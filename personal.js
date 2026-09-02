@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v238-0902-1552';
+window.PERSONAL_BUILD = 'v239-0902-1603';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -52,6 +52,20 @@ window.PERSONAL_BUILD = 'v238-0902-1552';
     }catch(e){ console.warn('[삭제 확인] 앱 팝업을 못 써서 기본 창으로', e); }
     try{ return Promise.resolve(window.confirm(msg)); }
     catch(e2){ return Promise.resolve(false); }
+  }
+
+  /* v239 — 「이름을 지어주세요」 같은 물음도 앱 팝업으로.
+     결과: 글자(확인) 또는 null(취소). 브라우저 prompt 와 답이 똑같은 모양이라
+     부르는 쪽 코드를 거의 안 바꿔도 된다. */
+  function askText(title, value, opt){
+    opt = opt || {};
+    try{
+      if(window.wlAsk && typeof window.wlAsk.text === 'function')
+        return window.wlAsk.text(title, value==null?'':String(value),
+                 { sub:opt.sub, ph:opt.ph, ok:opt.ok||'확인', no:opt.no||'취소' });
+    }catch(e){ console.warn('[물어보기] 앱 팝업을 못 써서 기본 창으로', e); }
+    try{ return Promise.resolve(window.prompt(title, value==null?'':String(value))); }
+    catch(e2){ return Promise.resolve(null); }
   }
 
   /* ── 차량 ── */
@@ -2591,8 +2605,9 @@ window.PERSONAL_BUILD = 'v238-0902-1552';
 
   /* ══════ 보기 저장 · 관리 ══════ */
   function viewSaveNow(pt){
-    var nm=prompt('이 보기의 이름을 지어주세요\n(예: 올해 5만원 이상 구매)');
-    if(nm===null) return; nm=nm.trim(); if(!nm) return;
+    askText('이 보기의 이름을 지어주세요', '',
+            { sub:'예) 올해 5만원 이상 구매', ph:'보기 이름', ok:'저장' }).then(function(nm){
+    if(nm===null) return; nm=String(nm).trim(); if(!nm) return;
     var vs=viewsOf(pt);
     var v={ id:'v'+Date.now(), name:nm, scope:pt||'',
             cols:colsOf(pt).slice(), srt:{k:srt.k,d:srt.d},
@@ -2602,6 +2617,7 @@ window.PERSONAL_BUILD = 'v238-0902-1552';
     curView=v.id; lsSet('wl_life_curview', curView);
     if(typeof toast==='function') toast('👁 "'+nm+'" 보기를 저장했어요');
     safeRender();
+    });
   }
   function viewMgr(pt){
     var vs=viewsOf(pt);
@@ -2635,8 +2651,10 @@ window.PERSONAL_BUILD = 'v238-0902-1552';
       b.addEventListener('click', function(){
         var id=b.getAttribute('data-vren'), a=viewsOf(pt);
         var hit=a.filter(function(x){return x.id===id;})[0];
-        var nm=prompt('새 이름', hit?hit.name:''); if(nm===null) return; nm=nm.trim(); if(!nm) return;
-        a.forEach(function(x){ if(x.id===id) x.name=nm; }); viewsSave(pt,a); cl(); viewMgr(pt); }); });
+        askText('보기 이름 바꾸기', hit?hit.name:'', { ph:'새 이름', ok:'저장' }).then(function(nm){
+          if(nm===null) return; nm=String(nm).trim(); if(!nm) return;
+          a.forEach(function(x){ if(x.id===id) x.name=nm; }); viewsSave(pt,a); cl(); viewMgr(pt);
+        }); }); });
     ov.querySelectorAll('[data-vdel]').forEach(function(b){
       b.addEventListener('click', function(){
         askDel('이 보기를 지울까요?', '기록은 안 지워집니다').then(function(ok){
@@ -3078,8 +3096,10 @@ window.PERSONAL_BUILD = 'v238-0902-1552';
       b.addEventListener('click', function(){
         var x=sp(b.getAttribute('data-pren'));
         var old=(customOf(x[0])||[]).filter(function(p){return p.id===x[1];})[0];
-        var nm=prompt('새 이름', old?old.name:''); if(nm===null) return; nm=nm.trim(); if(!nm) return;
-        customPatch(x[0], x[1], {name:nm}); again(); }); });
+        askText('칸 이름 바꾸기', old?old.name:'', { ph:'새 이름', ok:'저장' }).then(function(nm){
+          if(nm===null) return; nm=String(nm).trim(); if(!nm) return;
+          customPatch(x[0], x[1], {name:nm}); again();
+        }); }); });
     ov.querySelectorAll('[data-pdel]').forEach(function(b){
       b.addEventListener('click', function(){
         var x=sp(b.getAttribute('data-pdel'));
@@ -5757,9 +5777,9 @@ window.PERSONAL_BUILD = 'v238-0902-1552';
           try{
             if(navigator.clipboard && navigator.clipboard.writeText)
               navigator.clipboard.writeText(a.path||'').then(function(){ toast2('📋 경로를 복사했어요'); })
-                .catch(function(){ prompt('경로 복사', a.path||''); });
-            else prompt('경로 복사', a.path||'');
-          }catch(e){ prompt('경로 복사', a.path||''); }
+                .catch(function(){ askText('경로 복사', a.path||'', { sub:'아래 글자를 골라 복사하세요', ok:'닫기' }); });
+            else askText('경로 복사', a.path||'', { sub:'아래 글자를 골라 복사하세요', ok:'닫기' });
+          }catch(e){ askText('경로 복사', a.path||'', { sub:'아래 글자를 골라 복사하세요', ok:'닫기' }); }
         }); });
     })();
     ov.querySelectorAll('[data-subdel]').forEach(function(b){
@@ -6064,9 +6084,9 @@ window.PERSONAL_BUILD = 'v238-0902-1552';
   /* 지금 보고 있는 기록을 템플릿으로 */
   function tplFromRec(pt, rec){
     if(!rec) return;
-    var nm=prompt('템플릿 이름을 지어주세요\n(예: 누수 사고, 월간 소방점검)',
-                  String(pget(rec,'_title')||'').slice(0,20));
-    if(nm===null) return; nm=nm.trim(); if(!nm) return;
+    askText('템플릿 이름을 지어주세요', String(pget(rec,'_title')||'').slice(0,20),
+            { sub:'예) 누수 사고 · 월간 소방점검', ph:'템플릿 이름', ok:'저장' }).then(function(nm){
+    if(nm===null) return; nm=String(nm).trim(); if(!nm) return;
     var skip={_att:1, _date:1};
     var vals={};
     propsOf(pt).forEach(function(p){
@@ -6081,6 +6101,7 @@ window.PERSONAL_BUILD = 'v238-0902-1552';
     tplSave(pt,a);
     if(typeof toast==='function') toast('📑 "'+nm+'" 템플릿을 저장했어요');
     safeRender();
+    });
   }
 
   function tplPick(pt){
@@ -8346,42 +8367,67 @@ window.PERSONAL_BUILD = 'v238-0902-1552';
     var a=cars(), fm=fuelMap();
     var cur='현재 차량: '+a.map(function(c){return c.n;}).join(', ')+'\n'
       + '유종 자동 연결: '+Object.keys(fm).filter(function(k){return fm[k];}).map(function(k){return k+'\u2192'+fm[k];}).join(', ');
-    var n=prompt('차량 관리\n\n· 새 차 이름 → 추가\n· 있는 이름 → 삭제\n· "유종" 이라고 쓰면 → 유종 연결 고치기\n\n'+cur);
-    if(!n) return; n=n.trim(); if(!n) return;
-    if(n==='유종'||n==='연료'){ mgrFuelMap(); return; }
-    var i=-1; a.forEach(function(c,j){ if(c.n===n) i=j; });
-    if(i>=0){ if(!confirm('"'+n+'" 차량을 목록에서 뺄까요?\n(기록은 그대로 남아요)')) return;
-      a.splice(i,1); if(curCar===n) curCar=(a[0]||{}).n||''; }
-    else a.push({n:n, c:CARPOOL[a.length % CARPOOL.length]});
-    carsSave(a); render();
+    askText('차량 관리', '', { ph:'차 이름',
+      sub:'새 이름 → 추가 · 있는 이름 → 삭제 · 「유종」 → 유종 연결 고치기\n'+cur }).then(function(n){
+      if(!n) return; n=String(n).trim(); if(!n) return;
+      if(n==='유종'||n==='연료'){ mgrFuelMap(); return; }
+      var i=-1; a.forEach(function(c,j){ if(c.n===n) i=j; });
+      if(i>=0){
+        askDel('"'+n+'" 차량을 목록에서 뺄까요?', '기록은 그대로 남아요').then(function(ok){
+          if(!ok) return;
+          a.splice(i,1); if(curCar===n) curCar=(a[0]||{}).n||'';
+          carsSave(a); render();
+        });
+        return;
+      }
+      a.push({n:n, c:CARPOOL[a.length % CARPOOL.length]});
+      carsSave(a); render();
+    });
   }
   /* 유종 ↔ 차량 연결 고치기 */
   function mgrFuelMap(){
     var m=fuelMap(), a=cars(), names=a.map(function(c){return c.n;});
     var keys=['LPG','휘발유','고급휘발유','경유','전기'];
     var out={}; var changed=false;
-    for(var i=0;i<keys.length;i++){
+    /* v239 — 팝업은 기다렸다 답을 주므로 for 문 대신 한 칸씩 되풀이한다 */
+    (function step(i){
+      if(i >= keys.length){
+        fuelMapSave(out);
+        if(typeof toast==='function') toast('⛽ 유종 연결을 저장했어요');
+        render(); return;
+      }
       var k=keys[i];
-      var v=prompt('['+(i+1)+'/'+keys.length+'] "'+k+'" 로 주유하면 어느 차인가요?\n\n'
-        + '차량: '+names.join(', ')+'\n(비워두면 자동 연결 안 함)', m[k]||'');
-      if(v===null){ if(changed) fuelMapSave(out); return; }
-      v=v.trim();
-      if(v && names.indexOf(v)<0){ alert('"'+v+'" 는 등록된 차가 아니에요 — 건너뜁니다'); v=''; }
-      out[k]=v; if(v!==(m[k]||'')) changed=true;
-    }
-    fuelMapSave(out);
-    if(typeof toast==='function') toast('⛽ 유종 연결을 저장했어요');
-    render();
+      askText('['+(i+1)+'/'+keys.length+'] "'+k+'" 로 주유하면 어느 차인가요?', m[k]||'',
+        { sub:'차량: '+names.join(', ')+' · 비워두면 자동 연결 안 함', ph:'차 이름', ok:'다음' })
+      .then(function(v){
+        if(v===null){ if(changed) fuelMapSave(out); return; }
+        v=String(v).trim();
+        if(v && names.indexOf(v)<0){
+          if(typeof toast==='function') toast('"'+v+'" 는 등록된 차가 아니에요 — 건너뜁니다');
+          v='';
+        }
+        out[k]=v; if(v!==(m[k]||'')) changed=true;
+        step(i+1);
+      });
+    })(0);
   }
 
   function mgrCtCats(){
     var a=ctCats();
-    var n=prompt('연락처 분류 관리\n\n· 새 이름을 넣으면 추가\n· 있는 이름을 넣으면 삭제\n\n현재: '+a.join(', '));
-    if(!n) return; n=n.trim(); if(!n) return;
-    var i=a.indexOf(n);
-    if(i>=0){ if(!confirm('"'+n+'" 분류를 지울까요?\n(연락처는 그대로 남아요)')) return; a.splice(i,1); if(curCat===n) curCat='전체'; }
-    else a.push(n);
-    lsSet(LS_CTC,a); render();
+    askText('연락처 분류 관리', '', { ph:'분류 이름',
+      sub:'새 이름 → 추가 · 있는 이름 → 삭제\n현재: '+a.join(', ') }).then(function(n){
+      if(!n) return; n=String(n).trim(); if(!n) return;
+      var i=a.indexOf(n);
+      if(i>=0){
+        askDel('"'+n+'" 분류를 지울까요?', '연락처는 그대로 남아요').then(function(ok){
+          if(!ok) return;
+          a.splice(i,1); if(curCat===n) curCat='전체';
+          lsSet(LS_CTC,a); render();
+        });
+        return;
+      }
+      a.push(n); lsSet(LS_CTC,a); render();
+    });
   }
 
   /* ══════ 렌더 ══════ */

@@ -6139,16 +6139,18 @@ function renderFileLink(){
       const origCat = btn.dataset.cat;
       const grp = btn.closest(".cat-group");
       const curLabel = grp.dataset.label||origCat;
-      const newName = prompt(`"${curLabel}" 카테고리 이름 변경:`, curLabel);
-      if(!newName||newName===curLabel) return;
-      // CATEGORIES에서 이름 변경
-      const idx = CATEGORIES.filelink.indexOf(origCat);
-      if(idx>=0){ CATEGORIES.filelink[idx]=newName; saveCategories(); }
-      // 해당 카테고리 항목들 일괄 변경
-      const toChange = entries.filter(e=>e.kind==="filelink"&&e.category===origCat);
-      toChange.forEach(e=>updateRecord(e.id,{category:newName}));
-      toast(`"${origCat}" → "${newName}" 변경됨 (${toChange.length}개 항목)`);
-      renderFileLink();
+      window.wlAskText(`"${curLabel}" 분류 이름 바꾸기`, curLabel, { ph:'새 이름', ok:'저장' })
+        .then(function(newName){
+          if(!newName||newName===curLabel) return;
+          // CATEGORIES에서 이름 변경
+          const idx = CATEGORIES.filelink.indexOf(origCat);
+          if(idx>=0){ CATEGORIES.filelink[idx]=newName; saveCategories(); }
+          // 해당 카테고리 항목들 일괄 변경
+          const toChange = entries.filter(e=>e.kind==="filelink"&&e.category===origCat);
+          toChange.forEach(e=>updateRecord(e.id,{category:newName}));
+          toast(`"${origCat}" → "${newName}" 변경됨 (${toChange.length}개 항목)`);
+          renderFileLink();
+        });
     });
   });
   box.querySelectorAll("[data-fid]").forEach(el=>{
@@ -18525,7 +18527,7 @@ async function githubUpload(token){
             if(e && e.name === 'AbortError') return;    /* 사용자가 그만둠 — 조용히 */
             console.warn('[링크] 공유 실패 — 복사로', e);
             copy(url).then(function(){ if(typeof toast==='function') toast('🔗 주소를 복사했어요'); })
-                     .catch(function(){ prompt('아래 주소를 복사해서 보내세요', url); });
+                     .catch(function(){ window.wlAskText('아래 주소를 복사해서 보내세요', url, { ok:'닫기' }); });
           });
         return;
       }
@@ -18533,7 +18535,7 @@ async function githubUpload(token){
     /* 컴퓨터 — 복사해 준다 */
     copy(text + '\n' + url)
       .then(function(){ if(typeof toast==='function') toast('🔗 카톡에 붙여넣을 주소를 복사했어요'); })
-      .catch(function(){ prompt('아래 주소를 복사해서 카톡에 붙여넣으세요', url); });
+      .catch(function(){ window.wlAskText('아래 주소를 복사해서 카톡에 붙여넣으세요', url, { ok:'닫기' }); });
   }
 
   /* 페이지 위쪽 단추줄에 [🔗 링크] 를 넣는다 — 페이지가 다시 그려져도 붙는다 */
@@ -23255,7 +23257,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v238-0902-1552';
+  var JS_BUILD = 'v239-0902-1603';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -25632,6 +25634,23 @@ window.wlAskDel = function(msg, sub){
   }catch(e){ console.warn('[삭제 확인] 앱 팝업을 못 써서 기본 창으로', e); }
   try{ return Promise.resolve(window.confirm(m)); }
   catch(e2){ console.warn('[삭제 확인] 실패', e2); return Promise.resolve(false); }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   ✍ 글자 물어보기 창구 하나 (wlAskText)   v239
+   달님 : 「prompt 창도 앱 팝업으로 — 뜨는 창을 다 같은 모양으로」
+   결과는 브라우저 prompt 와 같은 모양이다 — 글자(확인) 또는 null(취소).
+   ⚠ 비밀번호·토큰은 일부러 바꾸지 않았다. 이 팝업은 글자가 그대로 보인다.
+   ═══════════════════════════════════════════════════════════════ */
+window.wlAskText = function(title, value, opt){
+  opt = opt || {};
+  try{
+    if(window.wlAsk && typeof window.wlAsk.text === 'function')
+      return window.wlAsk.text(title, value==null?'':String(value),
+               { sub:opt.sub, ph:opt.ph, ok:opt.ok||'확인', no:opt.no||'취소' });
+  }catch(e){ console.warn('[물어보기] 앱 팝업을 못 써서 기본 창으로', e); }
+  try{ return Promise.resolve(window.prompt(title, value==null?'':String(value))); }
+  catch(e2){ console.warn('[물어보기] 실패', e2); return Promise.resolve(null); }
 };
 
 
