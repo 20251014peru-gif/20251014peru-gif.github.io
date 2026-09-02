@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v218-0902-1031';
+window.PERSONAL_BUILD = 'v219-0902-1038';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -4328,7 +4328,20 @@ window.PERSONAL_BUILD = 'v218-0902-1031';
       return a.filter(function(k){ return !!(WORK_KINDS && WORK_KINDS[k]); });
     }catch(e){ console.warn('[달력 종류] 읽기 실패', e); return []; }
   }
-  function calKindsSet(a){ lsSet(LS_CALK, a || []); safeRender(); }
+  /* v219 — 달님 : 「업무가 527건이라 얹은 게 묻힌다. 다른 걸 켰으면 업무도 끌 수 있게」
+     🔴 얹은 종류가 하나도 없으면 끌 수 없다 — 달력이 통째로 비어 버린다. */
+  var LS_CALOFF='wl_cal_curoff';
+  function curOff(){
+    try{ return !!lsGet(LS_CALOFF, false) && calKinds().length > 0; }
+    catch(e){ return false; }
+  }
+  function curOffSet(v){ lsSet(LS_CALOFF, !!v); safeRender(); }
+  function calKindsSet(a){
+    a = a || [];
+    lsSet(LS_CALK, a);
+    if(!a.length) lsSet(LS_CALOFF, false);   /* 얹은 게 없어지면 지금 종류는 도로 켠다 */
+    safeRender();
+  }
 
   /* 종류마다 제목이 담기는 칸이 다르다 — 그 종류의 지도(BMAP)를 따라간다.
      지금 보는 종류는 기존대로 pget 을 쓰고, 얹은 종류만 이 함수를 쓴다. */
@@ -4350,7 +4363,7 @@ window.PERSONAL_BUILD = 'v218-0902-1031';
     var curK = (DS && DS.kind) || '';
     var seen = {};
     arr.forEach(function(e){ if(e && e.id) seen[e.id] = 1; });
-    var out = arr.slice();
+    var out = curOff() ? [] : arr.slice();   /* v219 — 지금 종류를 끄면 얹은 것만 */
     try{
       (entries || []).forEach(function(e){
         if(!e || !e.id || seen[e.id]) return;
@@ -4366,18 +4379,22 @@ window.PERSONAL_BUILD = 'v218-0902-1031';
   /* 표시: [업무][청소][메모]… 눌러서 켜고 끈다 */
   function calKindChips(){
     if(isPersonal()) return '';
-    var on = calKinds(), curK = (DS && DS.kind) || '';
+    var on = calKinds(), curK = (DS && DS.kind) || '', off = curOff();
     var h = '<div class="lf-fb" style="margin-top:8px"><div class="lf-fbwrap">'
           + '<div class="lf-fbmid" style="flex-wrap:wrap;row-gap:6px">'
           + '<span style="font-size:12px;font-weight:800;color:#8ba0b6">달력에 함께 보기</span>';
     DS_ORDER.forEach(function(k){
       var w = WORK_KINDS[k]; if(!w) return;
-      var isCur = (k === curK), act = isCur || on.indexOf(k) >= 0;
+      var isCur = (k === curK);
+      var act   = isCur ? !off : (on.indexOf(k) >= 0);
       h += '<button type="button" class="lf-fx" data-calk="'+esc(k)+'"'
-         + (isCur ? ' title="지금 보고 있는 종류예요"' : '')
+         + ' title="' + (isCur
+             ? (on.length ? '지금 보고 있는 종류 \u2014 눌러서 잠깐 감출 수 있어요'
+                          : '지금 보고 있는 종류 \u2014 다른 종류를 하나 켜면 감출 수 있어요')
+             : '눌러서 달력에 얹기') + '"'
          + ' style="height:32px;padding:0 10px;font-size:12.5px;font-weight:800'
          + (act ? (';background:'+w.c+'1f;border-color:'+w.c+';color:'+w.c) : '')
-         + (isCur ? ';opacity:.7' : '')
+         + (isCur && !act ? ';opacity:.55;text-decoration:line-through' : '')
          + '">' + w.i + ' ' + esc(w.n) + '</button>';
     });
     h += '<button type="button" class="lf-fx" data-calk="__none"'
@@ -8850,9 +8867,17 @@ window.PERSONAL_BUILD = 'v218-0902-1031';
       b.addEventListener('click', function(){
         try{
           var k = b.getAttribute('data-calk');
-          if(k === '__none'){ calKindsSet([]); return; }
+          if(k === '__none'){ lsSet(LS_CALOFF, false); calKindsSet([]); return; }
           if(DS && k === DS.kind){
-            if(typeof toast === 'function') toast('지금 보고 있는 종류예요 — 늘 나옵니다');
+            /* v219 — 얹은 종류가 있을 때만 감출 수 있다 */
+            if(!calKinds().length){
+              if(typeof toast === 'function') toast('다른 종류를 하나 켜면 이것도 감출 수 있어요');
+              return;
+            }
+            var willOff = !curOff();
+            curOffSet(willOff);
+            if(typeof toast === 'function')
+              toast(willOff ? '🙈 지금 종류를 잠깐 감췄어요' : '👀 지금 종류를 다시 켰어요');
             return;
           }
           var on = calKinds(), i = on.indexOf(k);
