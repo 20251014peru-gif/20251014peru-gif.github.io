@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v230-0902-1349';
+window.PERSONAL_BUILD = 'v231-0902-1410';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -3853,18 +3853,23 @@ window.PERSONAL_BUILD = 'v230-0902-1349';
       /* v218 — 달님 : 「세 단추만 남은 줄이 아깝다」
          업무일지에서는 검색줄을 통째로 없애고 이 셋을 여기로 옮겼다.
          🔴 개인일지는 검색칸(lfQ)이 있어 그대로 둔다 — 같은 id 가 둘이면 안 된다 (지침 ⑮). */
-      +   (isPersonal()? '' :
-           sep
+      +   (isPersonal()
+           /* v231 — 개인 기록 화면도 도구줄에서 템플릿을 쓴다 (윗줄 검색줄을 없앴으므로) */
+           ? ((cur==='rec') ? (sep + '<button type="button" id="lfTpl" class="lf-fx" title="📑 템플릿 — 자주 쓰는 기록을 미리 만들어 두기">📑</button>') : '')
+           : (sep
            /* v225 — 그림만 둔다. 「기록 추가」가 같은 줄에 들어오게 (마우스를 올리면 이름) */
            + '<button type="button" id="lfVend" class="lf-fx" title="📇 업체 — 업체 하나에 얽힌 모든 것 보기">📇</button>'
-           + '<button type="button" id="lfTpl" class="lf-fx" title="📑 템플릿 — 자주 쓰는 기록을 미리 만들어 두기">📑</button>')
+           + '<button type="button" id="lfTpl" class="lf-fx" title="📑 템플릿 — 자주 쓰는 기록을 미리 만들어 두기">📑</button>'))
       + '</div></div>'
       /* ══ v228 🔴 「기록 추가」를 스크롤되는 가운데 칸 밖으로 꺼냈다 ══
          예전에는 가운데 칸(lf-fbmid) 안에 있었다. 그 칸은 내용이 넘치면
          줄을 바꾸게 돼 있어서, 화면이 조금만 좁아도 「기록 추가」만 아래로
          떨어지고 ⚙ · 건수는 윗줄에 남아 줄이 어긋나 보였다.
          이제 ⚙ · 건수와 형제(줄바꿈 없는 lf-fb 바로 밑)라 늘 한 줄이다. */
-      + (isPersonal()? '' :
+      /* v231 — 개인 「📋 기록」 에서도 여기에 둔다.
+         🔴 차계부·연락처는 자기 화면에 ➕ 차계부 추가 · ➕ 연락처 추가 가 따로 있으니 넣지 않는다
+            (같은 뜻의 단추가 한 화면에 둘이면 헷갈린다) */
+      + ((isPersonal() && cur!=='rec') ? '' :
          '<button type="button" id="lfAdd" class="lf-add" style="height:34px;flex:0 0 auto">➕ 기록 추가</button>')
       + '<div class="lf-more" id="lfMore">'
       +   '<button type="button" class="lf-fx" id="lfMoreBtn" title="그 밖의 도구">⚙'
@@ -6487,16 +6492,16 @@ window.PERSONAL_BUILD = 'v230-0902-1349';
 
     /* 업무일지 데이터셋은 개인 전용 요약·분류칩·안내띠를 안 쓴다 */
     var showP = isPersonal();
-    return blankBar() + (showP ? sum : '')
-      + (showP ? ('<div class="lf-chips">'+chips+'</div>') : '')
-      /* v212 — 검색은 맨 위 공용 검색 하나로 모은다.
-         🔴 개인일지는 공용 검색이 안 훑으므로 그대로 남긴다.
-         v218 — 업무일지는 이 줄을 통째로 없앴다 (세 단추는 도구줄로 갔다). */
-      + (showP ? ('<div class="lf-bar">'
-      +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="width:220px;max-width:100%">'
-      +   '<div class="lf-sp"></div>'
-      +   '<button type="button" id="lfTpl" class="lf-fx" title="자주 쓰는 기록을 미리 만들어 두기">📑 템플릿</button>'
-      +   '<button type="button" id="lfAdd" class="lf-add">➕ 기록 추가</button>'
+    /* v231 — 달님 : 「개인은 돈 쓴 것보다 기록에 뜻을 두니 지출 요약은 없어도 된다」
+       ① 큰 요약 카드 4장(이번 달 지출·전체 지출·챙길 일·예정 지출) 제거
+       ② 분류 칩 줄과 검색칸을 한 줄로 합침 (검색줄 lf-bar 통째로 없앰)
+       ③ 📑 템플릿 · ➕ 기록 추가는 아래 도구줄로 내려보냄 — fltBar 안에 있다
+       🔴 요약을 다시 보고 싶으면 📊 결산 탭에 그대로 다 있다.
+          sum 은 지우지 않고 남겨 둔다 (되살릴 때 한 줄이면 된다). */
+    return blankBar()
+      + (showP ? ('<div class="lf-pbar">'
+      +   '<div class="lf-chips" style="margin:0;flex:1 1 auto">'+chips+'</div>'
+      +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="height:34px;width:200px;max-width:100%;flex:0 0 auto">'
       + '</div>') : '')
       + (showP ? oldBanner() : '')
       + gridHTML(list, (cats()[curCat]||{i:'🏠'}).i, (curQ?'검색 결과가 없어요':'아직 기록이 없어요<div style="font-size:12px;margin-top:6px">➕ 를 눌러 시작하세요</div>'));
@@ -6507,16 +6512,16 @@ window.PERSONAL_BUILD = 'v230-0902-1349';
   function oldBanner(){
     try{ if(localStorage.getItem(LS_OLDBN)==='off') return ''; }catch(e){}
     if(ent().some(function(e){ return e.fromOld; })) return '';
-    return '<div id="lfOldBn" style="background:#f3f0ff;border:1.5px solid #d8ccf5;border-radius:12px;'
-      + 'padding:12px 15px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
-      + '<div style="flex:1;min-width:220px;font-size:13px;color:#4c2f8a;line-height:1.6">'
-      +   '<b>📥 예전 개인일지 기록이 아직 안 넘어왔나요?</b><br>'
-      +   '<span style="font-size:12.5px;color:#6b5aa0">쓰시던 개인일지 앱의 기록·연락처를 한 번에 가져올 수 있어요. '
-      +   '예전 앱 기록은 그대로 남습니다.</span></div>'
-      + '<button type="button" id="lfOldGo" style="height:38px;padding:0 16px;border:none;border-radius:9px;'
-      +   'background:#7c3aed;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">가져오기</button>'
-      + '<button type="button" id="lfOldNo" style="height:38px;padding:0 12px;border:1.5px solid #d8ccf5;border-radius:9px;'
-      +   'background:#fff;color:#8b7ab8;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">숨기기</button>'
+    /* v231 — 두 줄짜리 큰 띠였다. 하는 일은 그대로 두고 한 줄로 줄인다 */
+    return '<div id="lfOldBn" style="background:#f8f6ff;border:1px solid #e3daf7;border-radius:9px;'
+      + 'padding:6px 11px;margin-bottom:9px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
+      + '<span style="flex:1;min-width:180px;font-size:12px;color:#6b5aa0"'
+      +   ' title="쓰시던 개인일지 앱의 기록·연락처를 한 번에 가져옵니다. 예전 앱 기록은 그대로 남습니다.">'
+      +   '📥 예전 개인일지 기록 가져오기</span>'
+      + '<button type="button" id="lfOldGo" style="height:26px;padding:0 11px;border:none;border-radius:7px;'
+      +   'background:#7c3aed;color:#fff;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">가져오기</button>'
+      + '<button type="button" id="lfOldNo" style="height:26px;padding:0 9px;border:1px solid #e3daf7;border-radius:7px;'
+      +   'background:#fff;color:#a99bc9;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">숨기기</button>'
       + '</div>';
   }
 
@@ -8322,10 +8327,13 @@ window.PERSONAL_BUILD = 'v230-0902-1349';
           ? '<button type="button" id="lfBackRec" style="height:32px;padding:0 13px;border:1.5px solid #dbe6f4;border-radius:9px;background:#fff;color:#5b7794;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">← 개인 기록으로</button>'
           : '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
             + '<span style="font-size:11.5px;color:#a8b8c8">업무일지와 따로 · 구글 캘린더로 안 나감</span>'
+            /* v231 — 달님 : 「개인일 때 종류 칩 줄은 안 보여도 된다」
+               16개짜리 칩 줄을 통째로 뺐다. 업무로 돌아가는 길은 이 단추 하나로 충분하다.
+               (업무 화면의 「🏠 개인일지」 단추와 짝이다) */
+            + '<button type="button" id="lfGoData" style="height:30px;padding:0 11px;border:1.5px solid #dbe6f4;border-radius:9px;background:#fff;color:#5b7794;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">🗃 업무일지</button>'
             + '<button type="button" id="lfSeedBtn" style="height:30px;padding:0 11px;border:1.5px dashed #dbe6f4;border-radius:9px;background:#fff;color:#8ba0b6;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">🧪 샘플</button>'
             + '</div>')
       + '</div>'
-      + dsChips()                       /* v168 — 여기서 바로 업무 종류로 갈 수 있게 */
       + '<div class="lf-tabs">' + TABS.map(function(t){
           return '<button type="button" class="lf-tab'+(t[0]===cur?' on':'')+'" data-lt="'+t[0]+'">'+t[1]+'</button>'; }).join('')
       + '</div>' + body + '</div>';
@@ -8527,6 +8535,13 @@ window.PERSONAL_BUILD = 'v230-0902-1349';
       render(); });
     var br=document.getElementById('lfBackRec');
     if(br) br.addEventListener('click', function(){ cur='rec'; lsSet(LS_TAB,'rec'); render(); });
+    var gd=document.getElementById('lfGoData');
+    if(gd) gd.addEventListener('click', function(){
+      var last='work';
+      try{ last=String(localStorage.getItem('wl_ds_last')||'work').replace(/^["'\\]+|["'\\]+$/g,'').trim()||'work'; }catch(e){}
+      if(!/^[a-z]{2,12}$/.test(last)) last='work';
+      try{ window.wlOpenData(last); }catch(e){ console.error('[업무일지로]', e); }
+    });
     var sb=document.getElementById('lfSeedBtn');
     if(sb) sb.addEventListener('click', function(){
       var has = ent().some(function(e){ return e.sample && (e.kind==='personal'||e.kind==='pcontact'); });
