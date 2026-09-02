@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v215-0902-1010';
+window.PERSONAL_BUILD = 'v216-0902-1018';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -4241,10 +4241,83 @@ window.PERSONAL_BUILD = 'v215-0902-1010';
     while(m<1){ m+=12; y--; } while(m>12){ m-=12; y++; }
     calYM = y+'-'+String(m).padStart(2,'0'); lsSet(LS_CALM, calYM); safeRender();
   }
+  /* ══ v216 — 달력에서 여러 종류를 겹쳐 보기 ═══════════════════
+     달님 : 「한 곳에서 필터로 여러 조합을 보는 게 편하다」
+     🔴 기본은 「지금 보고 있는 종류만」 — 아무것도 안 고르면 v215 와 똑같다.
+        고른 것이 있을 때만 entries 에서 그 종류를 더 얹는다. */
+  var LS_CALK='wl_cal_kinds';
+  function calKinds(){
+    try{
+      var a = lsGet(LS_CALK, null);
+      if(!Array.isArray(a)) return [];
+      /* 받는 쪽에서 화이트리스트 검사 (지침 ⑭) */
+      return a.filter(function(k){ return !!(WORK_KINDS && WORK_KINDS[k]); });
+    }catch(e){ console.warn('[달력 종류] 읽기 실패', e); return []; }
+  }
+  function calKindsSet(a){ lsSet(LS_CALK, a || []); safeRender(); }
+
+  /* 종류마다 제목이 담기는 칸이 다르다 — 그 종류의 지도(BMAP)를 따라간다.
+     지금 보는 종류는 기존대로 pget 을 쓰고, 얹은 종류만 이 함수를 쓴다. */
+  function calKTitle(e){
+    try{
+      var bm = (window.wlBMAP || {})[(e && e.kind) || ''];
+      var fs = bm && bm._title;
+      if(fs) for(var i=0;i<fs.length;i++){
+        var v = e[fs[i]];
+        if(v!=null && v!=='') return String(v);
+      }
+    }catch(err){ console.warn('[달력] 제목 찾기 실패', err); }
+    return String((e && (e.title || e.who || e.name)) || '');
+  }
+
+  function calMerge(arr){
+    var on = calKinds();
+    if(isPersonal() || !on.length) return arr;
+    var curK = (DS && DS.kind) || '';
+    var seen = {};
+    arr.forEach(function(e){ if(e && e.id) seen[e.id] = 1; });
+    var out = arr.slice();
+    try{
+      (entries || []).forEach(function(e){
+        if(!e || !e.id || seen[e.id]) return;
+        if(!e.kind || e.kind === curK) return;
+        if(on.indexOf(e.kind) < 0) return;
+        if(String(e.date || '').slice(0,7) !== calYM) return;   /* 그 달만 */
+        out.push(e);
+      });
+    }catch(err){ console.warn('[달력] 다른 종류 모으기 실패', err); }
+    return out;
+  }
+
+  /* 표시: [업무][청소][메모]… 눌러서 켜고 끈다 */
+  function calKindChips(){
+    if(isPersonal()) return '';
+    var on = calKinds(), curK = (DS && DS.kind) || '';
+    var h = '<div class="lf-fb" style="margin-top:8px"><div class="lf-fbwrap">'
+          + '<div class="lf-fbmid" style="flex-wrap:wrap;row-gap:6px">'
+          + '<span style="font-size:12px;font-weight:800;color:#8ba0b6">달력에 함께 보기</span>';
+    DS_ORDER.forEach(function(k){
+      var w = WORK_KINDS[k]; if(!w) return;
+      var isCur = (k === curK), act = isCur || on.indexOf(k) >= 0;
+      h += '<button type="button" class="lf-fx" data-calk="'+esc(k)+'"'
+         + (isCur ? ' title="지금 보고 있는 종류예요"' : '')
+         + ' style="height:32px;padding:0 10px;font-size:12.5px;font-weight:800'
+         + (act ? (';background:'+w.c+'1f;border-color:'+w.c+';color:'+w.c) : '')
+         + (isCur ? ';opacity:.7' : '')
+         + '">' + w.i + ' ' + esc(w.n) + '</button>';
+    });
+    h += '<button type="button" class="lf-fx" data-calk="__none"'
+      +  ' title="얹은 종류를 모두 끄고 지금 종류만 봅니다"'
+      +  ' style="height:32px;padding:0 10px;font-size:12.5px;font-weight:800;'
+      +  'color:#b52929;border-color:#f0c9c9;background:#fff6f6">✕ 이 종류만</button>';
+    return h + '</div></div></div>';
+  }
+
   function calHTML(arr, pt){
     var tot=arr.length;
     arr = applyFlt(arr);
     var bar = fltBar(arr.length, tot);
+    arr = calMerge(arr);                     /* v216 — 고른 종류를 얹는다 */
     var y=+calYM.slice(0,4), m=+calYM.slice(5,7);
     var first=new Date(y, m-1, 1), start=first.getDay();
     var days=new Date(y, m, 0).getDate();
@@ -4253,6 +4326,7 @@ window.PERSONAL_BUILD = 'v215-0902-1010';
     var mSum=0; arr.forEach(function(e){ if(String(e.date||'').slice(0,7)===calYM) mSum+=money(e); });
 
     var h = bar
+      + calKindChips()                       /* v216 */
       + '<div class="lf-calhead">'
       +   '<button type="button" id="lfCalPrev">‹</button>'
       +   '<b>'+y+'년 '+m+'월</b>'
@@ -4270,11 +4344,19 @@ window.PERSONAL_BUILD = 'v215-0902-1010';
       h+='<div class="lf-cday'+(isT?' today':'')+'" data-cday="'+d+'">'
         + '<div class="dn">'+d+'</div>'
         + list.map(function(e){
-            var dd = e.ptype==='car' ? {c:carColor(e.car)} : (cats()[e.ptype]||catEtc());
+            /* v216 — 얹은 종류인가? 그렇다면 그 종류의 색·아이콘·제목을 쓴다 */
+            var otherK = (!isPersonal() && DS && e.kind && e.kind !== DS.kind) ? e.kind : '';
+            var wk = otherK ? (WORK_KINDS[otherK] || null) : null;
+            var dd = e.ptype==='car' ? {c:carColor(e.car)}
+                   : (wk ? {c:wk.c} : (cats()[e.ptype]||catEtc()));
             var ch=colorHit(e,pt);
-            return '<div class="ev" data-cid="'+esc(e.id)+'" style="border-left-color:'+dd.c
+            var inner = wk ? (wk.i + ' ' + esc(calKTitle(e)))
+                           : (pfxHTML(e) + esc(String(pget(e,'_title')||'')));
+            return '<div class="ev" data-cid="'+esc(e.id)+'"'
+              + (otherK ? (' data-ckind="'+esc(otherK)+'"') : '')
+              + ' style="border-left-color:'+dd.c
               + (ch? ';background:'+colorOf(ch.color).bg:'') + '" title="'+esc(e.title||'')+'">'
-              + pfxHTML(e) + esc(String(pget(e,'_title')||'')) + '</div>'; }).join('')
+              + inner + '</div>'; }).join('')
         + (list.length>1? '<div class="more">'+list.length+'건</div>':'')
         + '</div>';
     }
@@ -8680,8 +8762,31 @@ window.PERSONAL_BUILD = 'v215-0902-1010';
     host.querySelectorAll('[data-cid]').forEach(function(b){
       b.addEventListener('click', function(ev){
         ev.stopPropagation();
+        /* v216 — 얹어 놓은 다른 종류면 그 종류로 옮겨서 연다 (창구 하나: wlGoPage) */
+        var ok = b.getAttribute('data-ckind');
+        if(ok){
+          try{
+            if(typeof window.wlGoPage === 'function'){ window.wlGoPage(b.getAttribute('data-cid'), true); return; }
+          }catch(e){ console.warn('[달력] 다른 종류 열기 실패', e); }
+        }
         PGLIST = [].map.call(host.querySelectorAll('[data-cid]'), function(x){ return x.getAttribute('data-cid'); });
         openPage(b.getAttribute('data-cid')); }); });
+    /* v216 — 달력 종류 칩 */
+    host.querySelectorAll('[data-calk]').forEach(function(b){
+      b.addEventListener('click', function(){
+        try{
+          var k = b.getAttribute('data-calk');
+          if(k === '__none'){ calKindsSet([]); return; }
+          if(DS && k === DS.kind){
+            if(typeof toast === 'function') toast('지금 보고 있는 종류예요 — 늘 나옵니다');
+            return;
+          }
+          var on = calKinds(), i = on.indexOf(k);
+          if(i >= 0) on.splice(i,1); else on.push(k);
+          calKindsSet(on);
+        }catch(e){ console.warn('[달력 종류] 누르기 실패', e); }
+      });
+    });
     host.querySelectorAll('[data-cday]').forEach(function(d){
       d.addEventListener('click', function(ev){
         if(ev.target.closest('[data-cid]')) return;
@@ -8756,15 +8861,18 @@ window.PERSONAL_BUILD = 'v215-0902-1010';
     host.querySelectorAll('[data-ldel]').forEach(function(b){
       b.addEventListener('click', function(ev){
         ev.stopPropagation();
-        if(!confirm('이 기록을 지울까요?')) return;
-        try{ pDel(b.getAttribute('data-ldel')); }catch(e){ alert('삭제 실패: '+e); return; }
-        if(typeof toast==='function') toast('🗑 삭제됐어요');
-        setTimeout(render, 220);
-        /* v169 — 위 지출 요약 카드도 함께 다시 센다 */
-        setTimeout(function(){
-          try{ if(window.wlExpStats && window.wlExpStats.now) window.wlExpStats.now(); }
-          catch(e){ console.warn('[지출 합계] 갱신 실패', e); }
-        }, 460);
+        wlAskDel('이 기록을 지울까요?').then(function(ok){
+          if(!ok) return;
+          try{ pDel(b.getAttribute('data-ldel')); }
+          catch(e){ console.error('[삭제]', e); if(typeof toast==='function') toast('삭제 실패: '+(e.message||e)); return; }
+          if(typeof toast==='function') toast('🗑 삭제됐어요');
+          setTimeout(render, 220);
+          /* v169 — 위 지출 요약 카드도 함께 다시 센다 (v217 — 지운 뒤에 센다) */
+          setTimeout(function(){
+            try{ if(window.wlExpStats && window.wlExpStats.now) window.wlExpStats.now(); }
+            catch(e){ console.warn('[지출 합계] 갱신 실패', e); }
+          }, 460);
+        });
       });
     });
     host.querySelectorAll('[data-lid]').forEach(function(c){

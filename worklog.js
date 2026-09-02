@@ -23158,7 +23158,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v215-0902-1010';
+  var JS_BUILD = 'v216-0902-1018';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -25476,3 +25476,22 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
   setTimeout(paint, 1200);
   console.log('[클라우드 쓰기] v213 준비됨 — 대기 ' + pend().length + '건 · 진단은 wlSync()');
 })();
+
+
+/* ═══════════════════════════════════════════════════════════════
+   🗑 삭제 확인 창구 하나 (wlAskDel)   v217
+   달님 : 「메모나 어떤 걸 삭제할 때 위로 확인창 팝업으로 나오게」
+   브라우저가 띄우는 confirm 은 주소창 아래 붙어 앱과 따로 논다.
+   이미 있는 앱 팝업(wlAsk)을 쓰되, 못 쓰는 상황이면 예전 창으로 내려간다.
+   ⚠ wlAsk 는 「기다렸다 답을 주는」 방식이라 .then( ) 안에서 지운다.
+   ═══════════════════════════════════════════════════════════════ */
+window.wlAskDel = function(msg, sub){
+  var m = msg || '지울까요?';
+  try{
+    if(window.wlAsk && typeof window.wlAsk.ok === 'function'){
+      return window.wlAsk.ok(m, { sub: (sub || '휴지통으로 갑니다'), ok:'삭제', danger:1 });
+    }
+  }catch(e){ console.warn('[삭제 확인] 앱 팝업을 못 써서 기본 창으로', e); }
+  try{ return Promise.resolve(window.confirm(m)); }
+  catch(e2){ console.warn('[삭제 확인] 실패', e2); return Promise.resolve(false); }
+};

@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v215-0902-1010";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v216-0902-1018";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=215-20260902t1010"></script>
+<script src="worklog.js?v=216-20260902t1018"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -4746,9 +4746,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     grid.querySelectorAll('[data-sdel]').forEach(btn=>{
       btn.addEventListener('click', e=>{
         e.stopPropagation();
-        if(!confirm('이 메모를 삭제할까요?')) return;
-        if(typeof deleteWithUndo==='function') deleteWithUndo(btn.dataset.sdel,'메모');
-        setTimeout(renderStickyGrid,300);
+        wlAskDel('이 메모를 삭제할까요?').then(function(ok){
+          if(!ok) return;
+          if(typeof deleteWithUndo==='function') deleteWithUndo(btn.dataset.sdel,'메모');
+          setTimeout(renderStickyGrid,300);
+        });
       });
     });
 
@@ -4792,9 +4794,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         });
         listBox.querySelectorAll('[data-sdel2]').forEach(btn=>{
           btn.addEventListener('click',()=>{
-            if(!confirm('이 메모를 삭제할까요?')) return;
-            if(typeof deleteWithUndo==='function') deleteWithUndo(btn.dataset.sdel2,'메모');
-            setTimeout(renderStickyGrid,300);
+            wlAskDel('이 메모를 삭제할까요?').then(function(ok){
+              if(!ok) return;
+              if(typeof deleteWithUndo==='function') deleteWithUndo(btn.dataset.sdel2,'메모');
+              setTimeout(renderStickyGrid,300);
+            });
           });
         });
       }
@@ -9678,13 +9682,16 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       });
       document.getElementById('stickyV44EditDel').addEventListener('click', function() {
         var id2 = ov.dataset.editId;
-        if (!id2 || !confirm('이 메모를 삭제할까요?')) return;
-        if (typeof deleteWithUndo === 'function') deleteWithUndo(id2, '메모');
-        closeEditModal();
-        setTimeout(function() {
-          if (typeof renderStickyGrid === 'function') renderStickyGrid();
-          if (typeof v43Refresh === 'function') v43Refresh();
-        }, 300);
+        if (!id2) return;
+        wlAskDel('이 메모를 삭제할까요?').then(function(ok){
+          if(!ok) return;
+          if (typeof deleteWithUndo === 'function') deleteWithUndo(id2, '메모');
+          closeEditModal();
+          setTimeout(function() {
+            if (typeof renderStickyGrid === 'function') renderStickyGrid();
+            if (typeof v43Refresh === 'function') v43Refresh();
+          }, 300);
+        });
       });
 
       /* 체크박스 클릭 — 토글 */
@@ -9969,9 +9976,11 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     grid.querySelectorAll('[data-sdel]').forEach(function(btn) {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
-        if (!confirm('이 메모를 삭제할까요?')) return;
-        if (typeof deleteWithUndo === 'function') deleteWithUndo(btn.dataset.sdel, '메모');
-        setTimeout(function() { doRenderStickyGrid(); }, 300);
+        wlAskDel('이 메모를 삭제할까요?').then(function(ok){
+          if(!ok) return;
+          if (typeof deleteWithUndo === 'function') deleteWithUndo(btn.dataset.sdel, '메모');
+          setTimeout(function() { doRenderStickyGrid(); }, 300);
+        });
       });
     });
 
@@ -10072,9 +10081,11 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         listBox.querySelectorAll('[data-sdel2]').forEach(function(btn) {
           btn.addEventListener('click', function(e) {
             e.stopPropagation();
-            if (!confirm('이 메모를 삭제할까요?')) return;
-            if (typeof deleteWithUndo === 'function') deleteWithUndo(btn.dataset.sdel2, '메모');
-            setTimeout(function() { doRenderStickyGrid(); }, 300);
+            wlAskDel('이 메모를 삭제할까요?').then(function(ok){
+              if(!ok) return;
+              if (typeof deleteWithUndo === 'function') deleteWithUndo(btn.dataset.sdel2, '메모');
+              setTimeout(function() { doRenderStickyGrid(); }, 300);
+            });
           });
         });
       }
@@ -20323,7 +20334,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=215-20260902t1010"></script>
+<script src="personal.js?v=216-20260902t1018"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에
