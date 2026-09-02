@@ -70,6 +70,28 @@ function colOfId(id){
     return colOf(r && r.kind);
   }catch(e){ return COL; }
 }
+/* v221 — 🔴 전수 조사에서 나온 것.
+   v213 에서 loadAll 의 되올리기는 고쳤지만, entries 를 훑으며 한 건씩
+   바로 쏘는 자리가 네 곳 더 남아 있었다 (백업 복구 · 사진 정리 ·
+   분류 옮기기 · 분야 지우기). 전부 `.catch(()=>{})` 라 실패해도 아무도 몰랐다.
+   기록이 많으면 한 번에 수백 건이 나가 쓰기 줄이 또 막힌다.
+   → 이 창구로 모아 12건씩 천천히 내보내고, 실패는 대기함에 남긴다. */
+function wlQueueSave(rec){
+  try{
+    if(!rec || !rec.id) return;
+    if(window.wlWrite && typeof window.wlWrite.put === 'function'){
+      window.wlWrite.put(rec.id, colOf(rec.kind));
+      return;
+    }
+    if(!online || !db) return;
+    var p = {}; for(var k in rec){ if(k !== 'id') p[k] = rec[k]; }
+    _wlDoc(rec).set(p).catch(function(err){
+      console.warn('[저장] ' + rec.id + ' 실패', err);
+    });
+  }catch(e){ console.warn('[저장] 대기함에 못 넣었어요', e); }
+}
+window.wlQueueSave = wlQueueSave;
+
 function _wlDoc(rec){
   try{ return db.collection(colOf(rec && rec.kind)).doc(rec.id); }
   catch(e){ return db.collection(COL).doc(rec.id); }
@@ -1501,9 +1523,7 @@ function migrateBadMemoAttachments(){
         e.attachments = e.attachments.filter(a => a && a.path);
         // body 필드 호환 (content → body)
         if(e.content && !e.body) e.body = e.content;
-        if(online && db){
-          _wlDoc(e).set(e).catch(()=>{});
-        }
+        wlQueueSave(e);                     /* v221 — 대기함으로 */
         changed++;
       }
     }
@@ -4803,9 +4823,12 @@ function handleRestore(e){
       if(!rec.id) rec.id=genId();
       if(byId[rec.id]) updated++; else added++;
       byId[rec.id]=rec;
-      if(online){ const {id,...p}=rec; _wlDoc(rec).set(p).catch(()=>{}); }
     });
+    /* v221 🔴 entries 를 먼저 갈아 끼운 뒤에 대기함에 넣는다.
+       (대기함은 보낼 때 entries 에서 최신 값을 꺼내므로 순서가 중요하다) */
     entries=Object.values(byId); lsSave(); renderAll();
+    try{ arr.forEach(function(rec){ if(rec && rec.id) wlQueueSave(byId[rec.id]); }); }
+    catch(e){ console.warn('[복구] 클라우드로 보내기 실패', e); }
     toast(`복구 완료 — 신규 ${added}건, 갱신 ${updated}건`);
   };
   reader.onerror=()=>toast("파일 읽기 실패");
@@ -5693,7 +5716,7 @@ function migrateTowerCats(){
     const newCat = getTowerGroupLabel(e);
     if(e.category!==newCat){
       e.category = newCat; // entries 직접 수정
-      if(online&&db) _wlDoc(e).update({category:newCat}).catch(()=>{});
+      wlQueueSave(e);                       /* v221 — 대기함으로 */
       changed++;
     }
   });
@@ -6376,8 +6399,7 @@ function renderFieldMgrList(){
           entries.forEach(e=>{
             if((e.kind==="work"||e.kind==="item") && e.field===f){
               e.field = "기타";
-              // Firestore 동기화
-              if(online && db) _wlDoc(e).set(e).catch(()=>{});
+              wlQueueSave(e);               /* v221 — 대기함으로 */
             }
           });
           lsSave();
@@ -23233,7 +23255,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v220-0902-1050';
+  var JS_BUILD = 'v223-0902-1137';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -23720,7 +23742,10 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
 (function(){
   'use strict';
   var LS   = 'wl_tab_hide';
-  var KEEP = ['data', 'folder'];            /* 절대 못 숨기는 것 */
+  /* v222 — 달님이 🗃 데이터도 감추기로 했다.
+     감춰도 화면은 남는다(restoreTab 이 data 를 기억한다).
+     대신 다른 탭에 갔다가 돌아올 「작은 문」을 아래 backDoor() 가 만들어 준다. */
+  var KEEP = ['folder'];                    /* 절대 못 숨기는 것 */
   var NAME = { main:'📋 기록', life:'🏠 개인', data:'🗃 데이터', expense:'💰 지출',
                memo:'📝 메모', calendar:'📅 달력', accident:'🚨 사고', progress:'🚧 진행업무',
                material:'📦 자재', password:'🔐 비번', diag:'🔧 진단', ai:'🤖 AI' };
@@ -23744,6 +23769,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
         if(hide){ b.dataset._wlth='1'; b.style.display='none'; }
         else if(b.dataset._wlth){ b.style.display=''; delete b.dataset._wlth; }
       });
+      backDoor(h.indexOf('data') >= 0);
       /* 지금 켜진 탭을 숨겼으면 데이터 화면으로 옮겨 준다 */
       var on = document.querySelector('[data-v43tab].on, [data-v43tab].active');
       var ot = on ? (on.getAttribute('data-v43tab')||'') : '';
@@ -23751,6 +23777,32 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
         if(typeof window.v43ActivateTab === 'function') window.v43ActivateTab('data');
       }
     }catch(e){ console.warn('[탭 숨기기]', e); }
+  }
+
+  /* v222 — 🗃 데이터를 감췄을 때만, 2행 줄 맨 앞에 돌아갈 작은 단추를 둔다.
+     이게 없으면 점검일지 같은 데 갔다가 노션식으로 못 돌아온다. */
+  function backDoor(on){
+    try{
+      var b = document.getElementById('wlBackToData');
+      if(!on){ if(b && b.parentNode) b.parentNode.removeChild(b); return; }
+      if(b) return;
+      var row = document.getElementById('wlTopRow')
+             || document.getElementById('v43TabsRow2Wrap')
+             || document.getElementById('v43Tabs');
+      if(!row) return;
+      b = document.createElement('button');
+      b.id = 'wlBackToData';
+      b.className = 'v43-tab';
+      b.type = 'button';
+      b.textContent = '🗃';
+      b.title = '노션식 화면으로 돌아가기';
+      b.style.cssText = 'width:auto;padding:5px 11px;font-size:14px;order:1;flex:0 0 auto';
+      b.addEventListener('click', function(){
+        try{ if(typeof window.v43ActivateTab === 'function') window.v43ActivateTab('data'); }
+        catch(e){ console.warn('[돌아갈 문] 실패', e); }
+      });
+      row.insertBefore(b, row.firstChild);
+    }catch(e){ console.warn('[돌아갈 문] 만들기 실패', e); }
   }
 
   function hide(t){ var a=list(); if(KEEP.indexOf(t)>=0) return '이 탭은 숨길 수 없어요'; if(a.indexOf(t)<0) a.push(t); save(a); return (NAME[t]||t)+' 숨김'; }
@@ -25570,3 +25622,218 @@ window.wlAskDel = function(msg, sub){
   try{ return Promise.resolve(window.confirm(m)); }
   catch(e2){ console.warn('[삭제 확인] 실패', e2); return Promise.resolve(false); }
 };
+
+
+/* ═══════════════════════════════════════════════════════════════
+   🧹 윗줄 한 줄로 (wlTopRow)   v222
+   ---------------------------------------------------------------
+   달님 : 「윗줄이 지저분하다. 검색칸까지 한 줄로 만들고 세로를 아끼자」
+
+   지금까지 : [검색바] / [탭 1행 13개] / [탭 2행 6개]  → 세 줄
+   v222     : [검색 · 남은 탭들]                        → 한 줄 (모자라면 자연스레 접힘)
+
+   🔴 코드는 하나도 안 지운다. 있는 요소를 「자리만 옮긴다」.
+      옮기는 것이라 단추에 걸린 동작은 그대로 살아 있다.
+   되돌리기 : wlTopRow.off()  → 새로고침하면 예전 세 줄로
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var LS = 'wl_toprow';
+  function isOn(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+
+  function join(){
+    try{
+      if(!isOn()) return true;
+      if(document.getElementById('wlTopRow')) return true;
+      var sw = document.querySelector('.v43-search-wrap');
+      if(!sw) return false;
+      var row1 = document.getElementById('v43Tabs');
+      var row2 = document.getElementById('v43TabsRow2Wrap');
+      if(!row1 && !row2) return false;
+
+      var box  = sw.parentNode;                 /* 검색바를 감싸던 칸 */
+      var host = document.createElement('div');
+      host.id = 'wlTopRow';
+      host.style.cssText = 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:2px 0 4px';
+      if(box && box.parentNode) box.parentNode.insertBefore(host, box);
+      else return false;
+
+      /* 검색칸 — 자리를 나눠 쓰되 너무 좁아지지는 않게 */
+      sw.style.flex = '1 1 240px';
+      sw.style.maxWidth = '400px';
+      sw.style.marginBottom = '0';
+      host.appendChild(sw);
+
+      /* 차례 : 검색 → 🗃돌아갈문 → 폴더 탭들 → 남은 옛 탭들 → 안내 배지(맨 끝)
+         자리를 옮기지 않고 order 로만 정한다 — 다른 코드가 제자리로 되돌려도 안전하다. */
+      sw.style.order = '0';
+      if(row2){ row2.style.margin = '0'; row2.style.flex = '0 1 auto'; row2.style.order = '2'; host.appendChild(row2); }
+      if(row1){ row1.style.margin = '0'; row1.style.flex = '0 1 auto'; row1.style.order = '3'; host.appendChild(row1); }
+      /* 🔒 비밀 항목 안내는 줄 가운데 끼면 지저분하다 → 맨 끝으로 */
+      try{
+        var lock = document.getElementById('wlLockBar');
+        if(lock){ lock.style.order = '9'; lock.style.marginLeft = 'auto'; }
+      }catch(e){}
+
+      /* 비어 버린 옛 칸은 자리만 없앤다 (지우지 않는다) */
+      if(box && !box.children.length) box.style.display = 'none';
+      return true;
+    }catch(e){ console.warn('[윗줄 정리] 실패', e); return false; }
+  }
+
+  /* 탭이 나중에 그려지는 경우가 있어 몇 번 더 본다 (붙으면 스스로 멈춘다) */
+  var tries = 0;
+  var t = setInterval(function(){
+    if(join() || ++tries > 20) clearInterval(t);
+  }, 400);
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', join);
+  else setTimeout(join, 60);
+
+  window.wlTopRow = {
+    on: function(){
+      try{ localStorage.setItem(LS, '1'); }catch(e){}
+      join();
+      return '윗줄을 한 줄로 모았습니다';
+    },
+    off: function(){
+      try{ localStorage.setItem(LS, '0'); }catch(e){}
+      return '되돌렸습니다 — 새로고침(Ctrl+Shift+R)하면 예전 세 줄로 보입니다';
+    },
+    state: function(){
+      return { 켜짐: isOn(), 모아짐: !!document.getElementById('wlTopRow') };
+    }
+  };
+  console.log('[윗줄 정리] v222 준비됨 — 되돌리려면 wlTopRow.off()');
+})();
+
+
+/* ═══════════════════════════════════════════════════════════════
+   🧹 머리말 줄 정리 (wlHeadTidy)   v223
+   ---------------------------------------------------------------
+   달님 : 「뒤로가기는 지우고, 지금 필요 없는 건 설정으로 보내고,
+           안전·휴지통도 윗줄로 올려」
+
+   🔴 아무것도 지우지 않는다. 자주 안 쓰는 것을 「⚙ 설정」 서랍으로 옮길 뿐이다.
+      옮기는 것이라 단추에 걸린 동작은 그대로 살아 있다.
+
+   늘 보이는 것 : 🏠홈 · 📋연락처 · 👥직원 · 📓일지 · 📊월보고 · 🛟안전 · 🗑휴지통
+   서랍으로     : 💾백업 · 📅연동 · 🔗로그인설정 · 📤다시보내기 · 📥지금가져오기 · ⚙캘린더설정
+   감추는 것    : ↶뒤로 (쓰지 않음) · 🔑구글다시로그인 (v217 빨간 띠가 대신한다)
+   상태 표시    : 연결이 정상이면 점만, 끊기면 글자까지
+
+   되돌리기 : wlHeadTidy.off()  → 새로고침하면 예전 그대로
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var LS = 'wl_head_tidy';
+  /* 서랍에 넣을 것 — [id, 서랍에서 보일 이름] */
+  var DRAWER = [
+    ['btnEntryBackup',  '💾 백업 · 되살리기'],
+    ['btnGCal',         '📅 구글 캘린더 연동'],
+    ['btnGcalPull',     '📥 지금 가져오기'],
+    ['btnGcalPullCfg',  '⚙ 캘린더 설정 · 정리'],
+    ['wlRsBtn',         '📤 캘린더로 다시 보내기'],
+    ['wlGaBtn',         '🔗 구글 로그인 설정(중계서버)']
+  ];
+  var HIDE = ['btnBack', 'wlOutBadge'];
+
+  function isOn(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+
+  function drawer(){
+    var d = document.getElementById('wlSetDrawer');
+    if(d) return d;
+    var row = document.querySelector('.head-row'); if(!row) return null;
+    var wrap = document.createElement('span');
+    wrap.id = 'wlSetWrap';
+    wrap.style.cssText = 'position:relative;display:inline-flex;align-items:center';
+    var btn = document.createElement('button');
+    btn.id = 'wlSetBtn'; btn.type = 'button'; btn.className = 'nav-btn';
+    btn.textContent = '⚙ 설정';
+    btn.title = '가끔 쓰는 것들 — 백업 · 캘린더 연동 · 로그인 설정';
+    btn.style.cssText = 'background:#eef3f9;color:#4a6a8a;border:1.5px solid #dbe6f4;'
+      + 'border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer';
+    d = document.createElement('div');
+    d.id = 'wlSetDrawer';
+    d.style.cssText = 'position:absolute;top:calc(100% + 6px);right:0;z-index:100001;display:none;'
+      + 'min-width:230px;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;'
+      + 'box-shadow:0 8px 24px rgba(0,0,0,.14);padding:8px;flex-direction:column;gap:5px';
+    btn.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      d.style.display = (d.style.display === 'flex') ? 'none' : 'flex';
+    });
+    document.addEventListener('click', function(ev){
+      try{ if(!wrap.contains(ev.target)) d.style.display = 'none'; }catch(e){}
+    });
+    wrap.appendChild(btn); wrap.appendChild(d);
+    row.appendChild(wrap);
+    return d;
+  }
+
+  function run(){
+    try{
+      if(!isOn()) return true;
+      var row = document.querySelector('.head-row'); if(!row) return false;
+      var d = drawer(); if(!d) return false;
+
+      /* 안 쓰는 것은 감춘다 (지우지 않는다) */
+      HIDE.forEach(function(id){
+        var el = document.getElementById(id);
+        if(el && el.style.display !== 'none'){ el.dataset._wlHid = '1'; el.style.display = 'none'; }
+      });
+
+      /* 가끔 쓰는 것은 서랍으로 옮긴다 */
+      var moved = 0;
+      DRAWER.forEach(function(pair){
+        var el = document.getElementById(pair[0]);
+        if(!el || el.dataset._wlDrw) return;
+        el.dataset._wlDrw = '1';
+        el.style.width = '100%';
+        el.style.margin = '0';
+        el.style.textAlign = 'left';
+        el.style.display = 'block';
+        if(!el.textContent.trim() || el.id === 'wlGaBtn' || el.id === 'wlRsBtn'
+           || el.id === 'btnGcalPullCfg' || el.id === 'btnGCal'){
+          el.textContent = pair[1];                    /* 아이콘만 있던 것에 이름을 붙인다 */
+        }
+        d.appendChild(el);
+        moved++;
+      });
+
+      /* 연결이 정상일 때는 상태 글자를 줄여 자리를 아낀다 */
+      try{
+        var st = document.getElementById('status');
+        var tx = document.getElementById('statusText');
+        if(st && tx){
+          var ok = /연결/.test(tx.textContent || '') && !/오프라인/.test(tx.textContent || '');
+          tx.style.display = ok ? 'none' : '';
+          st.style.padding = ok ? '4px 8px' : '';
+          st.title = tx.textContent || '';
+        }
+      }catch(e){ console.warn('[머리말 정리] 상태 표시', e); }
+
+      return moved > 0 || !!document.getElementById('wlSetBtn');
+    }catch(e){ console.warn('[머리말 정리] 실패', e); return false; }
+  }
+
+  /* 단추들이 나중에 붙는 것이 있어 잠깐 더 지켜본다 (다 붙으면 스스로 멈춘다) */
+  var n = 0;
+  var t = setInterval(function(){
+    run();
+    if(++n > 14) clearInterval(t);                     /* 약 12초 뒤 멈춘다 */
+  }, 800);
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else setTimeout(run, 300);
+
+  window.wlHeadTidy = {
+    on: function(){ try{ localStorage.setItem(LS,'1'); }catch(e){} run(); return '머리말 줄을 정리했습니다'; },
+    off: function(){ try{ localStorage.setItem(LS,'0'); }catch(e){}
+      return '되돌렸습니다 — 새로고침(Ctrl+Shift+R)하면 예전 그대로 보입니다'; },
+    state: function(){
+      return { 켜짐:isOn(),
+               서랍만듦: !!document.getElementById('wlSetBtn'),
+               서랍안: (function(){ var d=document.getElementById('wlSetDrawer');
+                 return d ? [].map.call(d.children, function(c){ return c.textContent.trim(); }) : []; })() };
+    }
+  };
+  console.log('[머리말 정리] v223 준비됨 — 되돌리려면 wlHeadTidy.off()');
+})();
