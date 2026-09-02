@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v227-0902-1308";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v229-0902-1355";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=227-20260902t1308"></script>
+<script src="worklog.js?v=229-20260902t1355"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -3556,8 +3556,14 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     });
   }
 
+  /* v229 - 화면 전환 차례표.
+     탭을 바꿀 때마다 1 올린다. 늦게 깨어난 「화면 열기」 는 자기 번호가
+     아니면 조용히 물러난다 (아래 wlOpenPanelSoon 참고). */
+  var _wlPanelSeq = 0;
   // v43 탭 전환
   function v43ActivateTab(name){
+    _wlPanelSeq++;
+    var _mySeq = _wlPanelSeq;
     /* 지출 탭을 벗어나면 정산표·인건비 재잠금 */
     if(name!=='expense' && window._expFinUnlocked){
       window._expFinUnlocked=false;
@@ -3584,6 +3590,14 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
        모두 같은 원인이다. 오류는 하나도 안 났다.
        → 준비될 때까지 0.1초마다 다시 본다 (최대 8초). ═══════════════ */
     function wlOpenPanelSoon(which, tryN){
+      /* ══ v229 🔴 달님 : 「개인 기록·차계부·연락처를 누르면 업무로 바뀐다」 ══
+         personal.js 가 늦게 도착하는 날에는 이 기다리기가 최대 8초 동안 살아 있다.
+         그 사이에 사람이 🏠 개인으로 옮겨 가면, 뒤늦게 깨어난 「데이터 열기」가
+         남의 화면을 덮어써서 업무로 튕겼다. 오류는 하나도 안 났다.
+         → 자기 차례가 지났거나 그 탭이 이미 꺼졌으면 그냥 물러난다. */
+      if(_mySeq !== _wlPanelSeq) return;
+      var panelEl = document.getElementById('v43-'+which);
+      if(!panelEl || !panelEl.classList.contains('active')) return;
       var ready = (which==='data')
         ? (typeof window.wlOpenData==='function' && typeof window.wlDSCur==='function')
         : (typeof window.wlLifeRender==='function');
@@ -20396,6 +20410,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-morep .lf-fx{ width:100%; text-align:left }
 /* 오른쪽 끝에 옅은 그림자 — 더 있다는 표시 */
 .lf-fbwrap{ position:relative; flex:1 1 auto; min-width:0; display:flex }
+/* v228 - 「기록 추가 · ⚙ · 건수」 는 가운데 칸 밖 형제라 늘 같은 줄에 선다 */
+.lf-fb > #lfAdd, .lf-fb > .lf-more, .lf-fb > .lf-cnt{ flex:0 0 auto; align-self:center }
 .lf-fbwrap::after{ content:''; position:absolute; right:0; top:0; bottom:0; width:22px;
   pointer-events:none; background:linear-gradient(90deg,rgba(247,250,253,0),rgba(247,250,253,1)) }
 @media (max-width:640px){
@@ -20450,7 +20466,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=227-20260902t1308"></script>
+<script src="personal.js?v=229-20260902t1355"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에

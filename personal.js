@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v227-0902-1308';
+window.PERSONAL_BUILD = 'v229-0902-1355';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -3857,10 +3857,15 @@ window.PERSONAL_BUILD = 'v227-0902-1308';
            sep
            /* v225 — 그림만 둔다. 「기록 추가」가 같은 줄에 들어오게 (마우스를 올리면 이름) */
            + '<button type="button" id="lfVend" class="lf-fx" title="📇 업체 — 업체 하나에 얽힌 모든 것 보기">📇</button>'
-           + '<button type="button" id="lfTpl" class="lf-fx" title="📑 템플릿 — 자주 쓰는 기록을 미리 만들어 두기">📑</button>'
-           /* v226 - 오른쪽 끝에 붙어 ⚙ · 건수와 부딪혀서 살짝 안으로 넣었다 */
-           + '<button type="button" id="lfAdd" class="lf-add" style="height:34px;margin-left:auto;margin-right:34px">➕ 기록 추가</button>')
+           + '<button type="button" id="lfTpl" class="lf-fx" title="📑 템플릿 — 자주 쓰는 기록을 미리 만들어 두기">📑</button>')
       + '</div></div>'
+      /* ══ v228 🔴 「기록 추가」를 스크롤되는 가운데 칸 밖으로 꺼냈다 ══
+         예전에는 가운데 칸(lf-fbmid) 안에 있었다. 그 칸은 내용이 넘치면
+         줄을 바꾸게 돼 있어서, 화면이 조금만 좁아도 「기록 추가」만 아래로
+         떨어지고 ⚙ · 건수는 윗줄에 남아 줄이 어긋나 보였다.
+         이제 ⚙ · 건수와 형제(줄바꿈 없는 lf-fb 바로 밑)라 늘 한 줄이다. */
+      + (isPersonal()? '' :
+         '<button type="button" id="lfAdd" class="lf-add" style="height:34px;flex:0 0 auto">➕ 기록 추가</button>')
       + '<div class="lf-more" id="lfMore">'
       +   '<button type="button" class="lf-fx" id="lfMoreBtn" title="그 밖의 도구">⚙'
       +     (nF? '<b class="dot">'+nF+'</b>':'') + '</button>'
@@ -6672,10 +6677,13 @@ window.PERSONAL_BUILD = 'v227-0902-1308';
       var mo=String(e.date).slice(5,7); byMon[mo]=(byMon[mo]||0)+m;
       tot+=m;
     });
-    var cats = Object.keys(byCat).sort(function(a,b){ return byCat[b]-byCat[a]; });
-    var mx = cats.length? byCat[cats[0]] : 1;
+    /* v229 🔴 여기서 var cats 라고 이름을 지어 버려서, 같은 함수 안의
+       cats() (분류표를 주는 함수) 가 통째로 가려졌다 → 「cats is not a function」.
+       📊 결산 단추가 안 눌리던 진짜 원인. 이름만 바꾼다. */
+    var catKeys = Object.keys(byCat).sort(function(a,b){ return byCat[b]-byCat[a]; });
+    var mx = catKeys.length? byCat[catKeys[0]] : 1;
 
-    var rowsC = cats.map(function(k){
+    var rowsC = catKeys.map(function(k){
       var d = k==='car'? {i:'🚗',n:'차계부',c:'#0891b2'} : (cats()[k]||catEtc());
       var v=byCat[k], p=Math.round(v/tot*100);
       return '<tr><td style="white-space:nowrap">'+d.i+' '+d.n+'</td>'
