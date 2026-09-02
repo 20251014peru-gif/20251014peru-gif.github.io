@@ -517,6 +517,26 @@ function wlChoBase(s){
 }
 window.wlChoBase = wlChoBase;
 
+/* v220 — 🔴 자모에는 「두 종류의 코드」가 있다.
+   ① 호환 자모 U+3131~ (ㄱㄴㄷ …) — 키보드로 자음만 칠 때 보통 이것
+   ② 결합 자모 U+1100~ (초성) · U+11A8~ (종성) — 글자를 이루는 조각
+   IME·기기·붙여넣기에 따라 ②로 들어올 때가 있는데,
+   그러면 isChosungOnly 가 false 라 초성 찾기가 통째로 안 먹는다.
+   보이는 모양은 거의 같아서 「왜 안 되는지」 알 수가 없다. → 들어오자마자 ①로 맞춘다. */
+var JAMO_CHO19  = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';                 /* U+1100~U+1112 */
+var JAMO_JONG27 = 'ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ';   /* U+11A8~U+11C2 */
+function wlJamoNorm(s){
+  try{
+    return String(s==null?'':s).replace(/[\u1100-\u1112\u11A8-\u11C2]/g, function(c){
+      var v = c.charCodeAt(0);
+      var r = (v <= 0x1112) ? JAMO_CHO19.charAt(v - 0x1100)
+                            : JAMO_JONG27.charAt(v - 0x11A8);
+      return r || c;
+    });
+  }catch(e){ console.warn('[자모 맞추기] 실패', e); return String(s==null?'':s); }
+}
+window.wlJamoNorm = wlJamoNorm;
+
 function wlChoSpread(s){
   try{
     return String(s==null?'':s).replace(/[ㄳㄵㄶㄺㄻㄼㄽㄾㄿㅀㅄ]/g,
@@ -532,10 +552,10 @@ window.wlChoSpread = wlChoSpread;
    글자 포함이 먼저, 자음만 쳤을 때만 초성으로 견준다
    (「전기」로 쳤는데 ㅈㄱ 로 엉뚱한 게 뜨지 않게). */
 function wlChoHit(hay, q){
-  q = String(q==null?'':q).trim();
+  q = wlJamoNorm(String(q==null?'':q)).trim();   /* v220 — 자모 코드부터 맞춘다 */
   if(!q) return true;
   try{
-    var s2 = String(hay==null?'':hay);
+    var s2 = wlJamoNorm(String(hay==null?'':hay));
     if(s2.toLowerCase().indexOf(q.toLowerCase()) >= 0) return true;
     var qc = wlChoSpread(q.replace(/\s/g,''));   /* v210 — ㄼ → ㄹㅂ */
     if(isChosungOnly(qc)){
@@ -548,6 +568,38 @@ function wlChoHit(hay, q){
   return false;
 }
 window.wlChoHit = wlChoHit;
+
+/* v220 — 「초성이 안 된다」고 할 때 어디서 걸렸는지 보는 창구.
+   달님 콘솔에서  wlChoHit.why('ㅂㅎㅁ')  한 줄이면 원인이 나온다. */
+wlChoHit.why = function(q, hay){
+  var raw = String(q==null?'':q);
+  var out = {
+    '친 글자': raw,
+    '글자 코드': raw.split('').map(function(c){
+      return c + '(U+' + c.charCodeAt(0).toString(16).toUpperCase() + ')'; }).join(' '),
+    '코드 맞춘 뒤': wlJamoNorm(raw),
+    '겹자음 편 뒤': wlChoSpread(wlJamoNorm(raw).trim().replace(/\s/g,'')),
+    '자음만인가': isChosungOnly(wlChoSpread(wlJamoNorm(raw).trim().replace(/\s/g,'')))
+  };
+  if(hay != null){
+    out['견줄 글'] = String(hay);
+    out['그 글의 초성'] = getChosung(wlJamoNorm(String(hay)));
+    out['찾히나'] = wlChoHit(hay, raw);
+  }else{
+    try{
+      var n = 0, first = '';
+      (entries || []).forEach(function(e){
+        if(n >= 3) return;
+        var t = (typeof collectSearchText === 'function') ? collectSearchText(e) : (e.title || '');
+        if(wlChoHit(t, raw)){ n++; if(!first) first = String(e.title || t).slice(0, 30); }
+      });
+      out['기록에서 찾은 수(앞 3건까지)'] = n;
+      out['첫 결과'] = first || '(없음)';
+    }catch(e){ out['기록 훑기'] = '실패: ' + (e.message || e); }
+  }
+  try{ console.table(out); }catch(e){ console.log(out); }
+  return out;
+};
 
 function wlMatFind(it, q){
   try{ return wlChoHit([it.itemName, it.spec, it.maker, it.vendor, it.unit].join(' '), q); }
@@ -23181,7 +23233,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v219-0902-1038';
+  var JS_BUILD = 'v220-0902-1050';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
