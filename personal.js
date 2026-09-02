@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v209-0901-1515';
+window.PERSONAL_BUILD = 'v213-0902-0934';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -3643,8 +3643,10 @@ window.PERSONAL_BUILD = 'v209-0901-1515';
       +   (rcOn? ';background:#eaf3fd;border-color:#2563a8;color:#2563a8':'')+'"'
       + ' title="눌러서 반복업무 목록 펼치기">'
       + (rcOn?'▾':'▸')+' 📅 '+(rc? esc(rc.mLab):'')
+      /* v211 — 달님 : 「반복업무가 안 나온다」
+         등록된 것이 있으면 이름이 사라지고 숫자만 남았다. 항상 적는다. */
       + (rc && rc.all.length
-         ? '<b style="color:'+(rc.done===rc.all.length?'#0f7a4a':'#9a3412')+'">'+rc.done+'/'+rc.all.length+'</b>'
+         ? '<b style="color:#1a2f45">반복업무</b> <b style="color:'+(rc.done===rc.all.length?'#0f7a4a':'#9a3412')+'">'+rc.done+'/'+rc.all.length+'</b>'
          : '<span style="color:#8ba0b6;font-weight:700">반복업무</span>')
       + '</button>';
     return h;
@@ -3747,6 +3749,10 @@ window.PERSONAL_BUILD = 'v209-0901-1515';
     var vs  = viewsOf(pt0);
     return '<div class="lf-fb">'
       + '<div class="lf-fbwrap"><div class="lf-fbmid" style="flex-wrap:wrap;row-gap:6px">'
+      /* v212 — 달님 : 「갤러리까지가 보기 부분이니 정기점검 왼쪽이 맞다」
+         검색줄(lf-bar)에 있던 보기 단추를 도구줄 맨 앞으로 옮긴다. */
+      +   vwBtns()
+      +   sep
       +   chkBtns(rows, rc)
       +   (isPersonal()? '' : sep)
       +   dayInline()
@@ -3829,6 +3835,7 @@ window.PERSONAL_BUILD = 'v209-0901-1515';
   function effGrp(pt){ return grp || (statInfo(pt) ? '_stat' : '_month'); }
   function grpKey(e, pt){
     var g=effGrp(pt);
+    if(g==='_day')   return String(e.date||'').slice(0,10);   /* v211 */
     if(g==='_month') return String(e.date||'').slice(0,7);
     if(g==='_stat')  return statVal(e, pt);
     var p=propById(pt, g); if(!p) return '';
@@ -3839,8 +3846,26 @@ window.PERSONAL_BUILD = 'v209-0901-1515';
     if(p.id==='_cat') return (e.ptype==='car') ? '🚗 차계부' : ((cats()[e.ptype]||catEtc()).i+' '+(cats()[e.ptype]||catEtc()).n);
     return String(v==null?'':v);
   }
+  /* v211 — 일별 묶기의 이름표. 기본 보기와 같은 모양으로.
+     🔴 날짜 연산은 Date.UTC 로만 한다 (KST 에서 하루 밀린다) */
+  var DAY_NAME=['일','월','화','수','목','금','토'];
+  function dayLab(k){
+    try{
+      if(!k) return '날짜 없음';
+      var p=String(k).slice(0,10).split('-');
+      if(p.length!==3) return String(k);
+      var d=new Date(Date.UTC(+p[0], +p[1]-1, +p[2]));
+      var w=DAY_NAME[d.getUTCDay()]||'';
+      var t=today(), pt2=t.split('-');
+      var t0=new Date(Date.UTC(+pt2[0], +pt2[1]-1, +pt2[2]));
+      var diff=Math.round((t0-d)/86400000);
+      var head = diff===0? '오늘 ' : (diff===1? '어제 ' : (diff===2? '2일전 ' : (diff===-1? '내일 ' : '')));
+      return head + String(k).slice(0,10) + ' (' + w + ')';
+    }catch(e){ console.warn('[일별 묶기] 이름표 실패', e); return String(k||''); }
+  }
   function grpLabel(k, pt){
     var g=effGrp(pt);
+    if(g==='_day') return dayLab(k);   /* v211 */
     if(g==='_month') return k? k.replace('-','년 ')+'월' : '날짜 없음';
     if(g==='_stat')  return k===''? '구분 없음' : k;
     return k===''? '(비어있음)' : k;
@@ -3848,7 +3873,7 @@ window.PERSONAL_BUILD = 'v209-0901-1515';
   /* 구분 차례대로 줄 세우기 — 상태는 일 순서, 월은 최근 것부터 */
   function grpRank(k, pt, g){
     if(g==='_stat') return statRank(k, pt);
-    if(g==='_month') return 0;
+    if(g==='_month' || g==='_day') return 0;   /* v211 */
     var p=propById(pt, g), ord=(p && (p.opts||p.o)) || null;
     if(ord){ var i=ord.indexOf(k); return i<0?900:i; }
     return 0;
@@ -3871,7 +3896,7 @@ window.PERSONAL_BUILD = 'v209-0901-1515';
       var a=grpKey(x,pt), b=grpKey(y,pt);
       if(a===b) return 0;
       if(a==='') return 1; if(b==='') return -1;          /* 빈 값은 항상 맨 아래 */
-      if(g==='_month' || dl) return String(b).localeCompare(String(a));
+      if(g==='_month' || g==='_day' || dl) return String(b).localeCompare(String(a));   /* v211 */
       var ra=grpRank(a,pt,g), rb=grpRank(b,pt,g);
       if(ra!==rb) return ra-rb;
       return String(a).localeCompare(String(b),'ko');
@@ -3892,6 +3917,7 @@ window.PERSONAL_BUILD = 'v209-0901-1515';
       + '<option value=""'+(grp===''?' selected':'')+'>'
         + (si? ('\u2728 '+siName+'별로 묶기 (기본)') : '\uD83D\uDCC5 월별로 묶기 (기본)') + '</option>'
       + '<option value="_none"'+(grp==='_none'?' selected':'')+'>\uD83D\uDEAB 묶지 않기 — 최신순으로 쭉</option>'
+      + '<option value="_day"'+(grp==='_day'?' selected':'')+'>\uD83D\uDCC5 일별로 묶기</option>'
       + '<option value="_month"'+(grp==='_month'?' selected':'')+'>\uD83D\uDCC5 월별로 묶기</option>'
       + a.map(function(p){ return '<option value="'+esc(p.id)+'"'+(grp===p.id?' selected':'')
           +'>'+tinfo(p.type).i+' '+esc(p.name)+' 로 묶기</option>'; }).join('')
@@ -6218,8 +6244,9 @@ window.PERSONAL_BUILD = 'v209-0901-1515';
     return blankBar() + (showP ? sum : '')
       + (showP ? ('<div class="lf-chips">'+chips+'</div>') : '')
       + '<div class="lf-bar">'
-      +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="width:260px;max-width:100%">'
-      +   vwBtns()
+      /* v212 — 검색은 맨 위 공용 검색 하나로 모은다.
+         🔴 개인일지는 공용 검색이 안 훑으므로 그대로 남긴다. */
+      +   (showP ? '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="width:220px;max-width:100%">' : '')
       +   '<div class="lf-sp"></div>'
       +   (showP ? '' : '<button type="button" id="lfVend" class="lf-fx" title="업체 하나에 얽힌 모든 것 보기">📇 업체</button>')
       +   '<button type="button" id="lfTpl" class="lf-fx" title="자주 쓰는 기록을 미리 만들어 두기">📑 템플릿</button>'
@@ -6322,7 +6349,6 @@ window.PERSONAL_BUILD = 'v209-0901-1515';
       +   '<input type="text" id="lfQ" class="lf-in" placeholder="🔍 검색" value="'+esc(curQ)+'" style="width:200px;max-width:100%">'
       +   '<select id="lfMonth" class="lf-in">'+mopt+'</select>'
       +   '<select id="lfCtype" class="lf-in">'+copt+'</select>'
-      +   vwBtns()
       +   '<div class="lf-sp"></div>'
       +   '<button type="button" id="lfAddCar" class="lf-add">➕ 차계부 추가</button>'
       + '</div>'

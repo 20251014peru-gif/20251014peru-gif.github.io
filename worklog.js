@@ -498,6 +498,22 @@ function isChosungOnly(str){
   return /^[ㄱ-ㅎ]+$/.test(str);
 }
 
+/* v210 — 겹자음 펴기.
+   자음만 칠 때 한글 IME 가 ㄹ 다음 ㅂ 을 ㄼ 으로 합쳐 버린다.
+   초성이 될 수 없는 겹자음만 낱자로 펀다
+   (ㄲㄸㅃㅆㅉ 는 진짜 초성이라 그대로 둔다). */
+var HANGUL_PAIR = {'ㄳ':'ㄱㅅ','ㄵ':'ㄴㅈ','ㄶ':'ㄴㅎ',
+                   'ㄺ':'ㄹㄱ','ㄻ':'ㄹㅁ','ㄼ':'ㄹㅂ',
+                   'ㄽ':'ㄹㅅ','ㄾ':'ㄹㅌ','ㄿ':'ㄹㅍ',
+                   'ㅀ':'ㄹㅎ','ㅄ':'ㅂㅅ'};
+function wlChoSpread(s){
+  try{
+    return String(s==null?'':s).replace(/[ㄳㄵㄶㄺㄻㄼㄽㄾㄿㅀㅄ]/g,
+      function(c){ return HANGUL_PAIR[c] || c; });
+  }catch(e){ console.warn('[겹자음 펴기] 실패', e); return String(s==null?'':s); }
+}
+window.wlChoSpread = wlChoSpread;
+
 /* v184 — 자재 찾기 「창구 하나」.
    글자 포함 + 초성(ㅎㄱ → 형광등) 둘 다 통한다.
    자재 고르기 창 두 개(wlPickItem·wlPickMats)가 이 함수만 쓴다. */
@@ -510,7 +526,7 @@ function wlChoHit(hay, q){
   try{
     var s2 = String(hay==null?'':hay);
     if(s2.toLowerCase().indexOf(q.toLowerCase()) >= 0) return true;
-    var qc = q.replace(/\s/g,'');
+    var qc = wlChoSpread(q.replace(/\s/g,''));   /* v210 — ㄼ → ㄹㅂ */
     if(isChosungOnly(qc)) return getChosung(s2).replace(/\s/g,'').indexOf(qc) >= 0;
   }catch(e){ console.warn('[초성 찾기] 실패', e); }
   return false;
@@ -1050,6 +1066,15 @@ function lsSave(){
 function genId(){ return online ? db.collection(COL).doc().id : "L"+Date.now()+Math.floor(Math.random()*100000); }
 function syncSet(id,rec){
   if(!online) return;
+  /* v213 — 클라우드 쓰기는 창구 하나(wlWrite)로 모아 천천히 내보낸다.
+     한꺼번에 쏟으면 파이어베이스 쓰기 줄이 막혀
+     resource-exhausted (Write stream exhausted) 가 난다. */
+  try{
+    if(window.wlWrite && typeof window.wlWrite.put === 'function'){
+      window.wlWrite.put(id, colOf(rec && rec.kind));
+      return;
+    }
+  }catch(e){ console.warn('[저장 동기화] 창구를 못 써서 바로 보냅니다', e); }
   const {id:_x,...payload}=rec;
   db.collection(colOf(rec&&rec.kind)).doc(id).set(payload)
     .catch(e=>{ logErr("저장 동기화", e); toast("클라우드 동기화 지연 — 이 기기에는 저장됨"); });
@@ -1203,7 +1228,36 @@ async function loadAll(){
       /* v46: 지운 것은 다시 올리지 않는다 */
       const extra=lsLoad().filter(x=>!ids.has(x.id) && !isDelId(x.id));
       entries=[...fb,...extra];
-      extra.forEach(x=>{ const {id,...p}=x; db.collection(colOf(x.kind)).doc(id).set(p).catch(()=>{}); });
+      /* ═══ v213 🔴 되올리기 폭주 막기 ═══════════════════════════
+         여기가 이 앱에서 「한 번에 수백 건을 쓰는」 유일한 자리였다.
+         못 읽은 컬렉션이 있으면 그 안의 기록이 통째로 「클라우드에 없다」로
+         보여서, 열 때마다 전부 다시 올리고 → 쓰기 줄이 막히고 →
+         resource-exhausted 가 났다. 실패는 .catch(()=>{}) 로 조용히 삼켜졌다.
+         ① 하나라도 못 읽었으면 되올리지 않는다
+         ② 30건이 넘으면 한꺼번에 안 올린다 (wlSync.push() 로 사람이 누를 때만)
+         ③ 무엇을 왜 보류했는지 반드시 남긴다 */
+      var _miss = _snaps.filter(function(sn){ return !sn; }).length;
+      var _hold = extra.map(function(x){ return { id:x.id, c:colOf(x.kind) }; });
+      window.__wlExtra = { n:extra.length, missCol:_miss, at:Date.now(), hold:_hold, sent:0 };
+      if(_miss){
+        console.warn('[불러오기] 못 읽은 컬렉션 ' + _miss + '개 — 되올리기를 건너뜁니다 ('
+          + extra.length + '건이 클라우드에 없는 것처럼 보입니다). 확인: wlSync()');
+      } else if(extra.length > 30){
+        console.warn('[불러오기] 클라우드에 없는 기록 ' + extra.length
+          + '건 — 한꺼번에 올리면 쓰기 줄이 막히므로 보류했습니다. 올리려면 wlSync.push()');
+      } else if(extra.length){
+        window.__wlExtra.sent = extra.length;
+        _hold.forEach(function(h){
+          try{
+            if(window.wlWrite && typeof window.wlWrite.put === 'function'){ window.wlWrite.put(h.id, h.c); return; }
+            var r0 = entries.filter(function(y){ return y && y.id===h.id; })[0];
+            if(!r0) return;
+            var p0 = {}; for(var k0 in r0){ if(k0!=='id') p0[k0]=r0[k0]; }
+            db.collection(h.c).doc(h.id).set(p0)
+              .catch(function(err){ console.warn('[불러오기] 되올리기 실패 ' + h.id, err); });
+          }catch(e){ console.warn('[불러오기] 되올리기 실패 ' + h.id, e); }
+        });
+      }
     }catch(e){ entries=lsLoad(); }
   } else entries=lsLoad();
 }
@@ -17935,11 +17989,16 @@ async function githubUpload(token){
     try{ if(typeof getChosung === 'function') return getChosung(String(s||'')); }catch(e){}
     return String(s||'');
   }
+  /* v210 — 겹자음 펴기는 창구 하나(wlChoSpread)만 쓴다 */
+  function spread(s){
+    try{ if(typeof wlChoSpread === 'function') return wlChoSpread(String(s||'')); }catch(e){}
+    return String(s||'');
+  }
   function hit(opt, q){
     var o = String(opt||''), s = String(q||'').trim();
     if(!s) return true;
     if(o.toLowerCase().indexOf(s.toLowerCase()) >= 0) return true;
-    try{ if(cho(o).indexOf(s) >= 0) return true; }catch(e){}
+    try{ if(cho(o).indexOf(spread(s)) >= 0) return true; }catch(e){}
     return false;
   }
   function ES(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
@@ -18090,8 +18149,16 @@ async function githubUpload(token){
 
     if(q){
       q.addEventListener('compositionstart', function(){ ime = true; });
-      q.addEventListener('compositionend',   function(){ ime = false; draw(); });
-      q.addEventListener('input', function(){ if(!ime) draw(); });   /* 검색창은 그대로 두고 목록만 다시 그린다 */
+      /* v210 — 조합이 끝나면 화면의 글자도 낱자로 펀다 (ㄼ → ㄹㅂ) */
+      function fixQ(){
+        try{
+          if(!q) return;
+          var v = q.value, v2 = spread(v);
+          if(v2 !== v){ q.value = v2; try{ q.setSelectionRange(v2.length, v2.length); }catch(e){} }
+        }catch(e){ console.warn('[고르기] 겹자음 펴기 실패', e); }
+      }
+      q.addEventListener('compositionend',   function(){ ime = false; fixQ(); draw(); });
+      q.addEventListener('input', function(){ draw(); });   /* 검색창은 그대로 두고 목록만 다시 그린다 */
       q.addEventListener('keydown', function(ev){
         if(ev.key === 'Enter'){
           ev.preventDefault();
@@ -18105,9 +18172,18 @@ async function githubUpload(token){
     /* 딴 데를 누르면 조용히 닫는다 (칸이 열린 채 남지 않게) */
     function outside(ev){
       try{
-        if(box.contains(ev.target) || ev.target === sel) return;
+        if(ev.target === sel) return;
+        if(box.contains(ev.target)) return;
+        /* v210 🔴 근본 — 조합 중에 누르면 그 순간 목록이 다시 그려져
+           눌린 단추가 DOM 에서 떨어져 나간다. contains 가 false 가 되어
+           「딴 데 눌렀다」로 잘못 보고 창을 닫아 버렸다
+           → 초성이 남아 있으면 단추가 안 먹던 진짜 원인.
+           그래서 「어디를 눌렀나」를 좌표로 본다. */
+        var r = box.getBoundingClientRect();
+        if(ev.clientX >= r.left && ev.clientX <= r.right &&
+           ev.clientY >= r.top  && ev.clientY <= r.bottom) return;
         giveUp();
-      }catch(e){}
+      }catch(e){ console.warn('[고르기] 바깥 누름 판단 실패', e); }
     }
     setTimeout(function(){
       try{ document.addEventListener('mousedown', outside, true); }catch(e){}
@@ -23048,7 +23124,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v209-0901-1515';
+  var JS_BUILD = 'v213-0902-0934';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -25164,4 +25240,205 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
   };
   console.log('[자재↔입출고] v209 준비됨 — 자재에 입출고 내역 ('
             + (edOn() ? '고치기 가능' : '보기 전용') + ') · 입출고에 [📦 품목 열기]');
+})();
+
+
+/* ═══════════════════════════════════════════════════════════════
+   📤 클라우드 쓰기 창구 하나 (wlWrite)   v213
+   ---------------------------------------------------------------
+   왜 만들었나 — 2026-09-02 콘솔에 이런 것이 떴다.
+     resource-exhausted : Write stream exhausted maximum allowed queued writes
+     Using maximum backoff delay to prevent overloading the backend
+   파이어베이스에 「보낼 쓰기」가 한도까지 쌓여 줄이 막힌 상태다.
+   막히면 그 뒤에 적은 기록도 서버에 못 올라간다.
+
+   그래서 지침 ⑲ 대로 고친다.
+     ① 보낼 것은 대기함(localStorage)에 적는다 — 브라우저를 닫아도 남는다
+     ② 한 번에 몇 건씩만, 쉬어가며 내보낸다 (한꺼번에 쏟지 않는다)
+     ③ 같은 기록은 마지막 값 한 번만 보낸다 (id 만 적어두고 보낼 때 꺼낸다)
+     ④ 실패하면 재시도 횟수를 올려 남긴다 — 조용히 삼키지 않는다 (지침 ㉑)
+     ⑤ 화면에 「📤 미전송 N」 을 띄운다
+
+   진단 :  wlSync()        지금 상태를 표로
+           wlSync.push()   보류해 둔 것을 천천히 올린다
+           wlWrite.now()   보류를 풀고 지금 바로 보낸다
+           wlWrite.q()     대기함 들여다보기
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var LS_Q    = 'wl_write_q';   /* 대기함 — id 와 컬렉션만 적는다 (문서 본문은 안 적는다) */
+  var BURST   = 12;             /* 한 번에 내보내는 최대 건수 */
+  var GAP     = 1500;           /* 다음 묶음까지 쉬는 시간 (ms) */
+  var IDLE    = 20000;          /* 대기함이 남아 있으면 이 간격으로 다시 본다 */
+  var MAX_TRY = 5;              /* 이만큼 실패하면 보류하고 사람에게 알린다 */
+
+  var q = {}, busy = false, timer = null;
+
+  function load(){
+    try{ var m = JSON.parse(localStorage.getItem(LS_Q) || '{}');
+         return (m && typeof m === 'object') ? m : {}; }
+    catch(e){ console.warn('[클라우드 쓰기] 대기함 읽기 실패', e); return {}; }
+  }
+  function save(){
+    try{ localStorage.setItem(LS_Q, JSON.stringify(q)); }
+    catch(e){ console.warn('[클라우드 쓰기] 대기함 저장 실패', e); }
+  }
+  q = load();
+
+  function recOf(id){
+    try{ return (entries || []).filter(function(x){ return x && x.id === id; })[0] || null; }
+    catch(e){ return null; }
+  }
+  function pend(){ return Object.keys(q); }
+  function held(){ return pend().filter(function(id){ return q[id] && q[id].hold; }); }
+  /* v213 — 실패한 것은 뒤로 보낸다. 안 그러면 한 건이 계속 앞자리를 차지해
+     멀쩡한 기록이 뒤로 밀린다 (시뮬레이션에서 실제로 그랬다). */
+  function ready(){
+    return pend().filter(function(id){ return q[id] && !q[id].hold; })
+      .sort(function(a,b){ return ((q[a].n)||0) - ((q[b].n)||0); });
+  }
+
+  /* 보낼 것을 적어 둔다 — 같은 id 를 여러 번 적어도 한 줄이다 */
+  function put(id, col){
+    if(!id) return;
+    var it = q[id] || {};
+    it.c = col || it.c || 'worklog_entries';
+    it.n = 0; it.hold = 0; delete it.e;
+    if(!it.t) it.t = Date.now();
+    q[id] = it;
+    save(); paint();
+    if(!busy) tick();
+  }
+
+  function tick(){
+    if(timer){ clearTimeout(timer); timer = null; }
+    if(busy) return;
+    var ids = ready();
+    if(!ids.length){ paint(); return; }
+    if(!online || !db){ timer = setTimeout(tick, 5000); return; }
+
+    busy = true;
+    var go = ids.slice(0, BURST), left = go.length;
+    function done(){
+      if(--left > 0) return;
+      busy = false; save(); paint();
+      if(ready().length) timer = setTimeout(tick, GAP);
+    }
+    go.forEach(function(id){
+      var rec = recOf(id);
+      if(!rec){ delete q[id]; done(); return; }        /* 지워진 기록은 큐에서 뺀다 */
+      var payload = {};
+      for(var k in rec){ if(k !== 'id') payload[k] = rec[k]; }
+      try{
+        db.collection(q[id].c).doc(id).set(payload)
+          .then(function(){ delete q[id]; done(); })
+          .catch(function(err){
+            var it = q[id];
+            if(it){
+              it.n = (it.n || 0) + 1;
+              it.e = String((err && (err.code || err.message)) || err).slice(0, 60);
+              if(it.n >= MAX_TRY){
+                it.hold = 1;
+                console.warn('[클라우드 쓰기] ' + id + ' — ' + MAX_TRY + '번 실패해서 보류합니다', err);
+              }
+            }
+            done();
+          });
+      }catch(e){ console.warn('[클라우드 쓰기] 보내기 실패 ' + id, e); done(); }
+    });
+  }
+
+  /* 화면 왼쪽 아래에 조용히 알린다 — 있을 때만 보인다 */
+  function paint(){
+    try{
+      var n = pend().length, h = held().length;
+      var el = document.getElementById('wlWriteBadge');
+      if(!n){ if(el && el.parentNode) el.parentNode.removeChild(el); return; }
+      if(!el){
+        if(!document.body) return;
+        el = document.createElement('div');
+        el.id = 'wlWriteBadge';
+        el.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:9998;'
+          + 'background:#fff7e6;border:1.5px solid #fcd34d;border-radius:11px;'
+          + 'padding:7px 12px;font-size:12.5px;font-weight:800;color:#92400e;'
+          + 'font-family:inherit;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.12)';
+        el.title = '아직 클라우드로 못 보낸 기록입니다 — 눌러서 자세히';
+        el.addEventListener('click', function(){
+          try{
+            var s = window.wlSync ? window.wlSync() : null;
+            var msg = '📤 못 보낸 기록 ' + pend().length + '건'
+                    + (held().length ? (' (여러 번 실패해 보류 ' + held().length + '건)') : '')
+                    + ' — 자세한 것은 진단 탭 콘솔에 적어 두었어요';
+            if(typeof toast === 'function') toast(msg, 4500); else console.log(msg, s);
+          }catch(e){ console.warn('[클라우드 쓰기] 배지 누름 실패', e); }
+        });
+        document.body.appendChild(el);
+      }
+      el.textContent = '📤 미전송 ' + n + (h ? (' · 보류 ' + h) : '');
+    }catch(e){ console.warn('[클라우드 쓰기] 배지 실패', e); }
+  }
+
+  /* 주기·탭 복귀·창 포커스 때 대기함을 비운다 (지침 ⑲) */
+  setInterval(function(){ if(pend().length && !busy) tick(); }, IDLE);
+  try{
+    document.addEventListener('visibilitychange', function(){
+      if(!document.hidden && pend().length && !busy) tick();
+    });
+    window.addEventListener('focus', function(){ if(pend().length && !busy) tick(); });
+  }catch(e){ console.warn('[클라우드 쓰기] 복귀 감시 실패', e); }
+
+  window.wlWrite = {
+    put: put,
+    q:   function(){ try{ return JSON.parse(JSON.stringify(q)); }catch(e){ return q; } },
+    now: function(){
+      pend().forEach(function(id){ q[id].hold = 0; q[id].n = 0; });
+      save(); busy = false; tick();
+      return pend().length + '건을 지금 보냅니다';
+    },
+    clear: function(){
+      var n = pend().length; q = {}; save(); paint();
+      return '대기함을 비웠습니다 (' + n + '건) — 기록 자체는 이 기기에 그대로 있습니다';
+    },
+    state: function(){ return { 대기:pend().length, 보류:held().length,
+                                한번에:BURST, 쉬는시간:GAP + 'ms', 연결:(online?'켜짐':'꺼짐') }; }
+  };
+
+  /* ── 🔍 진단 창구 ────────────────────────────────────────── */
+  window.wlSync = function(){
+    var x = window.__wlExtra || null;
+    var byKind = {};
+    try{ (entries || []).forEach(function(e){
+      var k = (e && e.kind) || '(없음)'; byKind[k] = (byKind[k] || 0) + 1; }); }catch(e){}
+    var out = {
+      '이 기기 기록':               (entries || []).length,
+      '보낼 대기 중':               pend().length,
+      '보류 (여러 번 실패)':        held().length,
+      '클라우드에 없어 보이는 것':  x ? x.n : '(아직 안 쟀어요)',
+      '못 읽은 컬렉션':             x ? x.missCol : '-',
+      '열 때 올린 것':              x ? x.sent : '-',
+      '연결':                       online ? '켜짐' : '꺼짐'
+    };
+    try{
+      console.log('%c[저장 상태]', 'font-weight:bold');
+      console.table ? console.table(out) : console.log(out);
+      var errs = {};
+      pend().forEach(function(id){ var e = (q[id] && q[id].e) || '(아직 안 보냄)'; errs[e] = (errs[e] || 0) + 1; });
+      if(Object.keys(errs).length){ console.log('— 실패 사유별'); console.table ? console.table(errs) : console.log(errs); }
+      console.log('— 종류별 기록 수'); console.table ? console.table(byKind) : console.log(byKind);
+      if(x && x.missCol) console.warn('🔴 못 읽은 컬렉션이 있습니다 — 되올리기를 막아 두었습니다. 새로고침 뒤 다시 재보세요.');
+      else if(x && x.n > 30) console.warn('🟡 클라우드에 없는 기록 ' + x.n + '건이 보류 중입니다 — 올리려면 wlSync.push()');
+    }catch(e){ console.warn('[저장 상태] 표 만들기 실패', e); }
+    return out;
+  };
+  window.wlSync.push = function(){
+    var x = window.__wlExtra;
+    if(!x || !x.hold || !x.hold.length) return '올릴 것이 없어요';
+    if(x.missCol) return '🔴 못 읽은 컬렉션이 있어 지금 올리면 위험합니다 — 새로고침 뒤 wlSync() 부터 보세요';
+    x.hold.forEach(function(h){ put(h.id, h.c); });
+    return x.hold.length + '건을 대기함에 넣었어요 — ' + BURST + '건씩 천천히 올라갑니다';
+  };
+
+  if(pend().length) setTimeout(tick, 2500);
+  setTimeout(paint, 1200);
+  console.log('[클라우드 쓰기] v213 준비됨 — 대기 ' + pend().length + '건 · 진단은 wlSync()');
 })();
