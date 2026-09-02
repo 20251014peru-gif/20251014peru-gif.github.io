@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v223-0902-1137';
+window.PERSONAL_BUILD = 'v224-0902-1148';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -885,17 +885,26 @@ window.PERSONAL_BUILD = 'v223-0902-1137';
   var VWS=['card','table','list','board','cal','floor','time','gal'];
   var vw = (function(){ var v=lsGet(LS_VIEW,null); return (VWS.indexOf(v)>=0)?v:'card'; })();
   function vwSet(v){ vw=v; lsSet(LS_VIEW,v); safeRender(); }
+  /* v224 — 달님 : 「여기도 줄여줘」
+     보기 단추 8개가 글자까지 달고 있어 도구줄이 두 줄로 넘쳤다.
+     지금 보고 있는 것만 이름을 보이고 나머지는 그림만 둔다 (마우스를 올리면 이름이 뜬다).
+     🔴 단추 자체는 그대로다 — data-vw 도, 눌렀을 때 하는 일도 안 바뀐다. */
+  function vwBtn(k, ico, name){
+    var on = (vw === k);
+    return '<button type="button" data-vw="'+k+'"'+(on?' class="on"':'')
+         + ' title="'+esc(name)+'">' + ico + (on ? (' ' + esc(name)) : '') + '</button>';
+  }
   function vwBtns(){
     var ptV = (cur==='car') ? 'car' : (curCat!=='전체' ? curCat : '');
     return '<div class="lf-vw">'
-      + '<button type="button" data-vw="card"'+(vw==='card'?' class="on"':'')+'>▦ 카드</button>'
-      + '<button type="button" data-vw="table"'+(vw==='table'?' class="on"':'')+'>☰ 목록</button>'
-      + '<button type="button" data-vw="list"'+(vw==='list'?' class="on"':'')+'>≣ 리스트</button>'
-      + '<button type="button" data-vw="board"'+(vw==='board'?' class="on"':'')+'>▥ 보드</button>'
-      + '<button type="button" data-vw="cal"'+(vw==='cal'?' class="on"':'')+'>📅 달력</button>'
-      + (hasFloors(ptV)? '<button type="button" data-vw="floor"'+(vw==='floor'?' class="on"':'')+'>🏢 층별</button>':'')
-      + '<button type="button" data-vw="time"'+(vw==='time'?' class="on"':'')+'>⏱ 타임라인</button>'
-      + '<button type="button" data-vw="gal"'+(vw==='gal'?' class="on"':'')+'>📸 갤러리</button>'
+      + vwBtn('card','▦','카드')
+      + vwBtn('table','☰','목록')
+      + vwBtn('list','≣','리스트')
+      + vwBtn('board','▥','보드')
+      + vwBtn('cal','📅','달력')
+      + (hasFloors(ptV) ? vwBtn('floor','🏢','층별') : '')
+      + vwBtn('time','⏱','타임라인')
+      + vwBtn('gal','📸','갤러리')
       + '</div>';
   }
 
@@ -3832,6 +3841,8 @@ window.PERSONAL_BUILD = 'v223-0902-1137';
       /* v188 — 달님 : 「노션 보기에는 복사가 없어」
             있기는 있었다(⚙ 도구 안 lfCopyXls). 눈에 보이는 줄에도 하나 둔다.
             누르는 일은 하나 — 아래 doCopyXls() 한 곳에서만 한다. */
+      /* v224 — 달력을 보고 있을 때만 「함께 보기」 접기 단추를 여기 둔다 */
+      +   ((!isPersonal() && vw==='cal') ? (sep + calKindToggle()) : '')
       +   (isPersonal()? '' :
            '<button type="button" class="lf-fx" id="lfCopyXls2"'
            + ' title="지금 걸린 기간의 업무를 엑셀에 붙여넣을 수 있게 복사합니다"'
@@ -4377,12 +4388,36 @@ window.PERSONAL_BUILD = 'v223-0902-1137';
   }
 
   /* 표시: [업무][청소][메모]… 눌러서 켜고 끈다 */
+  /* v224 — 칩 16개가 늘 한 줄을 먹는다. 평소엔 접어 두고 눌렀을 때만 펼친다. */
+  var LS_CALKOPEN='wl_cal_kopen';
+  function kOpen(){ try{ return !!lsGet(LS_CALKOPEN, false); }catch(e){ return false; } }
+  function kOpenSet(v){ lsSet(LS_CALKOPEN, !!v); safeRender(); }
+
+  /* v224 — 펴고 접는 단추. 도구줄(fltBar)과 칩줄이 이 하나를 함께 쓴다.
+     🔴 fltBar 보다 뒤에 있어도 된다 — function 선언이라 먼저 읽힌다(같은 구역). */
+  function calKindToggle(){
+    if(isPersonal()) return '';
+    var on = calKinds(), off = curOff(), open = kOpen();
+    return '<button type="button" class="lf-fx" data-calkopen="1"'
+         + ' title="달력에 다른 종류를 얹어서 함께 봅니다"'
+         + ' style="height:32px;padding:0 11px;font-size:12.5px;font-weight:800'
+         + (on.length ? ';background:#eaf3fd;border-color:#2563a8;color:#2563a8' : '') + '">'
+         + (open ? '\u25BE' : '\u25B8') + ' \uD83D\uDCC5 함께 보기'
+         + (on.length ? ('<b style="margin-left:4px">'+on.length+'</b>') : '')
+         + (off ? '<span style="color:#b52929;margin-left:5px">\u00B7 이 종류 감춤</span>' : '')
+         + '</button>';
+  }
+
   function calKindChips(){
     if(isPersonal()) return '';
+    /* v224 — 접혀 있으면 여기서는 아무것도 안 그린다.
+       접기 단추는 도구줄 안에 있으므로 줄 하나를 통째로 아낀다. */
+    if(!kOpen()) return '';
     var on = calKinds(), curK = (DS && DS.kind) || '', off = curOff();
     var h = '<div class="lf-fb" style="margin-top:8px"><div class="lf-fbwrap">'
           + '<div class="lf-fbmid" style="flex-wrap:wrap;row-gap:6px">'
-          + '<span style="font-size:12px;font-weight:800;color:#8ba0b6">달력에 함께 보기</span>';
+          + calKindToggle()
+          + '<span class="lf-fbsep"></span>';
     DS_ORDER.forEach(function(k){
       var w = WORK_KINDS[k]; if(!w) return;
       var isCur = (k === curK);
@@ -8862,6 +8897,12 @@ window.PERSONAL_BUILD = 'v223-0902-1137';
         }
         PGLIST = [].map.call(host.querySelectorAll('[data-cid]'), function(x){ return x.getAttribute('data-cid'); });
         openPage(b.getAttribute('data-cid')); }); });
+    /* v224 — 「함께 보기」 접기·펴기 */
+    host.querySelectorAll('[data-calkopen]').forEach(function(b){
+      b.addEventListener('click', function(){
+        try{ kOpenSet(!kOpen()); }catch(e){ console.warn('[함께 보기] 펼치기 실패', e); }
+      });
+    });
     /* v216 — 달력 종류 칩 */
     host.querySelectorAll('[data-calk]').forEach(function(b){
       b.addEventListener('click', function(){
