@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v225-0902-1214";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v227-0902-1308";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=225-20260902t1214"></script>
+<script src="worklog.js?v=227-20260902t1308"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -3574,19 +3574,50 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     dbg('tab: '+name);
     if(name==='calendar' && typeof renderCalendar==='function') setTimeout(renderCalendar, 100);
     if(name==='memo') setTimeout(()=>{ if(typeof renderStickyGrid==='function') renderStickyGrid(); }, 100);
-    if(name==='life') setTimeout(()=>{
-      try{ if(typeof window.wlDSReset==='function') window.wlDSReset(); }catch(e){}
-      if(typeof window.wlLifeRender==='function') window.wlLifeRender(); }, 60);
-    if(name==='data') setTimeout(()=>{
+    /* ══ v227 🔴 근본 원인 ══════════════════════════════════════════
+       이 코드는 worklog.html 3300줄쯤에 있고, 노션식 화면을 그리는
+       personal.js 는 20400줄쯤에 있다. 즉 personal.js 는 「나중에」 실린다.
+       그런데 예전에는 0.06초 뒤 딱 한 번만 열어 봤다.
+       personal.js 가 그 안에 도착하지 못한 날(새로고침·느린 인터넷·깃허브
+       페이지가 느릴 때)에는 아무 일도 안 일어나고 화면이 빈 채로 남았다.
+       - 「데이터」 단추를 눌러야 나오던 것도, 어떤 날은 개인 화면이 뜨던 것도
+       모두 같은 원인이다. 오류는 하나도 안 났다.
+       → 준비될 때까지 0.1초마다 다시 본다 (최대 8초). ═══════════════ */
+    function wlOpenPanelSoon(which, tryN){
+      var ready = (which==='data')
+        ? (typeof window.wlOpenData==='function' && typeof window.wlDSCur==='function')
+        : (typeof window.wlLifeRender==='function');
+      if(!ready){
+        if(tryN < 80) setTimeout(function(){ wlOpenPanelSoon(which, tryN+1); }, 100);
+        else console.warn('[화면 준비] personal.js 를 못 기다렸어요 - ' + which);
+        return;
+      }
       try{
-        if(typeof window.wlDSCur!=='function' || !window.wlDSCur() || window.wlDSCur()==='personal'){
-          var last='work';
-          try{ last=String(localStorage.getItem('wl_ds_last')||'work').replace(/^["'\\]+|["'\\]+$/g,'').trim() || 'work'; }catch(e){}
+        if(which==='life'){
+          try{ if(typeof window.wlDSReset==='function') window.wlDSReset(); }catch(e){}
+          window.wlLifeRender();
+          return;
+        }
+        var now = window.wlDSCur();
+        if(!now || now==='personal'){
+          /* v227 - 달님 : 「늘 항상 업무가 나오게」
+             예전에는 마지막에 보던 종류(wl_ds_last)로 열려서, 지출을 한 번 보면
+             다음에 켤 때도 지출이 나왔다. 이제 시작은 늘 🛠 업무다.
+             마지막에 보던 종류로 돌아가려면 콘솔에
+               localStorage.setItem('wl_ds_start','last')
+             다시 업무로 고정하려면  localStorage.removeItem('wl_ds_start') */
+          var last='work', dsMode='';
+          try{ dsMode=String(localStorage.getItem('wl_ds_start')||'').replace(/^["'\\]+|["'\\]+$/g,'').trim(); }catch(e){}
+          if(dsMode==='last'){
+            try{ last=String(localStorage.getItem('wl_ds_last')||'work').replace(/^["'\\]+|["'\\]+$/g,'').trim() || 'work'; }catch(e){}
+          }
           if(!/^[a-z]{2,12}$/.test(last)) last='work';
-          if(typeof window.wlOpenData==='function') window.wlOpenData(last);
+          window.wlOpenData(last);
         } else if(typeof window.wlLifeRender==='function') window.wlLifeRender();
-      }catch(e){ console.error('[데이터탭]',e); }
-    }, 60);
+      }catch(e){ console.error('[데이터탭]', e); }
+    }
+    if(name==='life') setTimeout(function(){ wlOpenPanelSoon('life', 0); }, 60);
+    if(name==='data') setTimeout(function(){ wlOpenPanelSoon('data', 0); }, 60);
     if(name==='main') setTimeout(()=>{ if(typeof v43Refresh==='function') v43Refresh(); }, 50);
     if(name==='expense') setTimeout(()=>{
       if(typeof window.renderExpYmBar==='function') window.renderExpYmBar();
@@ -3892,6 +3923,13 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       const v43tabs=['main','life','data','expense','memo','calendar','filelink','docs','common','indiv','etc','accident','progress','material','password','diag','ai'];
       var saved='';
       try{ saved = String(localStorage.getItem('v43_tab')||'').replace(/^["']+|["']+$/g,''); }catch(e){}
+      /* v226 - 처음 열면 늘 데이터 화면부터.
+         예전처럼 마지막에 보던 화면으로 돌아가려면 아래 한 줄을 콘솔에 넣으면 됩니다.
+           localStorage.setItem('wl_start','last')
+         다시 데이터로 고정하려면  localStorage.removeItem('wl_start') */
+      var startMode='';
+      try{ startMode = String(localStorage.getItem('wl_start')||'').replace(/^["']+|["']+$/g,''); }catch(e){}
+      if(startMode!=='last') saved = 'data';
       if(!saved) saved = 'data';
       const safeTab = (v43tabs.includes(saved) || saved.indexOf('custom_')===0) ? saved : 'data';
       v43ActivateTab(safeTab);
@@ -3905,6 +3943,17 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     if(window._wlInitDone){
       dbg('wlInitDone 감지 - v43 갱신');
       refreshV43();
+      /* v226 🔴 근본 수정 - 예전에는 여기서 「📋 기록」 목록만 다시 그렸다.
+         데이터(노션식) 화면은 기록을 다 읽기 전에 한 번 그려지고 끝이라
+         칸이 빈 채로 남았고, 「데이터」 단추를 눌러야 비로소 나왔다. */
+      try{
+        var _tabNow='';
+        var _on=document.querySelector('.v43-tab.active[data-v43tab]');
+        if(_on) _tabNow=_on.getAttribute('data-v43tab')||'';
+        if(_tabNow==='data' || _tabNow==='life'){
+          if(typeof window.wlLifeRender==='function') window.wlLifeRender();
+        }
+      }catch(e){ console.warn('[시작 화면] 다시 그리기 실패', e); }
     } else if(_initWait++ < 60){
       setTimeout(waitWlInit, 200);
     } else {
@@ -20314,20 +20363,24 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-tv th.s.on{ color:#2563a8; background:#e8f1fb }
 
 /* 목록 필터바 */
-.lf-fb{ display:flex; gap:8px; flex-wrap:nowrap; align-items:center;
+.lf-fb{ display:flex; gap:9px; flex-wrap:nowrap; align-items:center;
   background:#f7fafd; border:1.5px solid #e8f0fa; border-radius:11px;
-  padding:7px 10px; margin-bottom:9px; position:relative }
+  padding:9px 12px; margin-bottom:9px; position:relative }
 /* 가운데는 넘치면 옆으로 민다 — 줄이 늘어나 화면을 잡아먹지 않게 */
-.lf-fbmid{ display:flex; gap:7px; align-items:center; flex:1 1 auto; min-width:0;
+.lf-fbmid{ display:flex; gap:5px; align-items:center; flex:1 1 auto; min-width:0;
   overflow-x:auto; overflow-y:hidden; padding:2px 0; scrollbar-width:none }
 .lf-fbmid::-webkit-scrollbar{ height:0 }
 .lf-fbmid > *{ flex:0 0 auto }
-.lf-fbsep{ width:1px; height:20px; background:#dbe6f4; flex:0 0 auto }
+.lf-fbsep{ width:1px; height:22px; background:#dbe6f4; flex:0 0 auto; margin:0 1px }
 .lf-vchips, .lf-fchips, .lf-rchips{ display:inline-flex; gap:5px; align-items:center; flex:0 0 auto }
-.lf-fb .lf-chip{ height:30px; padding:0 11px; font-size:12px; border-radius:9px }
-.lf-fb select.lf-in{ height:30px; padding:0 6px 0 9px; font-size:12.5px; border-radius:9px;
+.lf-fb .lf-chip{ height:34px; padding:0 10px; font-size:13px; border-radius:9px }
+.lf-fb select.lf-in{ height:34px; padding:0 6px 0 9px; font-size:13px; border-radius:9px;
   width:auto; max-width:190px }
-.lf-fb .lf-fx{ height:30px; padding:0 10px; font-size:12px; border-radius:9px }
+.lf-fb .lf-fx{ height:34px; padding:0 9px; font-size:13px; border-radius:9px }
+/* v226 - ⚙ 도구와 건수는 한 단계 더 크게. 「기록 추가」는 그대로 둔다 */
+.lf-fb .lf-more > #lfMoreBtn{ height:38px; padding:0 14px; font-size:17px; line-height:1 }
+.lf-fb .lf-more > #lfMoreBtn .dot{ font-size:11px; min-width:16px; height:16px; line-height:16px }
+.lf-fb #lfAdd{ font-size:13.5px }
 .lf-fb .lf-fx.on{ border-color:#bcd2ea; color:#2563a8; font-weight:800; background:#eef5fd }
 .lf-fb .lf-ck{ flex:0 0 auto; white-space:nowrap; font-size:12px }
 /* ⚙ 그 밖의 도구 */
@@ -20361,7 +20414,8 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-fx{ height:32px; padding:0 11px; border:1.5px solid #dbe6f4; border-radius:8px;
   background:#fff; color:#7a92a8; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit }
 .lf-fx:hover{ border-color:#2563a8; color:#2563a8 }
-.lf-cnt{ font-size:12px; font-weight:800; color:#5b7794; margin-left:auto; white-space:nowrap }
+.lf-cnt{ font-size:14.5px; font-weight:900; color:#3d6187; margin-left:auto; white-space:nowrap;
+  padding:0 2px 0 4px }
 .lf-sum2 td{ background:#eef5fd; font-weight:900; color:#33567d; padding:9px 11px; font-size:12.5px }
 
 /* 보기 전환 */
@@ -20396,7 +20450,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=225-20260902t1214"></script>
+<script src="personal.js?v=227-20260902t1308"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에

@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v225-0902-1214';
+window.PERSONAL_BUILD = 'v227-0902-1308';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -3858,7 +3858,8 @@ window.PERSONAL_BUILD = 'v225-0902-1214';
            /* v225 — 그림만 둔다. 「기록 추가」가 같은 줄에 들어오게 (마우스를 올리면 이름) */
            + '<button type="button" id="lfVend" class="lf-fx" title="📇 업체 — 업체 하나에 얽힌 모든 것 보기">📇</button>'
            + '<button type="button" id="lfTpl" class="lf-fx" title="📑 템플릿 — 자주 쓰는 기록을 미리 만들어 두기">📑</button>'
-           + '<button type="button" id="lfAdd" class="lf-add" style="height:34px;margin-left:auto">➕ 기록 추가</button>')
+           /* v226 - 오른쪽 끝에 붙어 ⚙ · 건수와 부딪혀서 살짝 안으로 넣었다 */
+           + '<button type="button" id="lfAdd" class="lf-add" style="height:34px;margin-left:auto;margin-right:34px">➕ 기록 추가</button>')
       + '</div></div>'
       + '<div class="lf-more" id="lfMore">'
       +   '<button type="button" class="lf-fx" id="lfMoreBtn" title="그 밖의 도구">⚙'
@@ -8338,6 +8339,10 @@ window.PERSONAL_BUILD = 'v225-0902-1214';
      🔴 차례(DS_ORDER)는 그대로 둔다 — 자리가 바뀌면 손이 헷갈린다. */
   var LS_DSMORE = 'wl_ds_more';
   var DS_TOP_N  = 7;
+  /* v226 - 달님 : 「접었을 때 이 일곱은 늘 보이게」
+     기록 수로 뽑으면 그날그날 자리가 바뀌어 손이 헷갈렸다 - 붙박이로 고정한다.
+     차례는 DS_ORDER 를 따른다. */
+  var DS_KEEP = ['plan','work','site','expense','accident','progress','memo'];
   function dsMore(){ try{ return !!lsGet(LS_DSMORE, false); }catch(e){ return false; } }
   function dsMoreSet(v){ lsSet(LS_DSMORE, !!v); safeRender(); }
   function dsCounts(){
@@ -8353,9 +8358,7 @@ window.PERSONAL_BUILD = 'v225-0902-1214';
     /* 접혀 있을 때 보일 것 고르기 — 기록이 많은 차례로 7개 + 지금 보는 것 */
     var keep = {};
     if(!more){
-      var cnt = dsCounts();
-      DS_ORDER.slice().sort(function(a,b){ return (cnt[b]||0) - (cnt[a]||0); })
-        .slice(0, DS_TOP_N).forEach(function(k){ keep[k] = 1; });
+      DS_KEEP.forEach(function(k){ keep[k] = 1; });
       try{ if(DS && DS.kind) keep[DS.kind] = 1; }catch(e){}
     }
     var hidden = 0;
