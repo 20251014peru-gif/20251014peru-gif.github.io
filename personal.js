@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v224-0902-1148';
+window.PERSONAL_BUILD = 'v225-0902-1214';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -3709,7 +3709,10 @@ window.PERSONAL_BUILD = 'v224-0902-1148';
       +   (ckOn? ';background:#eaf3fd;border-color:#2563a8;color:#2563a8':'')+'"'
       + ' title="눌러서 정기점검 목록 펼치기">'
       + (ckOn?'▾':'▸')+' 🔁 '
-      + (r0? ('<b style="color:#1a2f45">'+esc(r0.t.name)+'</b> <b style="color:'+ddCol(r0.dd)+'">'+ddLab(r0.dd)+'</b>')
+      /* v225 — 이름이 길면 도구줄이 두 줄로 넘친다. 8글자까지만 (전체는 마우스를 올리면) */
+      + (r0? ('<b style="color:#1a2f45" title="'+esc(r0.t.name)+'">'
+              + esc(String(r0.t.name||'').length > 8 ? (String(r0.t.name).slice(0,8)+'…') : r0.t.name)
+              + '</b> <b style="color:'+ddCol(r0.dd)+'">'+ddLab(r0.dd)+'</b>')
            : '<span style="color:#8ba0b6;font-weight:700">정기점검</span>')
       + '</button>';
     h += '<button type="button" class="lf-fx" data-panel="rc"'
@@ -3846,15 +3849,16 @@ window.PERSONAL_BUILD = 'v224-0902-1148';
       +   (isPersonal()? '' :
            '<button type="button" class="lf-fx" id="lfCopyXls2"'
            + ' title="지금 걸린 기간의 업무를 엑셀에 붙여넣을 수 있게 복사합니다"'
-           + ' style="color:#0f7a4a;border-color:#b7e4c7;background:#f0f9f4;font-weight:800">📋 복사</button>')
+           + ' style="color:#0f7a4a;border-color:#b7e4c7;background:#f0f9f4;font-weight:800">📋</button>')
       /* v218 — 달님 : 「세 단추만 남은 줄이 아깝다」
          업무일지에서는 검색줄을 통째로 없애고 이 셋을 여기로 옮겼다.
          🔴 개인일지는 검색칸(lfQ)이 있어 그대로 둔다 — 같은 id 가 둘이면 안 된다 (지침 ⑮). */
       +   (isPersonal()? '' :
            sep
-           + '<button type="button" id="lfVend" class="lf-fx" title="업체 하나에 얽힌 모든 것 보기">📇 업체</button>'
-           + '<button type="button" id="lfTpl" class="lf-fx" title="자주 쓰는 기록을 미리 만들어 두기">📑 템플릿</button>'
-           + '<button type="button" id="lfAdd" class="lf-add" style="height:34px">➕ 기록 추가</button>')
+           /* v225 — 그림만 둔다. 「기록 추가」가 같은 줄에 들어오게 (마우스를 올리면 이름) */
+           + '<button type="button" id="lfVend" class="lf-fx" title="📇 업체 — 업체 하나에 얽힌 모든 것 보기">📇</button>'
+           + '<button type="button" id="lfTpl" class="lf-fx" title="📑 템플릿 — 자주 쓰는 기록을 미리 만들어 두기">📑</button>'
+           + '<button type="button" id="lfAdd" class="lf-add" style="height:34px;margin-left:auto">➕ 기록 추가</button>')
       + '</div></div>'
       + '<div class="lf-more" id="lfMore">'
       +   '<button type="button" class="lf-fx" id="lfMoreBtn" title="그 밖의 도구">⚙'
@@ -4024,7 +4028,8 @@ window.PERSONAL_BUILD = 'v224-0902-1148';
     var siName = si ? (({status:'상태',expType:'종류',stockType:'입고/출고',dir:'통화 구분',
                          vtype:'휴가 종류',dtype:'전달 종류',scheduleType:'반복',
                          field:'분야',category:'분류'})[si.k] || '상태') : '';
-    return '<select id="lfGrp" class="lf-in" style="height:32px;font-size:12.5px" title="어떤 기준으로 갈라서 볼지">'
+    /* v225 — 폭이 넓어 「기록 추가」가 다음 줄로 밀렸다. 최대 폭을 정한다. */
+    return '<select id="lfGrp" class="lf-in" style="height:32px;font-size:12.5px;max-width:150px" title="어떤 기준으로 갈라서 볼지">'
       + '<option value=""'+(grp===''?' selected':'')+'>'
         + (si? ('\u2728 '+siName+'별로 묶기 (기본)') : '\uD83D\uDCC5 월별로 묶기 (기본)') + '</option>'
       + '<option value="_none"'+(grp==='_none'?' selected':'')+'>\uD83D\uDEAB 묶지 않기 — 최신순으로 쭉</option>'
@@ -8328,17 +8333,47 @@ window.PERSONAL_BUILD = 'v224-0902-1148';
 
   /* v168 — 맨 앞에 「🏠 개인」 을 넣었다.
      윗줄(기록·개인·데이터…)을 없애도 이 줄 하나로 개인 ↔ 업무를 오갈 수 있다. */
+  /* v225 — 달님 : 「종류 칩 16개가 두 줄을 먹는다」
+     기록이 많은 종류 7개 + 지금 보고 있는 것만 보이고, 나머지는 「⋯」 로 접는다.
+     🔴 차례(DS_ORDER)는 그대로 둔다 — 자리가 바뀌면 손이 헷갈린다. */
+  var LS_DSMORE = 'wl_ds_more';
+  var DS_TOP_N  = 7;
+  function dsMore(){ try{ return !!lsGet(LS_DSMORE, false); }catch(e){ return false; } }
+  function dsMoreSet(v){ lsSet(LS_DSMORE, !!v); safeRender(); }
+  function dsCounts(){
+    var c = {};
+    try{ (entries||[]).forEach(function(e){ if(e && e.kind) c[e.kind] = (c[e.kind]||0) + 1; }); }
+    catch(e){ console.warn('[종류 칩] 세기 실패', e); }
+    return c;
+  }
+
   function dsChips(){
     var cw = (typeof WORK_KINDS==='object') ? WORK_KINDS : {};
+    var more = dsMore();
+    /* 접혀 있을 때 보일 것 고르기 — 기록이 많은 차례로 7개 + 지금 보는 것 */
+    var keep = {};
+    if(!more){
+      var cnt = dsCounts();
+      DS_ORDER.slice().sort(function(a,b){ return (cnt[b]||0) - (cnt[a]||0); })
+        .slice(0, DS_TOP_N).forEach(function(k){ keep[k] = 1; });
+      try{ if(DS && DS.kind) keep[DS.kind] = 1; }catch(e){}
+    }
+    var hidden = 0;
     var h = '<div class="lf-tabs lf-dstabs" style="margin-bottom:10px">';
     h += '<button type="button" class="lf-tab'+(isPersonal()?' on':'')+'" data-dsk="personal"'
        + ' title="개인일지 — 업무일지와 따로 저장됩니다">🏠 개인</button>'
        + '<span style="display:inline-block;width:1px;height:22px;background:#dbe6f4;margin:0 6px;vertical-align:middle"></span>';
     DS_ORDER.forEach(function(k){
       var m = cw[k]; if(!m) return;
+      if(!more && !keep[k]){ hidden++; return; }
       var on = (DS && DS.key==='work:'+k);
       h += '<button type="button" class="lf-tab'+(on?' on':'')+'" data-dsk="'+k+'">'+m.i+' '+m.n+'</button>';
     });
+    if(more || hidden){
+      h += '<button type="button" class="lf-tab" data-dsmore="1"'
+         + ' title="' + (more ? '자주 쓰는 것만 보기' : '나머지 종류도 보기') + '"'
+         + ' style="color:#8ba0b6">' + (more ? '\u25B4 접기' : ('\u22EF ' + hidden + '개 더')) + '</button>';
+    }
     h += '</div>';
     return h;
   }
@@ -8897,6 +8932,12 @@ window.PERSONAL_BUILD = 'v224-0902-1148';
         }
         PGLIST = [].map.call(host.querySelectorAll('[data-cid]'), function(x){ return x.getAttribute('data-cid'); });
         openPage(b.getAttribute('data-cid')); }); });
+    /* v225 — 종류 칩 ⋯ 더보기 */
+    host.querySelectorAll('[data-dsmore]').forEach(function(b){
+      b.addEventListener('click', function(){
+        try{ dsMoreSet(!dsMore()); }catch(e){ console.warn('[종류 칩] 펼치기 실패', e); }
+      });
+    });
     /* v224 — 「함께 보기」 접기·펴기 */
     host.querySelectorAll('[data-calkopen]').forEach(function(b){
       b.addEventListener('click', function(){

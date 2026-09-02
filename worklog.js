@@ -18555,7 +18555,7 @@ async function githubUpload(token){
     var mo = new MutationObserver(function(){ addBtn(); });
     mo.observe(document.body || document.documentElement, { childList:true, subtree:true });
   }catch(e){ console.warn('[링크] 감시 실패', e); }
-  setInterval(addBtn, 1200);
+  setInterval(function(){ if(document.hidden) return; addBtn(); }, 2500);   /* v225 */
 
   window.wlOneTab = {
     on:   function(){ setOn(true);  return '데이터 탭으로 모읍니다'; },
@@ -23216,8 +23216,8 @@ async function githubUpload(token){
   }
   try{
     new MutationObserver(watch).observe(document.body, { childList:true });
-  }catch(e){ setInterval(watch, 700); }
-  setInterval(watch, 1200);   /* 그물 — 관찰자가 놓쳐도 1.2초 안에 붙는다 */
+  }catch(e){ setInterval(function(){ if(document.hidden) return; watch(); }, 2500); }
+  setInterval(function(){ if(document.hidden) return; watch(); }, 2500);   /* 그물 — 관찰자가 놓쳐도 1.2초 안에 붙는다 */
 
   window.wlCardScan = {
     on:  function(){ try{ localStorage.setItem(LS,'1'); }catch(e){} watch();
@@ -23255,7 +23255,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v224-0902-1148';
+  var JS_BUILD = 'v225-0902-1214';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
