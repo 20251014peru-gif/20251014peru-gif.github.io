@@ -1479,3 +1479,16 @@ tr.settle-add:hover .settle-addhint{ color:#3f7cb8; font-weight:800 }
 .ei-cols .ei-sec{ min-width:0; background:#fbfdff; border:1px solid #eef4fb;
   border-radius:9px; padding:8px 9px }
 .ei-cols .ei-sec table{ width:100% }
+
+/* v246 — 휴대폰(640px 이하) 기록 목록 도구줄(.lf-fb) 2줄 배치
+   원인: 오른쪽 「➕ 기록 추가 · ⚙ · 건수」 가 flex:0 0 auto 라 322px 중 228px 를 먼저 먹고,
+         가운데 칩 칸(.lf-fbmid, 인라인 flex-wrap:wrap)이 94px 기둥으로 세로로 쌓였다.
+   해결: 도구줄을 줄바꿈 허용 → 1줄 = 칩 전체 폭(자동 줄바꿈) / 2줄 = 기록 추가 · ⚙ · 건수
+   ※ HTML 20701행 .lf-fbwrap{flex:1 1 auto} 가 뒤에 로드되므로 .lf-fb > 로 우선순위를 올렸다 */
+@media (max-width:640px){
+  .lf-fb{ flex-wrap:wrap !important; row-gap:6px }
+  .lf-fb > .lf-fbwrap{ flex:1 1 100% !important; min-width:0 }
+  .lf-fb > .lf-fbwrap::after{ display:none }            /* 넘침 그림자 — 줄바꿈이면 필요 없다 */
+  .lf-fb > #lfAdd{ flex:1 1 auto !important; min-height:40px }
+  .lf-fb > .lf-cnt{ margin-left:auto }
+}
