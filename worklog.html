@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v213-0902-0934";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v215-0902-1010";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=213-20260902t0934"></script>
+<script src="worklog.js?v=215-20260902t1010"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -19604,7 +19604,8 @@ select.lf-in{ padding-right:8px }
       대신 아래 .lf-note 가 늘 자리를 차지해 모든 카드가 같은 차례로 보인다. */
 .lf-card:hover{ border-color:#bcd2ea; box-shadow:0 3px 12px rgba(63,124,184,.13); transform:translateY(-1px) }
 .lf-t{ font-size:14.5px; font-weight:800; color:#1a2f45; padding-right:26px;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; line-height:1.35 }
 .lf-m{ font-size:12px; color:#8ba0b6; margin-top:5px; display:flex; gap:7px; flex-wrap:wrap; align-items:center }
 .lf-tag{ display:inline-block; padding:1.5px 7px; border-radius:7px; font-size:11px; font-weight:800; line-height:1.55 }
 .lf-money{ font-size:13.5px; font-weight:900; color:#0f7a4a; margin-top:6px }
@@ -20322,7 +20323,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=213-20260902t0934"></script>
+<script src="personal.js?v=215-20260902t1010"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에

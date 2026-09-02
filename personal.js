@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v213-0902-0934';
+window.PERSONAL_BUILD = 'v215-0902-1010';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -358,6 +358,30 @@ window.PERSONAL_BUILD = 'v213-0902-0934';
   /* ══════ 카드 ══════ */
   function stars(n){ n=parseInt(n,10)||0; return n? '★'.repeat(n)+'☆'.repeat(5-n) : ''; }
 
+  /* ══ v214 — 제목 앞에 [대상년도][대상월][해당층] ══════════════
+     달님 : 「제목 앞에 대상년도 대상월 해당층 순으로, 셀에 데이터가 있으면 나오게」
+     🔴 저장된 제목은 건드리지 않는다 — 보이기만 한다 (제0원칙-13).
+     카드·달력·목록이 모두 이 창구 하나만 쓴다 → 한 곳만 고치면 전부 따라온다. */
+  function wlTitlePfx(e){
+    try{
+      if(!e) return '';
+      var out=[];
+      var y=String(e.refYear==null?'':e.refYear).trim();
+      var m=String(e.refMonth==null?'':e.refMonth).trim();
+      var f=String(e.floor==null?'':e.floor).trim();
+      if(y) out.push(/년$/.test(y) ? y : (y+'년'));
+      if(m) out.push(/월$/.test(m) ? m : (m+'월'));
+      if(f) out.push(f);
+      return out.join(' ');
+    }catch(err){ console.warn('[제목 앞머리] 실패', err); return ''; }
+  }
+  window.wlTitlePfx = wlTitlePfx;
+  /* 화면에 붙일 모양 — 제목보다 옅게 해서 제목이 묻히지 않게 */
+  function pfxHTML(e){
+    var t = wlTitlePfx(e);
+    return t ? ('<span style="color:#6b86a3;font-weight:700;font-size:.86em">' + esc(t) + '</span> ') : '';
+  }
+
   function card(e){
     var pty = DS.ptypeOf(e);
     var d = (isPersonal() && pty==='car') ? {i:'🚗',n:'차계부',c:carColor(e.car)} : (cats()[pty]||catEtc());
@@ -408,12 +432,15 @@ window.PERSONAL_BUILD = 'v213-0902-0934';
       }else{
         tags = '<span class="lf-tag" style="background:'+col+'1f;color:'+col+'">'+d.i+' '+d.n+'</span>';
       }
-      tags += statTag(e, pty);                         /* 상태·구분을 한눈에 */
+      /* v214 — 달님 : 「95% 이상이 완료다」
+         완료는 굳이 안 적는다. 아직 안 끝난 것만 눈에 띄게 (미완료·진행중…). */
+      try{ if(String(statVal(e, pty)||'') !== '완료') tags += statTag(e, pty); }
+      catch(_st){ tags += statTag(e, pty); }                         /* 상태·구분을 한눈에 */
       if(pty==='plan' && Number(e.carryN)>0 && statVal(e,'plan')!=='완료')
         tags += '<span class="lf-tag" style="background:#fef3c7;color:#92400e">⏭ '+Number(e.carryN)+'일째</span>';
       var vd = (typeof vendorOf==='function') ? vendorOf(e) : '';
       if(vd) tags += '<span class="lf-tag" style="background:#eaf1fb;color:#2563a8">'+esc(String(vd).slice(0,14))+'</span>';
-      if(e.floor) tags += '<span class="lf-tag" style="background:#f1f5f9;color:#475569">'+esc(e.floor)+'</span>';
+      /* v214 — 해당층은 제목 앞으로 옮겼다 (pfxHTML) */
       if(e.ptype2) tags += '<span class="lf-tag" style="background:#f1f5f9;color:#475569">'+esc(e.ptype2)+'</span>';
       if(e.rating) tags += '<span style="color:#f4b942;font-weight:800">'+stars(e.rating)+'</span>';
       if(pty==='book' && num(e.totalpg)) tags += '<span class="lf-tag" style="background:#ede9fe;color:#5b21b6">'
@@ -469,11 +496,11 @@ window.PERSONAL_BUILD = 'v213-0902-0934';
               ② 날짜가 없는 종류(🌐 사이트·📦 자재…)도 「📅 」 만 찍혀 자리를 먹었다.
             ▶ 이제 모든 카드가 **제목 / 배지 줄 / 내용 두 줄 자리** 로 똑같이 생긴다.
                내용이 없어도 자리는 지킨다 (.lf-note 의 min-height). */
-      + '<div class="lf-t">'+esc(ttl)+'</div>'
-      + '<div class="lf-m">'
-      +   (e.date ? '<span style="font-weight:700">📅 '+esc(e.date)+'</span>' : '')
-      +   tags
-      + '</div>'
+      + '<div class="lf-t">'+pfxHTML(e)+esc(ttl)+'</div>'
+      /* v214 — 달님 : 「카드 가운데 줄 없애줘, 제목과 내용이 나오게」
+         날짜는 위의 묶음 이름표에 이미 있고, 층은 제목 앞으로, 완료는 안 적는다.
+         그래서 대개 이 줄이 통째로 사라진다. 남을 것이 있을 때만 그린다. */
+      + (tags ? ('<div class="lf-m">' + tags + '</div>') : '')
       + (mo? '<div class="lf-money">💰 '+won(mo)+'원</div>':'')
       + '<div class="lf-note">'+(note? esc(note):'')+'</div>'
       + ph
@@ -4247,7 +4274,7 @@ window.PERSONAL_BUILD = 'v213-0902-0934';
             var ch=colorHit(e,pt);
             return '<div class="ev" data-cid="'+esc(e.id)+'" style="border-left-color:'+dd.c
               + (ch? ';background:'+colorOf(ch.color).bg:'') + '" title="'+esc(e.title||'')+'">'
-              + esc(String(pget(e,'_title')||'')) + '</div>'; }).join('')
+              + pfxHTML(e) + esc(String(pget(e,'_title')||'')) + '</div>'; }).join('')
         + (list.length>1? '<div class="more">'+list.length+'건</div>':'')
         + '</div>';
     }

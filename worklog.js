@@ -5025,10 +5025,39 @@ var calY, calM, selDay=null;
 var calMode="work";   // "work" or "schedule"
 var calView="month";  // "month" or "year"
 // v37: 달력 종류별 필터 (true=표시)
+/* v215 — 달님 : 「평상시는 업무 목록만 나오게」
+   기본은 업무만 켜 둔다. 고른 것은 기억해서 다음에 열 때도 그대로 (wl_cal_filter). */
 const CAL_FILTER = {
-  work:true, cleaning:true, cleaning_lead:true, memo:true, call:true, meeting:true,
-  deliver:true, vacation:true, expense:true, expense_tax:true, expense_personal:true, expense_voucher:true, plan:true, schedule:true
+  work:true, cleaning:false, cleaning_lead:false, memo:false, call:false, meeting:false,
+  deliver:false, vacation:false, expense:false, expense_tax:false, expense_personal:false,
+  expense_voucher:false, plan:false, schedule:false
 };
+(function(){
+  try{
+    var raw = localStorage.getItem('wl_cal_filter');
+    if(!raw) return;
+    var m = JSON.parse(raw);
+    if(!m || typeof m !== 'object') return;
+    Object.keys(CAL_FILTER).forEach(function(k){
+      if(typeof m[k] === 'boolean') CAL_FILTER[k] = m[k];
+    });
+  }catch(e){ console.warn('[달력 필터] 기억한 값을 못 읽었어요', e); }
+})();
+function calFilterSave(){
+  try{ localStorage.setItem('wl_cal_filter', JSON.stringify(CAL_FILTER)); }
+  catch(e){ console.warn('[달력 필터] 저장 실패', e); }
+}
+/* v215 — 제목 앞머리는 창구 하나(wlTitlePfx)로. 카드·노션식 달력과 같은 규칙이다.
+   창구를 못 찾으면 예전처럼 층만 붙인다 (안전한 되돌림). */
+function calPfx(e){
+  try{
+    if(typeof window.wlTitlePfx === 'function'){
+      var t = window.wlTitlePfx(e);
+      return t ? (t + ' ') : '';
+    }
+  }catch(err){ console.warn('[달력] 제목 앞머리 실패', err); }
+  return (e && e.floor) ? (e.floor + ' ') : '';
+}
 (function(){ const d=new Date(); calY=d.getFullYear(); calM=d.getMonth(); })();
 function bindCalControls(){
   // 한 번만 바인딩
@@ -5067,24 +5096,29 @@ function bindCalControls(){
   // v37: 달력 종류별 필터 단추
   const filterWrap = $("calFilter");
   if(filterWrap){
+    /* v215 — 지금 켜진 것에 맞춰 단추 불을 다시 그린다.
+       HTML 에 active 가 박혀 있어서, 이걸 안 하면 「전부 켜진 것처럼」 보인다. */
+    function calFilterPaint(){
+      try{
+        var allOn = Object.keys(CAL_FILTER).every(function(x){ return CAL_FILTER[x]; });
+        filterWrap.querySelectorAll("button[data-calf]").forEach(function(btn){
+          var k = btn.dataset.calf;
+          btn.classList.toggle("active", (k === "all") ? allOn : !!CAL_FILTER[k]);
+        });
+      }catch(e){ console.warn('[달력 필터] 단추 그리기 실패', e); }
+    }
+    calFilterPaint();
     filterWrap.querySelectorAll("button[data-calf]").forEach(b=>{
       b.addEventListener("click",()=>{
         const k = b.dataset.calf;
         if(k==="all"){
-          // 전체 토글: 모두 켜있으면 모두 끄기, 아니면 모두 켜기
           const allOn = Object.values(CAL_FILTER).every(v=>v);
           Object.keys(CAL_FILTER).forEach(key=>{ CAL_FILTER[key] = !allOn; });
-          filterWrap.querySelectorAll("button[data-calf]").forEach(btn=>{
-            btn.classList.toggle("active", !allOn);
-          });
         } else {
           CAL_FILTER[k] = !CAL_FILTER[k];
-          b.classList.toggle("active", CAL_FILTER[k]);
-          // "전체" 단추 상태 갱신
-          const allOn = Object.keys(CAL_FILTER).every(key=>CAL_FILTER[key]);
-          const allBtn = filterWrap.querySelector('button[data-calf="all"]');
-          if(allBtn) allBtn.classList.toggle("active", allOn);
         }
+        calFilterPaint();
+        calFilterSave();
         renderCalendar();
       });
     });
@@ -5165,12 +5199,12 @@ function renderMonthView(){
       // v37: 필터 적용
       if(wArr.length && CAL_FILTER.work){
         hasContent=true;
-        let b=""; wArr.forEach(en=> b+=`<div class="wtitle" data-kind="work" data-id="${en.id}"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
+        let b=""; wArr.forEach(en=> b+=`<div class="wtitle" data-kind="work" data-id="${en.id}"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc((calPfx(en)+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:${CAL_KIND_COLOR.work}">${CAL_KIND_LABEL.work} ${wArr.length}</div>${b}</div>`;
       }
       if(wLeadArr.length && CAL_FILTER.cleaning_lead){
         hasContent=true;
-        let lb=""; wLeadArr.forEach(en=> lb+=`<div class="wtitle" data-kind="work" data-id="${en.id}"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
+        let lb=""; wLeadArr.forEach(en=> lb+=`<div class="wtitle" data-kind="work" data-id="${en.id}"><span class="d" style="background:${statusColor(en.status)}"></span><span class="wt">${esc((calPfx(en)+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</span></div>`);
         inner+=`<div class="cgrp"><div class="cgrp-h" style="color:#1f7a3a">🧹 청소반장 ${wLeadArr.length}</div>${lb}</div>`;
       }
       if(clArr.length && CAL_FILTER.cleaning){
@@ -5456,7 +5490,7 @@ function buildCalendarPrint(){
       const dnum=Number(ds.split("-")[2]);
       let inner=`<div class="pd">${dnum}</div>`;
       const wA=work[ds]||[], oA=other[ds]||[];
-      if(wA.length){ inner+=`<div class="pgh" style="color:${CAL_KIND_COLOR.work}">${CAL_KIND_LABEL.work}</div>`; wA.forEach(en=> inner+=`<div class="pw"><b style="color:${statusHex(en.status)}">●</b> ${esc(((en.floor?en.floor+" ":"")+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</div>`); }
+      if(wA.length){ inner+=`<div class="pgh" style="color:${CAL_KIND_COLOR.work}">${CAL_KIND_LABEL.work}</div>`; wA.forEach(en=> inner+=`<div class="pw"><b style="color:${statusHex(en.status)}">●</b> ${esc((calPfx(en)+(en.loc?en.loc+" ":"")+(en.title||"")).trim())}</div>`); }
       if(vac[ds]) inner+=`<div class="pgh" style="color:${CAL_KIND_COLOR.vacation}">${CAL_KIND_LABEL.vacation}</div><div class="pv">${esc(vac[ds].join(", "))}</div>`;
       OTHER_ORDER.forEach(k=>{ const arr=oA.filter(o=>o.kind===k); if(!arr.length) return; inner+=`<div class="pgh" style="color:${CAL_KIND_COLOR[k]}">${CAL_KIND_LABEL[k]}</div>`+arr.map(o=>`<div class="po">${esc(otherText(o))}</div>`).join(""); });
       h+=`<td class="${c===0?"sun":""}">${inner}</td>`;
@@ -23124,7 +23158,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v213-0902-0934';
+  var JS_BUILD = 'v215-0902-1010';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
