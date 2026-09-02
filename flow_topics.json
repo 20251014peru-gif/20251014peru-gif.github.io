@@ -1,14 +1,16 @@
 {
- "updated_at": "2026-09-02T08:39:46.657484+09:00",
+ "updated_at": "2026-09-02T14:12:53.646459+09:00",
  "topics": [
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 27,
+   "video_count": 26,
    "channel_count": 9,
-   "total_views": 3240221,
-   "latest": "2026-09-02T08:23:46+09:00",
+   "total_views": 3156988,
+   "latest": "2026-09-02T12:00:10+09:00",
    "video_ids": [
+    "H3h2EYg3ZUA",
+    "SKLgnlPLbDw",
     "YdUBDzCmDgk",
     "4Sk1_SjTaSE",
     "7MTukCB3xFU",
@@ -32,10 +34,7 @@
     "OXkPtyRAgfE",
     "9j-X675h9G8",
     "SmiVLG7yVFc",
-    "Y40KXqsXw_s",
-    "N_9NeH8bXbc",
-    "6sBiYbUWT68",
-    "wBuHNGPaybY"
+    "Y40KXqsXw_s"
    ],
    "channels": [
     "815머니톡",
@@ -55,7 +54,7 @@
    "name": "AI·엔비디아",
    "video_count": 10,
    "channel_count": 8,
-   "total_views": 1914396,
+   "total_views": 2244152,
    "latest": "2026-09-02T08:23:46+09:00",
    "video_ids": [
     "YdUBDzCmDgk",
@@ -84,11 +83,14 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 19,
+   "video_count": 18,
    "channel_count": 7,
-   "total_views": 3256770,
-   "latest": "2026-09-02T08:22:03+09:00",
+   "total_views": 3301315,
+   "latest": "2026-09-02T11:47:58+09:00",
    "video_ids": [
+    "-T1hdNfgil4",
+    "va7oWpKpFQE",
+    "cxjexH-75gc",
     "4Sk1_SjTaSE",
     "Et_WGedzSkQ",
     "5er-l6hPSH4",
@@ -99,15 +101,11 @@
     "YnOjUcYtqOg",
     "5gRibV_pxbM",
     "Fy_S9mRrsek",
-    "35lrcnrMoWk",
-    "BbWvX9KF8AM",
     "qDYduD2_nfw",
     "qXuK203LR5Y",
     "4u3VzpSKE1g",
     "YUHKB8Zvz7s",
-    "wW29eioaXas",
-    "4aaPQmk8cFo",
-    "U8XeMAGzLgM"
+    "4aaPQmk8cFo"
    ],
    "channels": [
     "815머니톡",
@@ -123,9 +121,9 @@
   {
    "id": "국내증시",
    "name": "국내증시",
-   "video_count": 11,
+   "video_count": 8,
    "channel_count": 7,
-   "total_views": 1612214,
+   "total_views": 1116485,
    "latest": "2026-09-01T19:30:31+09:00",
    "video_ids": [
     "Efg-yd9ViGU",
@@ -133,12 +131,9 @@
     "a4BfrCSGItE",
     "VJkCsHr-_7Y",
     "e6auiZe0_Cw",
-    "erSGwX9Ml_g",
     "zMSP2y32po8",
     "4aaPQmk8cFo",
-    "IEZvIsMP3uk",
-    "kVJuOEM1wn0",
-    "U8XeMAGzLgM"
+    "IEZvIsMP3uk"
    ],
    "channels": [
     "815머니톡",
@@ -154,11 +149,14 @@
   {
    "id": "유가_에너지",
    "name": "유가·에너지",
-   "video_count": 9,
+   "video_count": 11,
    "channel_count": 6,
-   "total_views": 1016972,
-   "latest": "2026-09-02T06:59:20+09:00",
+   "total_views": 1774469,
+   "latest": "2026-09-02T12:26:44+09:00",
    "video_ids": [
+    "Q-qlewsoq1s",
+    "-T1hdNfgil4",
+    "cxjexH-75gc",
     "5er-l6hPSH4",
     "KaWe-AkBwMc",
     "z7dEmNQX-so",
@@ -166,7 +164,6 @@
     "YnOjUcYtqOg",
     "Fy_S9mRrsek",
     "Go37CJQstpw",
-    "BbWvX9KF8AM",
     "KQFuipyqjsI"
    ],
    "channels": [
@@ -182,11 +179,12 @@
   {
    "id": "환율_달러",
    "name": "환율·달러",
-   "video_count": 5,
+   "video_count": 6,
    "channel_count": 5,
-   "total_views": 1317810,
-   "latest": "2026-09-02T08:22:03+09:00",
+   "total_views": 1909457,
+   "latest": "2026-09-02T12:26:44+09:00",
    "video_ids": [
+    "Q-qlewsoq1s",
     "4Sk1_SjTaSE",
     "zrpQ5CKwJFI",
     "jH8q_3kaTlc",
@@ -203,11 +201,34 @@
    "active": true
   },
   {
+   "id": "미국증시",
+   "name": "미국증시",
+   "video_count": 6,
+   "channel_count": 4,
+   "total_views": 1667079,
+   "latest": "2026-09-02T12:26:44+09:00",
+   "video_ids": [
+    "Q-qlewsoq1s",
+    "cxjexH-75gc",
+    "YdUBDzCmDgk",
+    "61xqX5MAu1o",
+    "XhOcnyM84nM",
+    "QqHABa3v1Vc"
+   ],
+   "channels": [
+    "815머니톡",
+    "미주은 (미국주식으로 은퇴하기)",
+    "삼프로TV 3PROTV",
+    "증시각도기TV"
+   ],
+   "active": true
+  },
+  {
    "id": "정책_정치",
    "name": "정책·정치",
    "video_count": 6,
    "channel_count": 4,
-   "total_views": 632572,
+   "total_views": 678372,
    "latest": "2026-09-01T21:25:38+09:00",
    "video_ids": [
     "125xb3bWv8w",
@@ -226,57 +247,14 @@
    "active": true
   },
   {
-   "id": "미국증시",
-   "name": "미국증시",
-   "video_count": 5,
-   "channel_count": 4,
-   "total_views": 1081023,
-   "latest": "2026-09-02T08:23:46+09:00",
-   "video_ids": [
-    "YdUBDzCmDgk",
-    "61xqX5MAu1o",
-    "XhOcnyM84nM",
-    "QqHABa3v1Vc",
-    "U8XeMAGzLgM"
-   ],
-   "channels": [
-    "815머니톡",
-    "미주은 (미국주식으로 은퇴하기)",
-    "삼프로TV 3PROTV",
-    "증시각도기TV"
-   ],
-   "active": true
-  },
-  {
-   "id": "2차전지",
-   "name": "2차전지",
-   "video_count": 5,
-   "channel_count": 4,
-   "total_views": 1032238,
-   "latest": "2026-09-01T16:00:33+09:00",
-   "video_ids": [
-    "e6auiZe0_Cw",
-    "2bAYZLfmsBQ",
-    "YUHKB8Zvz7s",
-    "SmiVLG7yVFc",
-    "N_9NeH8bXbc"
-   ],
-   "channels": [
-    "815머니톡",
-    "달란트투자",
-    "삼프로TV 3PROTV",
-    "증시각도기TV"
-   ],
-   "active": false
-  },
-  {
    "id": "관세_무역",
    "name": "관세·무역",
-   "video_count": 4,
+   "video_count": 5,
    "channel_count": 4,
-   "total_views": 1486295,
-   "latest": "2026-09-01T20:08:14+09:00",
+   "total_views": 1669262,
+   "latest": "2026-09-02T12:00:10+09:00",
    "video_ids": [
+    "H3h2EYg3ZUA",
     "JyNtbsaPGuI",
     "Bs6kd5bCOcI",
     "XXpW-QNHcCk",
@@ -291,11 +269,52 @@
    "active": false
   },
   {
+   "id": "2차전지",
+   "name": "2차전지",
+   "video_count": 4,
+   "channel_count": 4,
+   "total_views": 950098,
+   "latest": "2026-09-01T16:00:33+09:00",
+   "video_ids": [
+    "e6auiZe0_Cw",
+    "2bAYZLfmsBQ",
+    "YUHKB8Zvz7s",
+    "SmiVLG7yVFc"
+   ],
+   "channels": [
+    "815머니톡",
+    "달란트투자",
+    "삼프로TV 3PROTV",
+    "증시각도기TV"
+   ],
+   "active": false
+  },
+  {
+   "id": "실적시즌",
+   "name": "실적시즌",
+   "video_count": 4,
+   "channel_count": 3,
+   "total_views": 1541613,
+   "latest": "2026-09-02T12:00:10+09:00",
+   "video_ids": [
+    "H3h2EYg3ZUA",
+    "u6eM9asOsvM",
+    "cIF6D-U-dLc",
+    "4u3VzpSKE1g"
+   ],
+   "channels": [
+    "815머니톡",
+    "삼프로TV 3PROTV",
+    "슈카월드"
+   ],
+   "active": false
+  },
+  {
    "id": "채권_크레딧",
    "name": "채권·크레딧",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 185421,
+   "total_views": 388438,
    "latest": "2026-09-02T06:59:20+09:00",
    "video_ids": [
     "5er-l6hPSH4",
@@ -310,38 +329,20 @@
    "active": false
   },
   {
-   "id": "실적시즌",
-   "name": "실적시즌",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 1528430,
-   "latest": "2026-09-01T14:30:19+09:00",
-   "video_ids": [
-    "cIF6D-U-dLc",
-    "4u3VzpSKE1g",
-    "wW29eioaXas"
-   ],
-   "channels": [
-    "815머니톡",
-    "삼프로TV 3PROTV",
-    "슈카월드"
-   ],
-   "active": false
-  },
-  {
    "id": "배당_ETF",
    "name": "배당·ETF",
-   "video_count": 6,
+   "video_count": 7,
    "channel_count": 2,
-   "total_views": 373885,
-   "latest": "2026-09-01T19:00:25+09:00",
+   "total_views": 395890,
+   "latest": "2026-09-02T11:17:51+09:00",
    "video_ids": [
+    "fgkCI4e7qjs",
+    "5vDEOJzBNp0",
     "DewQdru2tQ8",
     "OsrIrn8GPoY",
     "TJPd_zqS4mI",
     "h_uoLvoKfZI",
-    "kBhKFXmLGpQ",
-    "Xhxw9ZKceIg"
+    "kBhKFXmLGpQ"
    ],
    "channels": [
     "체슬리TV (박세익)",
@@ -350,11 +351,31 @@
    "active": false
   },
   {
+   "id": "코인",
+   "name": "코인",
+   "video_count": 5,
+   "channel_count": 2,
+   "total_views": 233862,
+   "latest": "2026-09-02T12:18:26+09:00",
+   "video_ids": [
+    "tA_BHpCz5kw",
+    "-T1hdNfgil4",
+    "Xg1v23hvIis",
+    "kbu2LJKtrkU",
+    "infJR6ivA3I"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "삼프로TV 3PROTV"
+   ],
+   "active": false
+  },
+  {
    "id": "조선_방산",
    "name": "조선·방산",
    "video_count": 4,
    "channel_count": 2,
-   "total_views": 647100,
+   "total_views": 698525,
    "latest": "2026-09-01T16:30:01+09:00",
    "video_ids": [
     "1i1eB4eJUxA",
@@ -364,24 +385,6 @@
    ],
    "channels": [
     "달란트투자",
-    "삼프로TV 3PROTV"
-   ],
-   "active": false
-  },
-  {
-   "id": "코인",
-   "name": "코인",
-   "video_count": 3,
-   "channel_count": 2,
-   "total_views": 221811,
-   "latest": "2026-09-01T12:21:06+09:00",
-   "video_ids": [
-    "Xg1v23hvIis",
-    "kbu2LJKtrkU",
-    "infJR6ivA3I"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
     "삼프로TV 3PROTV"
    ],
    "active": false
