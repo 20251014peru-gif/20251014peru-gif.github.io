@@ -1,21 +1,21 @@
 {
- "updated_at": "2026-09-03T20:49:07.841925+09:00",
+ "updated_at": "2026-09-04T01:44:32.231798+09:00",
  "topics": [
   {
    "id": "반도체",
    "name": "반도체",
    "video_count": 19,
    "channel_count": 9,
-   "total_views": 865281,
-   "latest": "2026-09-03T19:00:28+09:00",
+   "total_views": 1185472,
+   "latest": "2026-09-03T21:25:32+09:00",
    "video_ids": [
+    "19JgEChjtok",
     "hqzviXVaUio",
     "x2vJcA4aKSM",
     "fQqdwkueiU0",
     "aleWgRQ8NMY",
     "i2u4uRtvp8k",
     "-426fKZLZmQ",
-    "UEw7NlnNilA",
     "9sdrvUbzdJ4",
     "9K1i7caNFpI",
     "pKOf5ZpQHaE",
@@ -34,18 +34,13 @@
     "경제 읽어주는 남자 (김광석)",
     "김영익의 경제스쿨",
     "달란트투자",
-    "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
+    "언더스탠딩",
     "염블리와 함께 (염승환)",
     "이효석아카데미",
     "증시각도기TV"
    ],
    "subtopics": [
-    {
-     "word": "9월",
-     "videos": 6,
-     "channels": 4
-    },
     {
      "word": "삼성전자",
      "videos": 5,
@@ -53,21 +48,26 @@
     },
     {
      "word": "한국",
-     "videos": 3,
+     "videos": 4,
+     "channels": 4
+    },
+    {
+     "word": "9월",
+     "videos": 5,
      "channels": 3
     },
     {
-     "word": "3일",
+     "word": "대표",
      "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "급락",
-     "videos": 3,
-     "channels": 3
+     "channels": 2
     },
     {
      "word": "실적",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "금리",
      "videos": 3,
      "channels": 2
     }
@@ -79,7 +79,7 @@
    "name": "AI·엔비디아",
    "video_count": 12,
    "channel_count": 6,
-   "total_views": 960407,
+   "total_views": 1103082,
    "latest": "2026-09-03T20:00:13+09:00",
    "video_ids": [
     "sqeTc-peLYg",
@@ -142,7 +142,7 @@
    "name": "금리·연준",
    "video_count": 11,
    "channel_count": 6,
-   "total_views": 783602,
+   "total_views": 1170540,
    "latest": "2026-09-03T18:05:32+09:00",
    "video_ids": [
     "aleWgRQ8NMY",
@@ -204,7 +204,7 @@
    "name": "배당·ETF",
    "video_count": 10,
    "channel_count": 5,
-   "total_views": 554666,
+   "total_views": 992160,
    "latest": "2026-09-03T19:36:32+09:00",
    "video_ids": [
     "pJ_7PAYPi24",
@@ -262,11 +262,13 @@
   {
    "id": "국내증시",
    "name": "국내증시",
-   "video_count": 5,
-   "channel_count": 4,
-   "total_views": 318849,
-   "latest": "2026-09-03T20:07:30+09:00",
+   "video_count": 7,
+   "channel_count": 5,
+   "total_views": 539464,
+   "latest": "2026-09-03T22:30:11+09:00",
    "video_ids": [
+    "IHwTNav7m-s",
+    "Dno_8VOYBrM",
     "SYLGjLfyA3w",
     "-426fKZLZmQ",
     "pktQIhRFxSk",
@@ -274,6 +276,7 @@
     "qxACbjTyJNA"
    ],
    "channels": [
+    "경제사냥꾼",
     "달란트투자",
     "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
@@ -282,8 +285,8 @@
    "subtopics": [
     {
      "word": "코스피",
-     "videos": 4,
-     "channels": 3
+     "videos": 5,
+     "channels": 4
     },
     {
      "word": "시장함께읽기",
@@ -311,34 +314,22 @@
   {
    "id": "정책_정치",
    "name": "정책·정치",
-   "video_count": 5,
+   "video_count": 4,
    "channel_count": 3,
-   "total_views": 873472,
+   "total_views": 1250143,
    "latest": "2026-09-03T19:52:53+09:00",
    "video_ids": [
     "ym_P0XtiEco",
     "6UOkHmShEgg",
     "cp7_u68GYLA",
-    "3r3G6NoMwyQ",
-    "125xb3bWv8w"
+    "3r3G6NoMwyQ"
    ],
    "channels": [
     "경제사냥꾼",
     "슈카월드",
     "언더스탠딩"
    ],
-   "subtopics": [
-    {
-     "word": "언더스탠딩",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "기자",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
+   "subtopics": [],
    "active": true
   },
   {
@@ -346,7 +337,7 @@
    "name": "실적시즌",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 128069,
+   "total_views": 173005,
    "latest": "2026-09-03T20:30:27+09:00",
    "video_ids": [
     "hufr0Ybxcb8",
@@ -366,7 +357,7 @@
    "name": "일본·엔화",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 142473,
+   "total_views": 406565,
    "latest": "2026-09-03T19:30:10+09:00",
    "video_ids": [
     "Kj0UDQfpDIM",
@@ -386,7 +377,7 @@
    "name": "유가·에너지",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 90766,
+   "total_views": 127049,
    "latest": "2026-09-03T19:00:28+09:00",
    "video_ids": [
     "hqzviXVaUio",
@@ -406,7 +397,7 @@
    "name": "미국증시",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 171863,
+   "total_views": 245698,
    "latest": "2026-09-03T18:05:32+09:00",
    "video_ids": [
     "aleWgRQ8NMY",
@@ -432,7 +423,7 @@
    "name": "관세·무역",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 80337,
+   "total_views": 129981,
    "latest": "2026-09-03T17:07:03+09:00",
    "video_ids": [
     "9sdrvUbzdJ4",
