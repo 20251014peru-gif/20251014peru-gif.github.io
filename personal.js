@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v260-0903-1305';
+window.PERSONAL_BUILD = 'v261-0903-1315';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -4908,11 +4908,8 @@ window.PERSONAL_BUILD = 'v260-0903-1305';
      PC(1180px 이상)는 창(뒤에 목록이 보임), 휴대폰·좁은 화면은 전체 페이지(뒤로가기로 복귀).
      wlPageStyle('page') 로 억지로 정한 경우만 그 값을 따른다. */
   function pgWantModal(){
-    try{
-      var v = localStorage.getItem('wl_open_as_page');
-      if(v==='page') return false;
-      return (window.innerWidth || 1400) >= 1180;
-    }catch(e){ return true; }
+    /* v261 — 예전에 [📄 페이지로] 를 눌러 남은 'page' 값이 창을 못 뜨게 했다 (달님 PC 실측). 저장값은 더 안 본다. */
+    try{ return (window.innerWidth || 1400) >= 1180; }catch(e){ return true; }
   }
   /* 창 모드일 때만 오른쪽 떠다니는 단추를 잠시 감춘다.
      인라인 display:flex !important 라 CSS 로는 못 이겨서 여기서 처리한다.
@@ -6038,7 +6035,7 @@ window.PERSONAL_BUILD = 'v260-0903-1305';
      아무것도 안 쓰고 닫으면 draftDrop() 이 조용히 지운다. */
   window.wlNewPage = function(kind, asModal){
     try{
-      PGASMOD_PEND = (asModal !== false);
+      PGASMOD_PEND = (asModal==null) ? null : (asModal !== false);   /* v261 — null 이면 화면 폭으로 자동 */
       var want = (kind==='personal'||kind==='pcontact') ? 'personal' : (kind||'work');
       var cur2 = DS ? (DS.key==='personal' ? 'personal' : DS.kind) : '';
       function go(){ try{ newRowAsk(null, true); }catch(e){ console.error('[새 기록]', e); PGASMOD_PEND=null; } }

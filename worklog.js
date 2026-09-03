@@ -12805,7 +12805,7 @@ async function githubUpload(token){
       openViewer = function(kind, id){
         try{
           if(usesPage() && KINDS[kind] && id && typeof window.wlGoPage === 'function'){
-            window.wlGoPage(id, openStyle()==='modal');
+            window.wlGoPage(id, undefined);   /* v261 — 창/페이지는 화면 폭으로 자동 (pgWantModal) */
             return;
           }
         }catch(e){ console.warn('[페이지 열기] 실패 — 예전 창으로', e); }
@@ -12823,7 +12823,7 @@ async function githubUpload(token){
         window._wlForceOld = false;
         try{
           if(!force && id && KINDS[kind] && usesPage() && typeof window.wlGoPage === 'function'){
-            window.wlGoPage(id, openStyle()==='modal');
+            window.wlGoPage(id, undefined);   /* v261 — 창/페이지는 화면 폭으로 자동 (pgWantModal) */
             return;
           }
         }catch(e){ console.warn('[페이지 열기] 수정 경로 실패 — 예전 창으로', e); }
@@ -12849,7 +12849,7 @@ async function githubUpload(token){
       window._wlForceOld = false;
       if(force || !id || !KINDS[kind] || !usesPage()) return false;
       if(typeof window.wlGoPage !== 'function') return false;
-      try{ window.wlGoPage(id, openStyle()==='modal'); return true; }
+      try{ window.wlGoPage(id, undefined);   /* v261 — 창/페이지는 화면 폭으로 자동 (pgWantModal) */ return true; }
       catch(e){ console.warn('[페이지 열기] 실패 — 예전 창으로', e); return false; }
     }
   };
@@ -13215,7 +13215,7 @@ async function githubUpload(token){
       _addLastAt = _now;
       var st = newStyle();
       if(st==='old' || !KINDS[kind] || typeof window.wlNewPage!=='function'){ oldAdd(kind); return; }
-      window.wlNewPage(kind, st==='modal');
+      window.wlNewPage(kind, null);          /* v261 — null = 창/페이지 자동 (화면 폭) */
     }catch(e){ console.warn('[새로 만들기] 페이지 실패 — 예전 창으로', e); oldAdd(kind); }
   };
 
@@ -23329,7 +23329,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v260-0903-1305';
+  var JS_BUILD = 'v261-0903-1315';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -26176,7 +26176,7 @@ window.wlAskText = function(title, value, opt){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   🚨 공통 경고 띠 (wlAlerts)   v260-0903-1305
+   🚨 공통 경고 띠 (wlAlerts)   v261-0903-1315
    달님 : 「구글 캘린더 끊기면 빨간 띠로 알려주듯이, 중요한 문제는 다 그렇게 —
            모르고 지나가면 문제 되니까. 8개 다 하고 색만 다르게」
    · 화면 맨 위에 문제마다 한 줄씩 쌓인다. 해결되면 스스로 사라진다.
@@ -26332,7 +26332,7 @@ window.wlAskText = function(title, value, opt){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   🔄 다시 읽기 (wlRefresh)   v260-0903-1305
+   🔄 다시 읽기 (wlRefresh)   v261-0903-1315
    달님 : 「컴이랑 모바일이랑 데이터가 안 맞아 — 왜 그런지 알아보고 확실히 고쳐」
    ▸ 원인 (확인됨) : loadAll() 은 앱을 켤 때 딱 한 번만 클라우드를 읽는다 (worklog.js 1440행).
        실시간 구독(onSnapshot)이 없고, 탭으로 돌아와도 다시 읽지 않는다.
