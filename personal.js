@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v257-0903-1236';
+window.PERSONAL_BUILD = 'v258-0903-1250';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -4901,9 +4901,15 @@ window.PERSONAL_BUILD = 'v257-0903-1236';
   var PGASMOD_PEND = null;/* 입구에서 정해 준 값 — 새로 열 때 딱 한 번 쓴다 */
   /* 진단 탭 「기록을 누르면」 설정을 그대로 따른다.
      worklog.js 가 옛 파일이라 wlOpenStyle 이 없으면 예전대로 전체 페이지 */
+  /* v258 — 달님 : 「페이지 보기와 창으로 보기는 별 차이가 없다」 → 사람이 고르지 않는다.
+     PC(1180px 이상)는 창(뒤에 목록이 보임), 휴대폰·좁은 화면은 전체 페이지(뒤로가기로 복귀).
+     wlPageStyle('page') 로 억지로 정한 경우만 그 값을 따른다. */
   function pgWantModal(){
-    try{ return !!(window.wlOpenStyle && window.wlOpenStyle()==='modal'); }
-    catch(e){ return true; }
+    try{
+      var v = localStorage.getItem('wl_open_as_page');
+      if(v==='page') return false;
+      return (window.innerWidth || 1400) >= 1180;
+    }catch(e){ return true; }
   }
   /* 창 모드일 때만 오른쪽 떠다니는 단추를 잠시 감춘다.
      인라인 display:flex !important 라 CSS 로는 못 이겨서 여기서 처리한다.
@@ -9474,6 +9480,9 @@ window.PERSONAL_BUILD = 'v257-0903-1236';
       c.addEventListener('click', function(){
         var id=c.getAttribute('data-lid');
         if(!PGLIST.length) PGLIST = [].map.call(host.querySelectorAll('[data-lid]'), function(x){ return x.getAttribute('data-lid'); });
+        /* v258 — 달님 : 「차계부는 추가는 예전 창, 수정은 노션식으로 나와」 → 차계부는 둘 다 예전 창.
+           예전 창에만 총금액·주유량·리터당 단가 자동계산과 직전 주행거리 채우기가 있다. 노션 페이지는 [📄 열기] 로. */
+        try{ var _r = anyRec(id); if(isPersonal() && _r && _r.ptype==='car'){ openRec('car', id); return; } }catch(_c){}
         openPage(id);
       });
     });

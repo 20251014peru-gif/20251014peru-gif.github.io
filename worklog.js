@@ -16146,30 +16146,34 @@ async function githubUpload(token){
     }catch(e){ return ''; }
   }
 
+  /* v258 — 달님 : 「창/페이지는 별 차이 없다 → 자동으로. 대신 페이지 보기 ↔ 컴팩트 보기 두 가지로」
+     창·페이지는 personal.js pgWantModal() 이 화면 폭으로 정한다.
+     이 단추는 ▦ 컴팩트(빽빽) ↔ ▤ 넓게 를 바꾼다. 데이터·저장은 무관, .lf-page 에 클래스 하나만 붙는다 (worklog.css .is-compact) */
+  var LS_CP = 'wl_pg_compact';
+  function compactOn(){ try{ return localStorage.getItem(LS_CP) === '1'; }catch(e){ return false; } }
+  function applyCompact(){
+    try{ var pg = document.querySelector('.lf-page'); if(pg) pg.classList.toggle('is-compact', compactOn()); }catch(e){}
+  }
   function add(){
     var top = document.querySelector('.lf-page .pg-top');
     if(!top) return;
+    applyCompact();
     var old = top.querySelector('#pgStyleBtn');
-    var cur = styleNow();
-    var toModal = (cur !== 'modal');          /* 지금 페이지면 → 창으로 */
-    var label = toModal ? '🗔 창으로' : '📄 페이지로';
+    var on = compactOn();
+    var label = on ? '▤ 넓게' : '▦ 컴팩트';
     if(old){ old.textContent = label; return; }
 
     var b = document.createElement('button');
     b.type = 'button'; b.id = 'pgStyleBtn';
     b.textContent = label;
-    b.title = toModal ? '작은 창으로 봅니다' : '화면 전체로 넓게 봅니다';
+    b.title = on ? '칸을 넓게 여유 있게 봅니다' : '예전 입력창처럼 빽빽하게 봅니다';
     b.addEventListener('click', function(){
-      var rid = ridNow();
-      try{ localStorage.setItem(LS, toModal ? 'modal' : 'page'); }
-      catch(e){ console.warn('[보기 모양] 저장 실패', e); }
-      if(typeof toast === 'function') toast(toModal ? '🗔 창으로 봅니다' : '📄 전체 페이지로 봅니다');
-      /* 보던 기록을 그 모양으로 곧바로 다시 연다 */
-      setTimeout(function(){
-        try{
-          if(rid && typeof window.wlGoPage === 'function') window.wlGoPage(rid, toModal);
-        }catch(e){ console.warn('[보기 모양] 다시 열기 실패', e); }
-      }, 120);
+      var now = !compactOn();
+      try{ localStorage.setItem(LS_CP, now ? '1' : '0'); }catch(e){ console.warn('[보기 모양] 저장 실패', e); }
+      applyCompact();
+      b.textContent = now ? '▤ 넓게' : '▦ 컴팩트';
+      b.title = now ? '칸을 넓게 여유 있게 봅니다' : '예전 입력창처럼 빽빽하게 봅니다';
+      if(typeof toast === 'function') toast(now ? '▦ 컴팩트로 봅니다' : '▤ 넓게 봅니다');
     });
 
     var del = top.querySelector('#pgDel');
@@ -16202,7 +16206,8 @@ async function githubUpload(token){
     }
     return '지금: ' + styleNow() + "  —  바꾸려면 wlPageStyle('page') 또는 wlPageStyle('modal')";
   };
-  console.log('[보기 모양] v112 준비됨 — 기록 머리줄의 [📄 페이지로] / [🗔 창으로]');
+  window.wlCompact = function(v){ try{ localStorage.setItem(LS_CP, v?'1':'0'); }catch(e){} applyCompact(); add(); return v?'컴팩트':'넓게'; };
+  console.log('[보기 모양] v258 준비됨 — 창/페이지 자동 · 머리줄 [▦ 컴팩트]/[▤ 넓게]');
 })();
 
 
@@ -23273,7 +23278,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v257-0903-1236';
+  var JS_BUILD = 'v258-0903-1250';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -26120,7 +26125,7 @@ window.wlAskText = function(title, value, opt){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   🚨 공통 경고 띠 (wlAlerts)   v257-0903-1236
+   🚨 공통 경고 띠 (wlAlerts)   v258-0903-1250
    달님 : 「구글 캘린더 끊기면 빨간 띠로 알려주듯이, 중요한 문제는 다 그렇게 —
            모르고 지나가면 문제 되니까. 8개 다 하고 색만 다르게」
    · 화면 맨 위에 문제마다 한 줄씩 쌓인다. 해결되면 스스로 사라진다.
@@ -26271,7 +26276,7 @@ window.wlAskText = function(title, value, opt){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   🔄 다시 읽기 (wlRefresh)   v257-0903-1236
+   🔄 다시 읽기 (wlRefresh)   v258-0903-1250
    달님 : 「컴이랑 모바일이랑 데이터가 안 맞아 — 왜 그런지 알아보고 확실히 고쳐」
    ▸ 원인 (확인됨) : loadAll() 은 앱을 켤 때 딱 한 번만 클라우드를 읽는다 (worklog.js 1440행).
        실시간 구독(onSnapshot)이 없고, 탭으로 돌아와도 다시 읽지 않는다.
