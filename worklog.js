@@ -23271,7 +23271,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v251-0903-0940';
+  var JS_BUILD = 'v252-0903-1010';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -26114,4 +26114,124 @@ window.wlAskText = function(title, value, opt){
     state: function(){ return load(); }
   };
   console.log('[하위 구분 목록] v242 준비됨 — wlExpSubs.manage()');
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🚨 공통 경고 띠 (wlAlerts)   v252-0903-1010
+   달님 : 「구글 캘린더 끊기면 빨간 띠로 알려주듯이, 중요한 문제는 다 그렇게 —
+           모르고 지나가면 문제 되니까. 8개 다 하고 색만 다르게」
+   · 화면 맨 위에 문제마다 한 줄씩 쌓인다. 해결되면 스스로 사라진다.
+   · [닫기] 를 누르면 30분 동안 안 보인다 (문제가 계속이면 다시 뜬다).
+   · 어디서든  wlAlerts.set('이름', {level, text, btn, run})  /  wlAlerts.clear('이름')
+   ┌ 색 ─────────────────────────────────────────────────────────────┐
+   │ red    구글 로그인 끊김 · 저장공간 80% ↑        → 지금 행동      │
+   │ orange 캘린더/클라우드 미전송                    → 곧 행동        │
+   │ purple 드라이브 자동 백업 멈춤                   → 이번 주 안에   │
+   │ gray   파이어베이스 오프라인 10분 ↑              → 알아 두기      │
+   │ dark   🐞 새 오류 쌓임                           → 알아 두기      │
+   │ (노란 버전 띠 · 아래쪽 목록 줄어듦 띠는 기존 것 그대로 — 색이 이미 다름) │
+   └───────────────────────────────────────────────────────────────┘
+   ══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var HOST_ID = 'wlAlertHost', LS_HIDE = 'wl_alert_hide', HIDE_MS = 30*60*1000;
+  var LV = { red:['#c0392b','#fff'], orange:['#d97706','#fff'], purple:['#6d28d9','#fff'],
+             gray:['#546e7a','#fff'], dark:['#1f2937','#fff'], blue:['#2563a8','#fff'] };
+  var items = {};
+  function hideMap(){ try{ return JSON.parse(localStorage.getItem(LS_HIDE)||'{}'); }catch(e){ return {}; } }
+  function hidden(id){ var m=hideMap(); return !!(m[id] && Date.now()-m[id] < HIDE_MS); }
+  function hide(id){ var m=hideMap(); m[id]=Date.now(); try{ localStorage.setItem(LS_HIDE, JSON.stringify(m)); }catch(e){} }
+  function host(){
+    var h=document.getElementById(HOST_ID);
+    if(h) return h;
+    if(!document.body) return null;
+    h=document.createElement('div'); h.id=HOST_ID;
+    h.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9997;display:flex;flex-direction:column;font-family:inherit';
+    document.body.insertBefore(h, document.body.firstChild);
+    return h;
+  }
+  function paint(){
+    var h=host(); if(!h) return;
+    h.innerHTML='';
+    Object.keys(items).forEach(function(id){
+      var it=items[id]; if(!it || hidden(id)) return;
+      var c=LV[it.level]||LV.red;
+      var row=document.createElement('div');
+      row.setAttribute('data-alert', id);
+      row.style.cssText='display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:'+c[0]+';color:'+c[1]
+        +';padding:8px 14px;font-size:13.5px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.18);border-bottom:1px solid rgba(255,255,255,.25)';
+      row.innerHTML='<span style="flex:1 1 auto;min-width:0">'+it.text+'</span>'
+        + (it.btn? '<button type="button" data-run="1" style="background:#fff;color:'+c[0]+';border:none;border-radius:9px;padding:6px 13px;font-weight:900;font-size:12.5px;cursor:pointer;font-family:inherit;min-height:32px">'+it.btn+'</button>' : '')
+        + '<button type="button" data-hide="1" title="30분 동안 숨기기" style="background:rgba(255,255,255,.18);color:'+c[1]+';border:none;border-radius:9px;padding:6px 10px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;min-height:32px">닫기</button>';
+      var rb=row.querySelector('[data-run]');
+      if(rb) rb.addEventListener('click', function(){ try{ if(typeof it.run==='function') it.run(); }catch(e){ console.warn('[경고 띠] 실행 실패', id, e); } });
+      row.querySelector('[data-hide]').addEventListener('click', function(){ hide(id); paint(); });
+      h.appendChild(row);
+    });
+    /* 띠 높이만큼 본문을 내린다 (v222 구글 띠와 같은 방식) */
+    try{ document.body.style.paddingTop = (h.children.length ? h.offsetHeight : 0) + 'px'; }catch(e){}
+  }
+  function set(id, o){ if(!id||!o) return; items[id]=o; paint(); }
+  function clear(id){ if(items[id]){ delete items[id]; paint(); } }
+
+  /* ── 점검 항목 (30초마다 · 창 포커스 때) ── */
+  var obSeen=0, offSince=0, errSeen=0;
+  function check(){
+    /* 캘린더 대기함 + 클라우드 쓰기 대기 — 두 번 연속(≥60초) 남아 있을 때만 */
+    try{
+      var n = (window.wlOutbox && typeof window.wlOutbox.count==='function') ? window.wlOutbox.count() : 0;
+      var wb = document.getElementById('wlWriteBadge');
+      var wtxt = (wb && wb.style.display!=='none' && wb.textContent) ? wb.textContent.trim() : '';
+      if(n>0 || wtxt){ obSeen++; } else { obSeen=0; }
+      if(obSeen>=2){
+        set('outbox', { level:'orange',
+          text:'📤 아직 못 보낸 것이 있어요 — ' + (n>0 ? ('구글 캘린더 '+n+'건') : '') + (n>0&&wtxt?' · ':'') + (wtxt? ('클라우드 '+wtxt.replace('📤 ','')) : ''),
+          btn:'지금 보내기', run:function(){ try{ if(window.wlOutbox) window.wlOutbox.drain(); }catch(e){} if(typeof toast==='function') toast('다시 보내는 중…'); } });
+      } else clear('outbox');
+    }catch(e){ clear('outbox'); }
+
+    /* 파이어베이스 오프라인 10분 이상 */
+    try{
+      var off = (typeof online!=='undefined') ? (online===false) : false;
+      if(off){ if(!offSince) offSince=Date.now(); }
+      else offSince=0;
+      var mins = offSince ? Math.floor((Date.now()-offSince)/60000) : 0;
+      if(mins>=10) set('offline', { level:'gray', text:'☁ 클라우드 연결이 '+mins+'분째 끊겨 있어요 — 지금은 이 기기에만 저장됩니다 (다른 기기와 어긋날 수 있어요)',
+        btn:'새로고침', run:function(){ location.reload(); } });
+      else clear('offline');
+    }catch(e){ clear('offline'); }
+
+    /* 저장공간 80% 이상 (브라우저 localStorage 5MB 기준) */
+    try{
+      var bytes=0; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); bytes += ((k||'').length + (localStorage.getItem(k)||'').length) * 2; }
+      var pct = Math.round(bytes/(5*1024*1024)*100);
+      if(pct>=80) set('storage', { level:'red', text:'💾 브라우저 저장공간이 '+pct+'% 찼어요 — 더 차면 기록 저장이 막힙니다 (8-27 사고)',
+        btn:'진단 탭 열기', run:function(){ try{ window.v43ActivateTab('diag'); }catch(e){} } });
+      else clear('storage');
+    }catch(e){ clear('storage'); }
+
+    /* 구글 드라이브 자동 백업 멈춤 */
+    try{
+      var st = (window.wlDrive && typeof window.wlDrive.stale==='function') ? window.wlDrive.stale() : null;
+      if(st) set('drive', { level:'purple', text:'☁️ 구글 드라이브 자동 백업이 '+(st.days>=0? st.days+'일째 ':'')+'멈춰 있어요'+(st.err? (' — '+String(st.err).slice(0,60)) : ''),
+        btn:'🔑 드라이브 다시 연결', run:function(){ try{ window.wlDrive.auth(false); }catch(e){ if(typeof toast==='function') toast('연결 창을 못 열었어요 — 설정 → 구글 드라이브 자동 백업'); } } });
+      else clear('drive');
+    }catch(e){ clear('drive'); }
+
+    /* 🐞 새 오류 — 버튼에 숫자가 붙어 있으면 */
+    try{
+      var b=document.getElementById('dbgBtn');
+      var m = b && b.textContent.match(/🐞\s*(\d+\+?)/);
+      if(m) set('errors', { level:'dark', text:'🐞 앱 안에서 오류 '+m[1]+'건이 났어요 — 조용히 실패하고 있을 수 있어요', btn:'오류 보기', run:function(){ try{ b.click(); }catch(e){} } });
+      else clear('errors');
+    }catch(e){ clear('errors'); }
+  }
+  function tick(){ try{ check(); }catch(e){ console.warn('[경고 띠] 점검 실패', e); } }
+  setTimeout(tick, 8000);
+  setInterval(tick, 30000);
+  window.addEventListener('focus', function(){ setTimeout(tick, 1500); });
+
+  window.wlAlerts = { set:set, clear:clear, check:tick, list:function(){ return Object.keys(items); } };
+  console.log('[경고 띠] v252 준비됨 — 구글·대기함·오프라인·저장공간·드라이브·오류');
 })();
