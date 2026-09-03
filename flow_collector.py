@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # 흐름지도(flow) 수집기
-# v 20260902-0620
+# v 20260902-1030
 #
 # 하는 일 : 경제 유튜브 채널의 최근 영상을 모아 → 쇼츠/라이브를 걸러내고 → 주제별로 묶어
 #           주제 카드를 갱신하고 → 변경 이력을 남기고 → 급증하면 폰으로 알립니다.
@@ -269,7 +269,82 @@ def build_videos(raw_items, ch, st):
     return kept
 
 
-def group_by_topic(videos, compiled, st):
+# 영문·숫자·한글이 섞인 말을 한 덩어리로 봅니다 (D램·HBM4·2차전지·SK하이닉스가 쪼개지지 않게)
+TOKEN_RE = re.compile(r"[A-Za-z0-9가-힣]{2,}")
+DIGITS_ONLY = re.compile(r"^\d+$")
+
+# 조사는 긴 것부터 잘라냅니다. 자르고 남은 게 2글자 미만이거나 원래가 3글자 미만이면 안 자릅니다
+# (그래야 '주가' 가 '주' 로 뭉개지지 않습니다).
+JOSA = ("으로써", "으로서", "에서는", "이라는", "에게서", "라는", "까지", "부터", "에서", "에게",
+        "으로", "이란", "한테", "보다", "처럼", "마다", "조차", "밖에", "이나", "와의", "과의",
+        "의", "은", "는", "이", "가", "을", "를", "에", "로", "도", "만", "과", "와", "랑")
+
+
+def _strip_josa(w):
+    if len(w) < 3:
+        return w
+    for j in JOSA:
+        if w.endswith(j) and len(w) - len(j) >= 2:
+            return w[: -len(j)]
+    return w
+
+
+def extract_subtopics(vids, stop, st, own=()):
+    """카테고리 안에서 '오늘 실제로 무슨 얘기가 오갔나'를 제목에서 직접 뽑아냅니다.
+
+    '반도체' 는 제가 미리 정한 서랍 이름이라 그 안에 뭐가 들었는지 말해주지 않습니다.
+    오늘 터질 일을 사전에 미리 넣어둘 수는 없으므로, 제목에 반복해서 나오는 말을 셉니다.
+    사전이 필요 없어서 새 이슈(신규 종목·신규 사건)도 자동으로 잡힙니다.
+    엉뚱한 말이 올라오면 flow_channels.json 의 stopwords 에 한 줄 추가하면 빠집니다.
+    own = 그 카테고리의 '이름' 조각만. '금리·연준' 카드에 '연준' 이 뜨면 서랍 이름을 다시
+    말하는 것이라 정보가 0 이므로 뺍니다. 반대로 '삼성전자·HBM·파월' 처럼 서랍 안에서만
+    나오는 말은 반드시 남겨야 합니다 — 그게 우리가 알고 싶은 것이니까요.
+    """
+    own = {w.lower() for w in own}
+    freq, owners = {}, {}
+    for v in vids:
+        seen = set()
+        for raw in TOKEN_RE.findall(v["title"]):
+            w = _strip_josa(raw)
+            if len(w) < 2 or DIGITS_ONLY.match(w) or w in stop or w.lower() in stop:
+                continue
+            if w.lower() in own:          # 카테고리 이름 되풀이는 정보가 아닙니다
+                continue
+            if w in seen:            # 한 영상 안에서 같은 말이 여러 번 나와도 1표
+                continue
+            seen.add(w)
+            freq[w] = freq.get(w, 0) + 1
+            owners.setdefault(w, set()).add(v["channel"])
+
+    cands = [w for w, n in freq.items() if n >= st["subtopic_min_videos"]]
+
+    # '삼성'과 '삼성전자'가 같이 잡히면 긴 쪽만 남깁니다
+    cands = [w for w in cands
+             if not any(w != o and w in o and freq[o] >= freq[w] for o in cands)]
+
+    cands.sort(key=lambda w: (len(owners[w]), freq[w], len(w)), reverse=True)
+    return [{"word": w, "videos": freq[w], "channels": len(owners[w])}
+            for w in cands[: st["subtopic_max"]]]
+
+
+def cap_per_channel(videos, n):
+    """한 채널이 주제 묶기에 기여할 영상 수를 최신 n개로 제한합니다.
+
+    하루 13개씩 올리는 채널(삼프로TV 실측 48시간 27개)이 거의 모든 주제에 들어가
+    '채널 몇 곳이 다뤘나'를 부풀립니다. 27번 말한 채널과 1번 말한 채널의 무게가
+    같아야 관점 희소성이 제대로 측정됩니다.
+    videos 는 최신순으로 정렬되어 들어옵니다. 제외된 영상도 목록에는 남고 used=False 만 붙습니다.
+    """
+    seen = {}
+    for v in videos:
+        c = seen.get(v["channel"], 0)
+        v["used"] = c < n
+        if v["used"]:
+            seen[v["channel"]] = c + 1
+    return [v for v in videos if v["used"]]
+
+
+def group_by_topic(videos, compiled, st, stop):
     """주제 사전으로 영상을 묶습니다. min_topic_videos 개 미만이면 주제로 세우지 않습니다."""
     buckets = {}
     for v in videos:
@@ -291,6 +366,7 @@ def group_by_topic(videos, compiled, st):
             "latest": vids[0]["published"],
             "video_ids": [v["id"] for v in vids],
             "channels": sorted({v["channel"] for v in vids}),
+            "subtopics": extract_subtopics(vids, stop, st, re.split(r"[·・/]", name)),  # ← 서랍 안에 뭐가 들었나
         })
 
     # 채널 수가 많을수록 = 더 많은 사람이 다룬 = 오늘의 주제. 상위 N개만 카드로 세웁니다.
@@ -353,7 +429,7 @@ def save_all(videos, topics, alerts, changes, prev_out):
         return False
 
     save_json(OUT_FILE, {
-        "_version": "v 20260902-0620",
+        "_version": "v 20260902-1030",
         "generated_at": stamp,
         "mode": RUN_MODE,
         "quota_used": quota_used,
@@ -408,6 +484,7 @@ def main():
 
     st = conf["settings"]
     compiled = compile_keywords(conf["keywords"])
+    stop = set(conf.get("stopwords", []))
     state = load_json(STATE_FILE, {})
     prev_out = load_json(OUT_FILE, {})
     prev_topics = load_json(TOPICS_FILE, {}).get("topics", [])
@@ -432,13 +509,20 @@ def main():
         time.sleep(0.05)
 
     all_videos.sort(key=lambda v: v["published"], reverse=True)
-    topics = group_by_topic(all_videos, compiled, st)
-    alerts = detect_alerts(all_videos, topics, st)
+
+    # 채널 편중 보정: 한 채널의 목소리는 하나 (설정 max_used_per_channel)
+    used = cap_per_channel(all_videos, st["max_used_per_channel"])
+    dropped = len(all_videos) - len(used)
+    if dropped:
+        log(f"  · 채널당 상한 {st['max_used_per_channel']}개 적용 → 주제 계산에서 {dropped}개 제외 (목록에는 남음)")
+
+    topics = group_by_topic(used, compiled, st, stop)
+    alerts = detect_alerts(used, topics, st)
     changes = diff_topics(prev_topics, topics)
 
     ok = save_all(all_videos, topics, alerts, changes, prev_out)
 
-    log(f"◀ 영상 {len(all_videos)}개 · 주제 {len(topics)}개(활성 {sum(1 for t in topics if t['active'])}) · 변경 {len(changes)}건 · "
+    log(f"◀ 영상 {len(all_videos)}개(주제계산 {len(used)}) · 주제 {len(topics)}개(활성 {sum(1 for t in topics if t['active'])}) · 변경 {len(changes)}건 · "
         f"긴급 {len(alerts)}건 · 할당량 {quota_used}유닛 · 저장 {'완료' if ok else '거부'}")
 
     if st.get("ntfy_enabled"):
