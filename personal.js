@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v246-0903-0819';
+window.PERSONAL_BUILD = 'v250-0903-0925';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -439,6 +439,16 @@ window.PERSONAL_BUILD = 'v246-0903-0819';
     return t ? ('<span style="color:#6b86a3;font-weight:700;font-size:.86em">' + esc(t) + '</span> ') : '';
   }
 
+  /* v250 — 카드 오른쪽 아래 날짜. 올해면 「09-02 (수)」, 다른 해면 「2025-11-12」 */
+  function cardDateHTML(e){
+    var d='';
+    try{ d = String(pget(e,'_date')||e.date||'').slice(0,10); }catch(_d){ d = String(e.date||'').slice(0,10); }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return '';
+    var p=d.split('-'), dt=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
+    var wd='일월화수목금토'.charAt(dt.getUTCDay());
+    var txt = (p[0]===today().slice(0,4)) ? (p[1]+'-'+p[2]+' ('+wd+')') : d;
+    return '<span class="lf-date" title="'+d+'">📅 '+txt+'</span>';
+  }
   function card(e){
     var pty = DS.ptypeOf(e);
     var d = (isPersonal() && pty==='car') ? {i:'🚗',n:'차계부',c:carColor(e.car)} : (cats()[pty]||catEtc());
@@ -563,9 +573,11 @@ window.PERSONAL_BUILD = 'v246-0903-0819';
       /* v214 — 달님 : 「카드 가운데 줄 없애줘, 제목과 내용이 나오게」
          날짜는 위의 묶음 이름표에 이미 있고, 층은 제목 앞으로, 완료는 안 적는다.
          그래서 대개 이 줄이 통째로 사라진다. 남을 것이 있을 때만 그린다. */
-      + (tags ? ('<div class="lf-m">' + tags + '</div>') : '')
+      /* v250 — 달님 : 「카드에 날짜 나오게 해줘」 배지 줄 오른쪽 끝에 날짜 (올해면 월-일(요일), 아니면 연-월-일) */
+      + ((tags || cardDateHTML(e)) ? ('<div class="lf-m">' + tags + cardDateHTML(e) + '</div>') : '')
       + (mo? '<div class="lf-money">💰 '+won(mo)+'원</div>':'')
-      + '<div class="lf-note">'+(note? esc(note):'')+'</div>'
+      /* v250 — 달님 : 「내용 없는데도 자리 차지해 창이 좁아 보여」 내용 있을 때만 그린다 (v208 의 '자리 지키기' 는 접음) */
+      + (note ? ('<div class="lf-note">'+esc(note)+'</div>') : '')
       + ph
       + '</div>';
   }

@@ -1492,3 +1492,30 @@ tr.settle-add:hover .settle-addhint{ color:#3f7cb8; font-weight:800 }
   .lf-fb > #lfAdd{ flex:1 1 auto !important; min-height:40px }
   .lf-fb > .lf-cnt{ margin-left:auto }
 }
+
+/* v247 — 휴대폰(640px 이하) 🏠 개인 머리줄(.lf-phead) 3줄 배치
+   원인: 한 줄 고정(nowrap)에 제목·하위탭·분류칩·검색·단추 6가지가 들어가
+         322px 에서 하위탭이 21px, 분류칩이 80px 로 짓눌렸다.
+   해결: 1줄 = 제목 · 검색(남은 폭 전부) · 단추 / 2줄 = 하위탭(줄바꿈) / 3줄 = 분류칩(옆으로 밀기) */
+@media (max-width:640px){
+  .lf-phead{ flex-wrap:wrap !important; row-gap:7px }
+  .lf-phead > .lf-pq{ flex:1 1 60px !important; width:auto !important; max-width:none !important; min-width:0; margin-left:2px }
+  .lf-phead > .lf-ptabs{ order:10; flex:1 1 100% !important; flex-wrap:wrap; overflow:visible; row-gap:5px }
+  .lf-phead > .lf-pcats{ order:11; flex:1 1 100% !important; border-left:none; margin-left:0; padding-left:0 }
+}
+
+/* v248 — 휴대폰(640px 이하) 기록 입력창 · 헤더 상태칩
+   ① 2열 속성 라벨(62px)에서 「완료 상태」「지출종류」가 … 로 잘리던 것 → 두 줄로 접어 다 보이게
+   ② 「수량」 처럼 값 옆에 단추(＋ 자재 추가)가 붙는 줄은 값 칸이 20px 로 짓눌림 → 그 줄만 두 열을 다 쓴다
+   ③ 헤더 「오프라인 (이 기기에 저장)」 칩이 FAB(＋ 기록추가) 뒤로 잘림 → 칩을 FAB 폭만큼 왼쪽으로 */
+@media (max-width:640px){
+  .pg-pk .pg-pnm{ white-space:normal !important; overflow:visible !important; text-overflow:clip;
+    line-height:1.2; font-size:11.5px; word-break:keep-all }
+  .pg-props .pg-prow:has(.pg-addon){ grid-column:1 / -1 }
+  .pg-pv .pg-val{ flex:1 1 44px; min-width:44px }
+  .pg-pv .pg-addon{ flex:0 0 auto }
+  .head-row #status{ margin-right:40px !important }
+}
+
+/* v250 — 카드 날짜 (배지 줄 오른쪽 끝) */
+.lf-card .lf-m .lf-date{ margin-left:auto; font-size:11.5px; font-weight:800; color:#8ba0b6; white-space:nowrap }

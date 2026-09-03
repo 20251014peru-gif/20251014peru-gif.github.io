@@ -4604,7 +4604,9 @@ $("mDelete").addEventListener("click",()=>{
   $("overlay").classList.remove("show");
   deleteWithUndo(mId, KIND_LABEL[mKind]||"항목");
 });
-document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>{ if(window.wlAddNew) window.wlAddNew(b.dataset.add); else openEditor(b.dataset.add,null); }));
+/* v250 — 🔴 FAB 종류 단추(.v43-cat-btn) 는 worklog.html 3882행이 따로 묶는다.
+   여기서도 잡으면 wlAddNew 가 두 번 불려 빈 기록이 하나 더 생겼다 (0.3초 간격, 하루 5번 재현). */
+document.querySelectorAll("[data-add]:not(.v43-cat-btn)").forEach(b=>b.addEventListener("click",()=>{ if(window.wlAddNew) window.wlAddNew(b.dataset.add); else openEditor(b.dataset.add,null); }));
 
 /* ===== 검색 ===== */
 const Q={work:"",plan:"",memo:"",call:"",vacation:"",meeting:"",deliver:""};
@@ -13203,8 +13205,12 @@ async function githubUpload(token){
     }catch(e){ console.error('[새로 만들기]', e); }
   }
   /* ＋ 버튼은 전부 이걸 부른다 */
+  var _addLastAt = 0;                      /* v250 — 같은 클릭이 두 통로로 들어와도 한 번만 */
   window.wlAddNew = function(kind){
     try{
+      var _now = Date.now();
+      if(_now - _addLastAt < 700){ console.warn('[새로 만들기] 0.7초 안 중복 호출 무시:', kind); return; }
+      _addLastAt = _now;
       var st = newStyle();
       if(st==='old' || !KINDS[kind] || typeof window.wlNewPage!=='function'){ oldAdd(kind); return; }
       window.wlNewPage(kind, st==='modal');
@@ -23265,7 +23271,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v246-0903-0819';
+  var JS_BUILD = 'v250-0903-0925';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
