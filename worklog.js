@@ -16195,6 +16195,40 @@ async function githubUpload(token){
 
     var del = top.querySelector('#pgDel');
     if(del) top.insertBefore(b, del); else top.appendChild(b);
+    bindDrag(top);
+  }
+  /* v260 — 달님 : 「창을 마우스로 드래그할 수 있게」 창(모달)일 때 머리줄을 잡고 끈다.
+     단추·입력칸 위에서는 끌리지 않는다. 화면 밖으로 나가지 않게 막는다. 새로 열면 제자리. */
+  function bindDrag(top){
+    if(top._wlDrag) return; top._wlDrag = 1;
+    var pg = top.closest('.lf-page');
+    var startX=0, startY=0, dx=0, dy=0, baseX=0, baseY=0, on=false;
+    function isModal(){ var ov = pg && pg.parentElement; return !!(ov && /as-modal/.test(ov.className)); }
+    function down(cx, cy, target){
+      if(!isModal()) return false;
+      if(target.closest('button, input, textarea, select, a, [contenteditable]')) return false;
+      on = true; startX = cx; startY = cy; baseX = dx; baseY = dy;
+      pg.classList.add('wl-dragging');
+      return true;
+    }
+    function move(cx, cy){
+      if(!on) return;
+      var r = pg.getBoundingClientRect();
+      var nx = baseX + (cx - startX), ny = baseY + (cy - startY);
+      /* 머리줄이 화면 안에 남게 */
+      var maxX = window.innerWidth - 120 - (r.left - dx), minX = 120 - (r.right - dx);
+      var maxY = window.innerHeight - 60 - (r.top - dy), minY = -(r.top - dy);
+      dx = Math.max(minX, Math.min(maxX, nx)); dy = Math.max(minY, Math.min(maxY, ny));
+      pg.style.transform = 'translate(' + Math.round(dx) + 'px,' + Math.round(dy) + 'px)';
+    }
+    function up(){ if(!on) return; on = false; pg.classList.remove('wl-dragging'); }
+    top.addEventListener('mousedown', function(e){ if(e.button !== 0) return; if(down(e.clientX, e.clientY, e.target)) e.preventDefault(); });
+    document.addEventListener('mousemove', function(e){ if(on){ move(e.clientX, e.clientY); e.preventDefault(); } });
+    document.addEventListener('mouseup', up);
+    top.addEventListener('touchstart', function(e){ var t=e.touches[0]; if(t) down(t.clientX, t.clientY, e.target); }, {passive:true});
+    document.addEventListener('touchmove', function(e){ if(!on) return; var t=e.touches[0]; if(t){ move(t.clientX, t.clientY); if(e.cancelable) e.preventDefault(); } }, {passive:false});
+    document.addEventListener('touchend', up);
+    if(isModal()) top.style.cursor = 'move';
   }
 
   var t = null;
@@ -23295,7 +23329,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v259-0903-1300';
+  var JS_BUILD = 'v260-0903-1305';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -26142,7 +26176,7 @@ window.wlAskText = function(title, value, opt){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   🚨 공통 경고 띠 (wlAlerts)   v259-0903-1300
+   🚨 공통 경고 띠 (wlAlerts)   v260-0903-1305
    달님 : 「구글 캘린더 끊기면 빨간 띠로 알려주듯이, 중요한 문제는 다 그렇게 —
            모르고 지나가면 문제 되니까. 8개 다 하고 색만 다르게」
    · 화면 맨 위에 문제마다 한 줄씩 쌓인다. 해결되면 스스로 사라진다.
@@ -26193,8 +26227,13 @@ window.wlAskText = function(title, value, opt){
       row.querySelector('[data-hide]').addEventListener('click', function(){ hide(id); paint(); });
       h.appendChild(row);
     });
-    /* 띠 높이만큼 본문을 내린다 (v222 구글 띠와 같은 방식) */
-    try{ document.body.style.paddingTop = (h.children.length ? h.offsetHeight : 0) + 'px'; }catch(e){}
+    /* 띠 높이만큼 본문을 내린다 (v222 구글 띠와 같은 방식)
+       v260 — 고정 창(.lf-page-ov·.lf-ov·.overlay)은 padding 이 안 먹어 띠가 창 머리줄을 덮었다 → CSS 변수로 창도 내린다 */
+    try{
+      var hh = h.children.length ? h.offsetHeight : 0;
+      document.body.style.paddingTop = hh + 'px';
+      document.documentElement.style.setProperty('--wl-alert-h', hh + 'px');
+    }catch(e){}
   }
   function set(id, o){ if(!id||!o) return; items[id]=o; paint(); }
   function clear(id){ if(items[id]){ delete items[id]; paint(); } }
@@ -26293,7 +26332,7 @@ window.wlAskText = function(title, value, opt){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   🔄 다시 읽기 (wlRefresh)   v259-0903-1300
+   🔄 다시 읽기 (wlRefresh)   v260-0903-1305
    달님 : 「컴이랑 모바일이랑 데이터가 안 맞아 — 왜 그런지 알아보고 확실히 고쳐」
    ▸ 원인 (확인됨) : loadAll() 은 앱을 켤 때 딱 한 번만 클라우드를 읽는다 (worklog.js 1440행).
        실시간 구독(onSnapshot)이 없고, 탭으로 돌아와도 다시 읽지 않는다.

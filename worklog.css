@@ -1590,3 +1590,16 @@ tr.settle-add:hover .settle-addhint{ color:#3f7cb8; font-weight:800 }
   .lf-page.is-compact .pg-pk{ flex:none !important; font-size:11.5px }
   .lf-page.is-compact .pg-prow{ flex-direction:column }
 }
+
+/* v260 — 달님 : 「서식 보기 창을 절반 정도로」 PC(1180px↑) 에서 서식 보기 창은 화면의 52% 폭
+   (노션 보기는 그대로). 머리줄을 잡고 끌 수 있다 (worklog.js bindDrag). */
+@media (min-width:1180px){
+  .lf-page-ov.as-modal > .lf-page.is-compact{ width:52vw; max-width:none; min-width:720px }
+  .lf-page-ov.as-modal > .lf-page.is-compact .pg-props,
+  .lf-page-ov.as-modal > .lf-page.is-compact .pg-2l .pg-props{ grid-template-columns:repeat(3, minmax(0,1fr)) }  /* 절반 폭이면 3열이 알맞다 */
+}
+.lf-page-ov.as-modal .pg-top{ cursor:move; user-select:none }
+.lf-page-ov.as-modal .pg-top button{ cursor:pointer }
+.lf-page-ov.as-modal > .lf-page.wl-dragging{ box-shadow:0 26px 70px rgba(20,40,64,.4); transition:none }
+/* v260 — 경고 띠가 떠 있으면 고정 창들도 그만큼 아래에서 시작한다 (띠가 창 머리줄을 덮지 않게) */
+.lf-page-ov, .lf-ov, .overlay{ top:var(--wl-alert-h, 0px) !important }   /* html 의 inset:0 이 뒤에 오므로 !important */
