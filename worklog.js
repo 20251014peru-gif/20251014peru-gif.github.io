@@ -12472,7 +12472,9 @@ async function githubUpload(token){
       for (var k in localStorage){
         if (!Object.prototype.hasOwnProperty.call(localStorage, k)) continue;
         var raw = String(localStorage[k]);
-        var b = (k.length + raw.length) * 2;
+        /* v253 — ×2(UTF-16 바이트) 로 재던 것을 글자 수로 통일. 브라우저 한도(약 5.1~5.7MB)는 글자 수 기준이고,
+           <head> 응급처치·lsTotalSize() 도 글자 수라 이것만 두 배로 나와 「158%」 같은 헛경고가 났다 */
+        var b = (k.length + raw.length);
         keys++; bytes += b;
         var mine = isMine(k);
         if (mine) mineB += b; else otherB += b;
@@ -23271,7 +23273,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v252-0903-1010';
+  var JS_BUILD = 'v254-0903-1020';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -26118,7 +26120,7 @@ window.wlAskText = function(title, value, opt){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   🚨 공통 경고 띠 (wlAlerts)   v252-0903-1010
+   🚨 공통 경고 띠 (wlAlerts)   v254-0903-1020
    달님 : 「구글 캘린더 끊기면 빨간 띠로 알려주듯이, 중요한 문제는 다 그렇게 —
            모르고 지나가면 문제 되니까. 8개 다 하고 색만 다르게」
    · 화면 맨 위에 문제마다 한 줄씩 쌓인다. 해결되면 스스로 사라진다.
@@ -26175,6 +26177,35 @@ window.wlAskText = function(title, value, opt){
   function set(id, o){ if(!id||!o) return; items[id]=o; paint(); }
   function clear(id){ if(items[id]){ delete items[id]; paint(); } }
 
+  /* ── 저장공간 계량기 (v253) ──
+     사용량 = 모든 키의 글자 수(KB).  한도 = 하루 한 번 100KB 덩어리를 실제로 넣어 보고 잰 값 (wl_ls_quota_kb 에 기억).
+     못 재면 5120KB(대부분 브라우저의 5MB) 로 본다. 이름표: ct_=연락처 앱, scanapp_=스캔 앱, wl_/v43_=업무일지 */
+  var LS_QUOTA='wl_ls_quota_kb', LS_QUOTA_AT='wl_ls_quota_at';
+  function lsMeter(){
+    var used=0, top={k:'',n:0};
+    for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i)||''; var n=k.length+(localStorage.getItem(k)||'').length; used+=n; if(n>top.n) top={k:k,n:n}; }
+    var usedKB=Math.round(used/1024);
+    var quotaKB = parseInt(localStorage.getItem(LS_QUOTA)||'0',10) || 5120;
+    var label = /^ct_/.test(top.k) ? '연락처 앱 명함·연락처('+top.k+')' : /^scanapp_/.test(top.k) ? '스캔 앱('+top.k+')'
+              : /^(wl_|v43_)/.test(top.k) ? '업무일지('+top.k+')' : top.k;
+    return { usedKB:usedKB, quotaKB:quotaKB, pct:Math.round(usedKB/quotaKB*100), topName:label, topKB:Math.round(top.n/1024) };
+  }
+  function lsProbe(){          /* 실제 한도 재기 — 하루 한 번, 100KB 씩 넣어 보고 바로 지운다 */
+    try{
+      var at=parseInt(localStorage.getItem(LS_QUOTA_AT)||'0',10);
+      if(Date.now()-at < 86400000) return;
+      var used=0; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i)||''; used+=k.length+(localStorage.getItem(k)||'').length; }
+      var chunk=new Array(102401).join('x'), extra=0;
+      try{ for(var j=0;j<70;j++){ localStorage.setItem('__wl_probe_'+j, chunk); extra+=102400; } }catch(e){}
+      for(var j2=0;j2<70;j2++){ try{ localStorage.removeItem('__wl_probe_'+j2); }catch(e){} }
+      var quotaKB=Math.round((used+extra)/1024);
+      if(quotaKB>1024){ localStorage.setItem(LS_QUOTA, String(quotaKB)); localStorage.setItem(LS_QUOTA_AT, String(Date.now())); }
+      console.log('[경고 띠] 저장공간 한도 실측 ' + quotaKB + 'KB (사용 ' + Math.round(used/1024) + 'KB)');
+    }catch(e){ console.warn('[경고 띠] 한도 실측 실패', e); }
+  }
+  setTimeout(lsProbe, 20000);
+  window.wlLsMeter = lsMeter;
+
   /* ── 점검 항목 (30초마다 · 창 포커스 때) ── */
   var obSeen=0, offSince=0, errSeen=0;
   function check(){
@@ -26202,11 +26233,13 @@ window.wlAskText = function(title, value, opt){
       else clear('offline');
     }catch(e){ clear('offline'); }
 
-    /* 저장공간 80% 이상 (브라우저 localStorage 5MB 기준) */
+    /* 저장공간 — v253 : 글자 수 기준 + 실제 한도를 하루 한 번 재서 쓴다 (v252 의 ×2 계산은 「158%」 헛경고를 냈다)
+       · 80% ↑ 빨강(지금 행동)  · 65% ↑ 주황(가장 큰 덩어리를 이름으로 알려 준다) */
     try{
-      var bytes=0; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); bytes += ((k||'').length + (localStorage.getItem(k)||'').length) * 2; }
-      var pct = Math.round(bytes/(5*1024*1024)*100);
-      if(pct>=80) set('storage', { level:'red', text:'💾 브라우저 저장공간이 '+pct+'% 찼어요 — 더 차면 기록 저장이 막힙니다 (8-27 사고)',
+      var m = lsMeter();
+      if(m.pct>=80) set('storage', { level:'red', text:'💾 브라우저 저장공간 '+m.pct+'% ('+m.usedKB+'/'+m.quotaKB+'KB) — 더 차면 기록 저장이 막힙니다. 가장 큰 것: '+m.topName+' '+m.topKB+'KB',
+        btn:'진단 탭 열기', run:function(){ try{ window.v43ActivateTab('diag'); }catch(e){} } });
+      else if(m.pct>=65) set('storage', { level:'orange', text:'💾 브라우저 저장공간 '+m.pct+'% — 가장 큰 것: '+m.topName+' '+m.topKB+'KB. 미리 정리해 두세요',
         btn:'진단 탭 열기', run:function(){ try{ window.v43ActivateTab('diag'); }catch(e){} } });
       else clear('storage');
     }catch(e){ clear('storage'); }
@@ -26234,4 +26267,78 @@ window.wlAskText = function(title, value, opt){
 
   window.wlAlerts = { set:set, clear:clear, check:tick, list:function(){ return Object.keys(items); } };
   console.log('[경고 띠] v252 준비됨 — 구글·대기함·오프라인·저장공간·드라이브·오류');
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🔄 다시 읽기 (wlRefresh)   v254-0903-1020
+   달님 : 「컴이랑 모바일이랑 데이터가 안 맞아 — 왜 그런지 알아보고 확실히 고쳐」
+   ▸ 원인 (확인됨) : loadAll() 은 앱을 켤 때 딱 한 번만 클라우드를 읽는다 (worklog.js 1440행).
+       실시간 구독(onSnapshot)이 없고, 탭으로 돌아와도 다시 읽지 않는다.
+       휴대폰은 브라우저 탭이 며칠씩 살아 있으므로 「켰을 때 본 것」이 계속 보인다 →
+       PC 에서 적은 것이 폰에 안 보이고, 폰에서 적은 것이 PC 에 안 보인다.
+       또 _wlReconnect() 는 늦게 연결돼도 연락처만 다시 읽고 기록은 안 읽었다.
+   ▸ 해결 : ① 탭으로 돌아올 때(60초 이상 지났으면) ② 보이는 동안 5분마다
+            ③ 오프라인 → 온라인으로 바뀐 직후  — 클라우드를 다시 읽고 화면을 다시 그린다.
+            입력창·페이지가 열려 있으면 건너뛴다 (쓰는 중에 화면이 바뀌면 안 되니까).
+            loadAll 은 이 기기에만 있는 기록을 합쳐 주므로(extra) 아직 안 올라간 것이 사라지지 않는다.
+   창구 : wlRefresh.now()  wlRefresh.state()
+   ══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var lastAt = Date.now(), busy = false, wasOnline = null, count = 0, MIN_GAP = 60*1000, EVERY = 5*60*1000;
+  function editing(){
+    try{
+      if(document.getElementById('lfPageOv')) return true;                       /* 노션식 페이지 */
+      if(document.querySelector('.lf-ov')) return true;                            /* 개인·목록 작은 창 */
+      if(document.querySelector('.overlay.show, [id$=Overlay].show')) return true; /* 예전 입력창 */
+      var ae = document.activeElement;
+      if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.id !== 'gsBar') return true;
+    }catch(e){}
+    return false;
+  }
+  function refresh(why){
+    if(busy) return Promise.resolve(false);
+    if(typeof online === 'undefined' || !online || !db) return Promise.resolve(false);
+    if(typeof loadAll !== 'function') return Promise.resolve(false);
+    if(editing()){ console.log('[다시 읽기] 입력 중이라 건너뜀 (' + why + ')'); return Promise.resolve(false); }
+    busy = true;
+    var before = 0; try{ before = (entries||[]).length; }catch(e){}
+    return loadAll().then(function(){
+      lastAt = Date.now(); count++;
+      var after = 0; try{ after = (entries||[]).length; }catch(e){}
+      try{ if(typeof renderStatusChips === 'function') renderStatusChips(); }catch(e){}
+      try{ if(typeof renderAll === 'function') renderAll(); }catch(e){}
+      try{ if(typeof window.v43Refresh === 'function') window.v43Refresh(); }catch(e){}
+      console.log('[다시 읽기] ' + why + ' — ' + before + '건 → ' + after + '건');
+      if(after !== before && typeof toast === 'function') toast('🔄 다른 기기에서 바뀐 기록을 받았어요 (' + before + '→' + after + '건)', 3500);
+      return true;
+    }).catch(function(e){ console.warn('[다시 읽기] 실패', e); return false; })
+      .then(function(r){ busy = false; return r; });
+  }
+  /* ① 탭으로 돌아올 때 */
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) return;
+    if(Date.now() - lastAt < MIN_GAP) return;
+    setTimeout(function(){ refresh('탭 복귀'); }, 800);
+  });
+  window.addEventListener('focus', function(){
+    if(Date.now() - lastAt < MIN_GAP) return;
+    setTimeout(function(){ refresh('창 포커스'); }, 800);
+  });
+  /* ② 보이는 동안 5분마다 · ③ 오프라인→온라인 */
+  setInterval(function(){
+    try{
+      var on = (typeof online !== 'undefined') && !!online;
+      if(wasOnline === false && on){ wasOnline = on; refresh('연결 복구'); return; }
+      wasOnline = on;
+      if(document.hidden) return;
+      if(Date.now() - lastAt >= EVERY) refresh('5분 주기');
+    }catch(e){}
+  }, 15000);
+  window.wlRefresh = {
+    now:   function(){ return refresh('수동'); },
+    state: function(){ return { 마지막_읽기: new Date(lastAt).toLocaleString('ko-KR'), 다시_읽은_횟수: count, 입력중: editing() }; }
+  };
+  console.log('[다시 읽기] v254 준비됨 — 탭 복귀·5분·연결 복구 때 클라우드를 다시 읽는다');
 })();
