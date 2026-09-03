@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v254-0903-1020';
+window.PERSONAL_BUILD = 'v255-0903-1147';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -5349,6 +5349,19 @@ window.PERSONAL_BUILD = 'v254-0903-1020';
         pgExec(c, B); phSync(); bodySave();
       });
     });
+    /* v255 — 본문 칸을 클릭하지 않은 상태에서 Ctrl+V 해도 사진이 본문 끝에 들어간다 (본문 안 붙여넣기는 pgBindBody 가 처리) */
+    ov.addEventListener('paste', function(e){
+      try{
+        if(B.contains(e.target)) return;
+        var ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
+        var dt=e.clipboardData; if(!dt) return;
+        var fs=[].filter.call(dt.files||[], function(f){ return /^image\//.test(f.type); });
+        if(!fs.length) return;
+        e.preventDefault();
+        pgInsertPics(fs, B, function(){ phSync(); bodySave(); });
+        if(typeof toast==='function') toast('📋 클립보드 사진을 본문에 넣었어요');
+      }catch(err){ console.warn('[페이지 붙여넣기]', err); }
+    });
     document.getElementById('pgPicIn').addEventListener('change', function(ev){
       pgInsertPics(ev.target.files, B, function(){ ev.target.value=''; phSync(); bodySave(); }); });
 
@@ -7555,6 +7568,7 @@ window.PERSONAL_BUILD = 'v254-0903-1020';
       +     '<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">'
       +       '<button type="button" id="lfCam" class="lf-radd">📷 카메라</button>'
       +       '<button type="button" id="lfPick" class="lf-radd">🖼 앨범에서 선택</button>'
+      +       '<button type="button" id="lfPaste" class="lf-radd" title="복사해 둔 사진을 붙여넣습니다 (PC 는 Ctrl+V 도 됩니다)">📋 붙여넣기</button>'
       +       '<input type="file" id="lfF1" accept="image/*" capture="environment" style="display:none">'
       +       '<input type="file" id="lfF2" accept="image/*" multiple style="display:none">'
       +     '</div><div id="lfPhotos" class="lf-ph" style="margin-top:8px"></div>'
@@ -7730,6 +7744,37 @@ window.PERSONAL_BUILD = 'v254-0903-1020';
         }
         ev.target.value=''; drawPhotos();
       });
+    });
+    /* v255 — 달님 : 「사진 붙여넣기 방식이 없더라」 업무 입력창(worklog.js 4338행)과 같은 방식.
+       ① Ctrl+V(창 어디서나)  ② 📋 붙여넣기 단추(휴대폰 — 클립보드 읽기 권한을 물어본다)  ③ 끌어놓기 */
+    async function addPhotoFiles(fs, how){
+      var n=0;
+      for(var i=0;i<fs.length && PHOTOS.length<8;i++){
+        if(!/^image\//.test(fs[i].type||'')) continue;
+        var u=await shrink(fs[i]); if(u){ PHOTOS.push(u); n++; }
+      }
+      drawPhotos();
+      if(typeof toast==='function') toast(n ? (how+' 사진 '+n+'장 추가됨') : '사진이 없어요 — 사진을 복사한 뒤 눌러 주세요');
+    }
+    ov.addEventListener('paste', function(e){
+      var dt=e.clipboardData; if(!dt) return;
+      var fs=[].filter.call(dt.files||[], function(f){ return /^image\//.test(f.type); });
+      if(!fs.length) return;                      /* 글자 붙여넣기는 그대로 둔다 */
+      e.preventDefault(); addPhotoFiles(fs, '📋 클립보드에서');
+    });
+    document.getElementById('lfPaste').addEventListener('click', async function(){
+      try{
+        if(!(navigator.clipboard && navigator.clipboard.read)){ if(typeof toast==='function') toast('이 브라우저는 단추 붙여넣기를 지원하지 않아요 — Ctrl+V 를 써 주세요'); return; }
+        var items=await navigator.clipboard.read(), fs=[];
+        for(var a=0;a<items.length;a++){ var ts=items[a].types.filter(function(t){ return /^image\//.test(t); });
+          for(var b=0;b<ts.length;b++){ var bl=await items[a].getType(ts[b]); fs.push(new File([bl], 'paste.'+ts[b].split('/')[1], {type:ts[b]})); } }
+        addPhotoFiles(fs, '📋 클립보드에서');
+      }catch(err){ console.warn('[붙여넣기]', err); if(typeof toast==='function') toast('클립보드를 못 읽었어요 — 권한을 허용했는지 확인해 주세요'); }
+    });
+    ['dragenter','dragover'].forEach(function(ev){ ov.addEventListener(ev, function(e){ e.preventDefault(); }); });
+    ov.addEventListener('drop', function(e){
+      var fs=(e.dataTransfer&&e.dataTransfer.files)||[]; if(!fs.length) return;
+      e.preventDefault(); addPhotoFiles([].slice.call(fs), '끌어놓은');
     });
 
     function close(){ ov.remove(); }
