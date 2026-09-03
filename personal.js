@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v250-0903-0925';
+window.PERSONAL_BUILD = 'v251-0903-0940';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -548,7 +548,10 @@ window.PERSONAL_BUILD = 'v250-0903-0925';
     if(e.cur && e.cur!=='\uc6d0') tags += '<span class="lf-tag" style="background:#dcfce7;color:#166534">'+esc(e.cur)+'</span>';
     var ph='';
     var pics = esr(e.photos).concat(esr(e.scanRefs).map(function(r){ return (r.data&&r.data.photoUrl)||''; }).filter(Boolean));
-    if(pics.length) ph = '<div class="lf-ph">' + pics.slice(0,4).map(function(u){
+    /* v251 — 달님 : 「사진이 있으면 카드에 두 장 나와 카드만 커져 — 한 장만」
+       대표 사진(wlThumb, worklog.js)이 제목 옆에 이미 붙으므로 아래 사진띠는 그게 꺼져 있을 때만, 그것도 1장만 */
+    var _thumbOn = true; try{ _thumbOn = localStorage.getItem('wl_thumb') !== '0'; }catch(_t){}
+    if(pics.length && !_thumbOn) ph = '<div class="lf-ph">' + pics.slice(0,1).map(function(u){
       return '<img src="'+esc(u)+'">'; }).join('') + '</div>';
 
     var chC = colorHit(e, pty);

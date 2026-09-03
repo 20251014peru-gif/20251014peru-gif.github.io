@@ -1519,3 +1519,8 @@ tr.settle-add:hover .settle-addhint{ color:#3f7cb8; font-weight:800 }
 
 /* v250 — 카드 날짜 (배지 줄 오른쪽 끝) */
 .lf-card .lf-m .lf-date{ margin-left:auto; font-size:11.5px; font-weight:800; color:#8ba0b6; white-space:nowrap }
+
+/* v251 — 카드 대표 사진은 제목 오른쪽 위(삭제 단추 옆)에 작게 — 카드 높이를 안 늘린다
+   (.lf-card 는 flex 세로라 float 가 안 먹어 사진이 한 줄을 통째로 차지했다) */
+.lf-card > .wl-th{ float:none; position:absolute; top:7px; right:36px; width:40px; height:40px; margin:0 }
+.lf-card:has(> .wl-th) .lf-t{ padding-right:84px }

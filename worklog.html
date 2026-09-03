@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v250-0903-0925";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v251-0903-0940";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=250-20260903t0925"></script>
+<script src="worklog.js?v=251-20260903t0940"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -14496,21 +14496,36 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       html += '<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:800;color:'+grp.color+';margin-bottom:8px;padding:6px 10px;background:'+grp.color+'15;border-radius:8px">'+grp.title+'</div>';
       html += '<div style="display:flex;flex-direction:column;gap:6px">';
       grp.items.forEach(function(it){
+        /* v251 — 달님 : 「+1개 누르고 창 뜨면 또 골라야 해 — 밖으로 빼서 바로 누르게, 파일 먼저 폴더 나중」
+           한 줄 = 이름 + 단추들. 파일(📄, 최신 달 먼저) → 폴더(📁). 줄 높이가 늘 같아 스크롤이 안 늘어난다. */
         var matches = findMatching(it.keywords);
         var hasMatch = matches.length > 0;
-        var latestPath = hasMatch ? (matches[0].path||'') : '';
-        var subText = hasMatch ? ('최신: '+(matches[0].name||'').slice(0,30)+(matches[0].month?(' / '+matches[0].month):'')) : '등록된 파일 없음 (점검일지·운영실무에 추가하세요)';
-        html += '<div style="padding:10px 12px;background:'+(hasMatch?'#f7faff':'#f5f5f5')+';border:1.5px solid '+(hasMatch?'#dbe6f4':'#e5e5e5')+';border-radius:10px">';
-        html += '  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">';
-        html += '    <div><div style="font-weight:700;font-size:14px;color:#1a2f45">'+it.label+'</div><div style="font-size:11px;color:#7a92a8;margin-top:2px">'+subText+'</div></div>';
-        if(hasMatch){
-          html += '<div style="display:flex;gap:4px;flex-shrink:0"><button data-open-path="'+encodeURIComponent(latestPath)+'" class="btn-action btn-action-sm btn-action-primary" style="padding:0 10px;height:28px;font-size:11px">▶ 열기</button>';
-          if(matches.length > 1){
-            html += '<button data-show-all="'+it.label+'" data-grp-id="'+grp.id+'" class="btn-action btn-action-sm" style="padding:0 8px;height:28px;font-size:11px">+'+(matches.length-1)+'개</button>';
-          }
-          html += '</div>';
+        function isFolder(d){
+          if(d.fileType==='folder') return true;
+          if(d.fileType==='file') return false;
+          return !/\.[a-z0-9]{2,5}$/i.test(String(d.path||''));     /* 구분 칸이 없는 옛 자료: 확장자로 판정 */
         }
-        html += '  </div>';
+        var files = matches.filter(function(d){ return !isFolder(d); });
+        var folders = matches.filter(isFolder);
+        function chip(d, folder){
+          var nm = String(d.name||'').trim() || '(이름 없음)';
+          var short = nm.length > 14 ? nm.slice(0,13)+'…' : nm;
+          return '<button type="button" data-open-path="'+encodeURIComponent(d.path||'')+'"'
+            + ' title="'+String((d.name||'')+(d.month?(' · '+d.month):'')+'\n'+(d.path||'')).replace(/"/g,'&quot;')+'"'
+            + ' class="btn-action btn-action-sm'+(folder?'':' btn-action-primary')+'"'
+            + ' style="padding:0 10px;height:30px;font-size:12px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">'
+            + (folder?'📁 ':'📄 ') + short + '</button>';
+        }
+        html += '<div style="padding:8px 12px;background:'+(hasMatch?'#f7faff':'#f5f5f5')+';border:1.5px solid '+(hasMatch?'#dbe6f4':'#e5e5e5')+';border-radius:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+        html += '<div style="font-weight:700;font-size:14px;color:#1a2f45;flex:0 0 auto;min-width:96px">'+it.label+'</div>';
+        if(hasMatch){
+          html += '<div style="display:flex;gap:5px;flex-wrap:wrap;flex:1 1 auto;min-width:0">'
+            + files.map(function(d){ return chip(d,false); }).join('')
+            + folders.map(function(d){ return chip(d,true); }).join('')
+            + '</div>';
+        } else {
+          html += '<div style="font-size:11px;color:#7a92a8">등록된 파일 없음 (점검일지·운영실무에 추가하세요)</div>';
+        }
         html += '</div>';
       });
       html += '</div></div>';
@@ -20759,7 +20774,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=250-20260903t0925"></script>
+<script src="personal.js?v=251-20260903t0940"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에
