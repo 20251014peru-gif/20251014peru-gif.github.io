@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v255-0903-1147';
+window.PERSONAL_BUILD = 'v257-0903-1236';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -266,6 +266,27 @@ window.PERSONAL_BUILD = 'v255-0903-1147';
       {k:'detail', l:'내용',   t:'area', w:'full'}
     ]}
   };
+  /* ══ v256 — 달님 : 「일상 첫째, 차계부 둘째, 구매·맛집·독서·생각 … 건강·사람은 잘 안 써」
+     순서만 바꾼다. 저장된 기록의 열쇠(buy·food…)는 그대로라 옛 기록에 아무 영향 없다.
+     ⚠ 열쇠 이름을 바꾸면 옛 기록이 「기타」로 보이므로 이름은 절대 안 바꾼다.
+     차계부(car)는 CAT_P 밖의 별도 종류라 고르기 창에서 이 순서표로 끼워 넣는다. */
+  var CAT_ORDER = ['daily','car','buy','food','book','think','todo','trip','etc','health','person'];
+  (function reorder(o){
+    var keep = {}; Object.keys(o).forEach(function(k){ keep[k]=o[k]; delete o[k]; });
+    CAT_ORDER.forEach(function(k){ if(keep[k]){ o[k]=keep[k]; delete keep[k]; } });
+    Object.keys(keep).forEach(function(k){ o[k]=keep[k]; });          /* 표에 없는 것은 뒤에 */
+  })(CAT_P);
+  /* 고르기 창용 — 차계부까지 끼운 순서 */
+  function catPickList(){
+    var c = cats(), out = [], seen = {};
+    CAT_ORDER.forEach(function(k){
+      if(k==='car'){ out.push({k:'car', i:'🚗', n:'차계부'}); seen.car=1; }
+      else if(c[k]){ out.push({k:k, i:c[k].i, n:c[k].n}); seen[k]=1; }
+    });
+    Object.keys(c).forEach(function(k){ if(!seen[k]) out.push({k:k, i:c[k].i, n:c[k].n}); });
+    if(!seen.car) out.push({k:'car', i:'🚗', n:'차계부'});
+    return out;
+  }
 
   /* ── 차계부: 구분별로 서식이 달라진다 ── */
   var CARF = {
@@ -5288,6 +5309,38 @@ window.PERSONAL_BUILD = 'v255-0903-1147';
       }catch(e){ console.error('[페이지 자동채움]', e); }
     };
 
+    /* v256 — 달님 : 「구매로 넣은 걸 차계부로 못 바꾸네」 종류 배지를 누르면 다른 종류로 옮긴다.
+       제목·날짜·금액·메모·본문·사진처럼 공통 칸은 그대로 남고, 옛 종류만의 칸은 기록 안에 남되 화면에서만 안 보인다(되돌리면 다시 보임). */
+    (function(){
+      if(!isPersonal()) return;
+      var bd = ov.querySelector('.pg-badge'); if(!bd) return;
+      bd.style.cursor='pointer'; bd.title='눌러서 종류 바꾸기';
+      bd.addEventListener('click', function(){
+        var cv=document.createElement('div'); cv.className='lf-ov'; cv.style.zIndex='9800';
+        cv.innerHTML='<div class="lf-mod" style="max-width:600px">'
+          + '<div class="lf-mh"><b>어떤 종류로 바꿀까요?</b> <span style="font-size:12px;color:#8ba0b6;font-weight:600">지금: '+d.i+' '+esc(d.n)+'</span>'
+          +   '<button type="button" id="lfCatX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
+          + '<div class="lf-cats">' + catPickList().map(function(x){
+              return '<button type="button" class="lf-cb'+(x.k===pt?' on':'')+'" data-ck="'+x.k+'"'+(x.k===pt?' disabled style="opacity:.45"':'')+'><span class="i">'+x.i+'</span><span class="l">'+x.n+'</span></button>'; }).join('')
+          + '</div></div>';
+        document.body.appendChild(cv);
+        function cl(){ cv.remove(); }
+        cv.querySelector('#lfCatX').addEventListener('click', cl);
+        cv.addEventListener('mousedown', function(e){ if(e.target===cv) cl(); });
+        cv.querySelectorAll('[data-ck]').forEach(function(b){
+          b.addEventListener('click', function(){
+            var k=b.getAttribute('data-ck'); cl(); if(!k || k===pt) return;
+            var patch={ ptype:k };
+            if(k==='car'){ patch.car = rec.car || curCar || (cars()[0]||{}).n || ''; patch.ctype = rec.ctype || '주유'; }
+            if(!rec.date) patch.date = today();
+            try{ pUpd(id, patch); }catch(e2){ console.error('[종류 바꾸기]', e2); noteMsg('바꾸지 못했어요: '+e2); return; }
+            if(typeof toast==='function') toast('🔁 종류를 바꿨어요 → '+(k==='car'?'🚗 차계부':(cats()[k].i+' '+cats()[k].n)));
+            setTimeout(function(){ try{ openPage(id); }catch(e3){} try{ render(); }catch(e4){} }, 60);
+          });
+        });
+      });
+    })();
+
     /* 제목 */
     var T=document.getElementById('pgTitle');
     pgAutoGrow(T);
@@ -6405,9 +6458,8 @@ window.PERSONAL_BUILD = 'v255-0903-1147';
     ov.innerHTML='<div class="lf-mod" style="max-width:600px">'
       + '<div class="lf-mh"><b>어떤 기록을 추가할까요?</b>'
       +   '<button type="button" id="lfNX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
-      + '<div class="lf-cats">' + Object.keys(cats()).map(function(k){
-          return '<button type="button" class="lf-cb" data-nk="'+k+'"><span class="i">'+cats()[k].i+'</span><span class="l">'+cats()[k].n+'</span></button>'; }).join('')
-      + '<button type="button" class="lf-cb" data-nk="car"><span class="i">🚗</span><span class="l">차계부</span></button>'
+      + '<div class="lf-cats">' + catPickList().map(function(d){
+          return '<button type="button" class="lf-cb" data-nk="'+d.k+'"><span class="i">'+d.i+'</span><span class="l">'+d.n+'</span></button>'; }).join('')
       + '</div></div>';
     document.body.appendChild(ov);
     function cl(){ ov.remove(); }
@@ -7878,9 +7930,8 @@ window.PERSONAL_BUILD = 'v255-0903-1147';
     ov.innerHTML='<div class="lf-mod" style="max-width:640px">'
       + '<div class="lf-mh"><b>무엇을 기록할까요?</b>'
       +   '<button type="button" id="lfX" style="border:none;background:none;font-size:21px;color:#94a3b8;cursor:pointer">✕</button></div>'
-      + '<div class="lf-cats">' + Object.keys(cats()).map(function(k){
-          return '<button type="button" class="lf-cb" data-lcat="'+k+'"><span class="i">'+cats()[k].i+'</span><span class="l">'+cats()[k].n+'</span></button>'; }).join('')
-      + '<button type="button" class="lf-cb" data-lcat="car"><span class="i">🚗</span><span class="l">차계부</span></button>'
+      + '<div class="lf-cats">' + catPickList().map(function(d){
+          return '<button type="button" class="lf-cb" data-lcat="'+d.k+'"><span class="i">'+d.i+'</span><span class="l">'+d.n+'</span></button>'; }).join('')
       + '</div></div>';
     document.body.appendChild(ov);
     function close(){ ov.remove(); }
