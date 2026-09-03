@@ -16190,7 +16190,13 @@ async function githubUpload(token){
       applyCompact();
       b.textContent = now ? '📄 노션 보기' : '📋 서식 보기';
       b.title = now ? '노션처럼 한 줄씩 넓게 봅니다' : '예전 입력창처럼 — 이름 위·칸 아래, 구역 띠, 4열';
-      if(typeof toast === 'function') toast(now ? '📋 서식 보기 — 예전 입력창 모양' : '📄 노션 보기');
+      if(typeof toast === 'function') toast(now ? '📋 서식 보기 — 절반 창' : '📄 노션 보기 — 전체 화면');
+      /* v263 — 서식 보기는 창, 노션 보기는 전체 페이지라 껍데기가 다르다 → 보던 기록을 새 모양으로 다시 연다 */
+      var rid = ridNow();
+      if(rid && typeof window.wlGoPage === 'function'){
+        var asModal = now && (window.innerWidth >= 1180);   /* 이미 떠 있는 창은 null 로는 안 바뀌어 명시한다 */
+        setTimeout(function(){ try{ window.wlGoPage(rid, asModal); }catch(e){ console.warn('[보기 모양] 다시 열기 실패', e); } }, 80);
+      }
     });
 
     var del = top.querySelector('#pgDel');
@@ -23329,7 +23335,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v262-0903-1325';
+  var JS_BUILD = 'v263-0903-1330';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -26176,7 +26182,7 @@ window.wlAskText = function(title, value, opt){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   🚨 공통 경고 띠 (wlAlerts)   v262-0903-1325
+   🚨 공통 경고 띠 (wlAlerts)   v263-0903-1330
    달님 : 「구글 캘린더 끊기면 빨간 띠로 알려주듯이, 중요한 문제는 다 그렇게 —
            모르고 지나가면 문제 되니까. 8개 다 하고 색만 다르게」
    · 화면 맨 위에 문제마다 한 줄씩 쌓인다. 해결되면 스스로 사라진다.
@@ -26332,7 +26338,7 @@ window.wlAskText = function(title, value, opt){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   🔄 다시 읽기 (wlRefresh)   v262-0903-1325
+   🔄 다시 읽기 (wlRefresh)   v263-0903-1330
    달님 : 「컴이랑 모바일이랑 데이터가 안 맞아 — 왜 그런지 알아보고 확실히 고쳐」
    ▸ 원인 (확인됨) : loadAll() 은 앱을 켤 때 딱 한 번만 클라우드를 읽는다 (worklog.js 1440행).
        실시간 구독(onSnapshot)이 없고, 탭으로 돌아와도 다시 읽지 않는다.
