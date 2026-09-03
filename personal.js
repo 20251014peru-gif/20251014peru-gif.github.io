@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v258-0903-1250';
+window.PERSONAL_BUILD = 'v259-0903-1300';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -1765,7 +1765,10 @@ window.PERSONAL_BUILD = 'v258-0903-1250';
     if(def){
       var seen={};
       if(bmp){ for(var mk in bmp) (bmp[mk]||[]).forEach(function(n){ seen[n]=1; }); }
-      def.forEach(function(f){
+      def.forEach(function(f, fi){
+        /* v259 — 달님 : 「예전 입력창처럼 구역 제목(⛽ 주유 내역 · 📍 주유소 정보)이 눈에 띄게」
+           개인 서식의 구역 표시 {s:'…'} 를 제목 줄(head)로 페이지에도 낸다. 값이 없는 표시용 줄이라 저장과 무관. */
+        if(f.s && !bmp){ out.push({ id:'s:'+fi, name:String(f.s), type:'head', from:'기본' }); return; }
         if(f.s || !f.k) return;
         if(seen[f.k]) return; seen[f.k]=1;
         if(!bmp && (f.k==='date'||f.k==='title'||f.k==='detail'||f.k==='amount')) return;  /* 공통과 겹침 */
