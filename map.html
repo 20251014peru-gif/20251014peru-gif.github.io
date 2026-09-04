@@ -392,7 +392,7 @@ svg.rel{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-in
 <body>
 <script id="app-data" type="application/json">
 {
- "v": 3,
+ "v": 4,
  "title": "나의 시스템 지도",
  "root": {
   "name": "나의 시스템",
@@ -630,6 +630,17 @@ svg.rel{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-in
    "checked": ""
   },
   {
+   "id": "i6",
+   "axis": "inv",
+   "icon": "🦢",
+   "name": "투자 허브 (invest)",
+   "status": "live",
+   "url": "https://20251014peru-gif.github.io/invest/",
+   "desc": "통폐합 새 시스템 — 시장 상태(매크로 17지표) · 축 8개×6단계 · 전략 카드 5 · 오픈북 예측·채점. PC 없이 GitHub Actions 로 돈다",
+   "checked": "",
+   "fav": true
+  },
+  {
    "id": "i1",
    "axis": "inv",
    "icon": "📰",
@@ -790,8 +801,8 @@ svg.rel{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-in
    "icon": "🗄️",
    "name": "cygnus",
    "status": "stop",
-   "url": "https://20251014peru-gif.github.io/cygnus.html",
-   "desc": "세계경제 12지표 화면 — 표 머리만 있고 데이터가 비어 있음. v2로 흡수 후 삭제",
+   "url": "https://20251014peru-gif.github.io/invest/cygnus.html",
+   "desc": "옛 cygnus.html 은 _docs/ 로 이동(2026-09-04). 정적판은 invest/cygnus.html — 매크로 17지표·레짐·영웅문 붙여넣기",
    "checked": ""
   },
   {
@@ -799,9 +810,9 @@ svg.rel{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-in
    "axis": "lab",
    "icon": "🧱",
    "name": "stock-system",
-   "status": "dev",
-   "url": "https://20251014peru-gif.github.io/stock-system.html",
-   "desc": "주식 시스템 관리 v1.0 — 수집→판단→매매→복기 웹 원형. CYGNUS v2 설계의 밑그림. 지금은 초기화 에러",
+   "status": "stop",
+   "url": "https://20251014peru-gif.github.io/_docs/stock-system.html",
+   "desc": "설계 원형 — _docs/ 로 이동(2026-09-04), 참조만. 실물은 invest 저장소",
    "checked": ""
   },
   {
@@ -810,8 +821,8 @@ svg.rel{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-in
    "icon": "🗑️",
    "name": "youtube",
    "status": "stop",
-   "url": "https://20251014peru-gif.github.io/youtube.html",
-   "desc": "채널분석·워치리스트·검색이 youtube3(v4.3)에 전부 들어있음 — 바로 삭제 가능",
+   "url": "",
+   "desc": "2026-09-04 삭제됨(정리1.bat). 요약은 로컬 요약기 V2, 채점은 invest/predict.html",
    "checked": ""
   },
   {
@@ -840,8 +851,8 @@ svg.rel{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-in
    "icon": "🗄️",
    "name": "links-recipes",
    "status": "stop",
-   "url": "https://20251014peru-gif.github.io/links-recipes.html",
-   "desc": "My Collection — 링크+레시피 통합 원본. 지금은 links/recipes로 분리됨. 저장된 내용 옮겼는지 확인 후 삭제",
+   "url": "",
+   "desc": "2026-09-04 삭제됨(정리1.bat) — links/recipes 로 분리 완료",
    "checked": ""
   },
   {
@@ -851,7 +862,7 @@ svg.rel{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-in
    "name": "worklog 사본 4개",
    "status": "stop",
    "url": "",
-   "desc": "worklog_2=v44(폴더탭관리 없음) · worklog-test=v43 · worklog_(9)=404. 전부 현재 v44보다 뒤처짐 — 삭제 안전",
+   "desc": "2026-09-04 삭제됨(정리1.bat) — worklog_1/2·worklog (8)(9)·worklog-test·backups 47개",
    "checked": ""
   },
   {
@@ -860,8 +871,8 @@ svg.rel{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-in
    "icon": "🗑️",
    "name": "migrate",
    "status": "stop",
-   "url": "https://20251014peru-gif.github.io/migrate.html",
-   "desc": "개인일지 v67 → Firebase 이전 도구. 원본을 지우지 않는 안전한 도구, 이전 끝났으면 삭제",
+   "url": "",
+   "desc": "2026-09-04 삭제됨(정리1.bat) — Firebase 이전 완료",
    "checked": ""
   },
   {
@@ -1711,7 +1722,7 @@ function boot(){
     window.claude.use("downloads").then(function(d){ dl=d; }).catch(function(){});
   }else{
     try{ var raw=localStorage.getItem(LSKEY);
-      if(raw){ var saved=JSON.parse(raw); if(saved&&saved.nodes){ data=saved; setView(view); toast("이 브라우저에 저장해둔 내용을 불러왔습니다"); } }
+      if(raw){ var saved=JSON.parse(raw); if(saved&&saved.nodes&&saved.v===data.v){ data=saved; setView(view); toast("이 브라우저에 저장해둔 내용을 불러왔습니다"); } else if(saved&&saved.nodes){ toast("파일이 새 판(v"+data.v+")이라 브라우저 저장본은 무시했습니다"); } }
     }catch(e){}
   }
 }

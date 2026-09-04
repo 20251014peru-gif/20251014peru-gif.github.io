@@ -8,7 +8,6 @@
 
 - **GitHub**: `20251014peru-gif.github.io`
 - **Firebase 프로젝트**: `my-system-25497` (Blaze)
-- **Firebase API Key**: `AIzaSyAyG1chECYsbO7cSZUuXmNa0_KDYBmahPY`
 - **Anthropic 모델**: 반드시 `claude-sonnet-4-6` (날짜 suffix 없음)
 - **Anthropic API Key**: localStorage에만 저장, 코드에 하드코딩 금지
 - **회사 컴** (항상 켜둠): app.py(port 8080), 텔레그램 봇 상시 실행

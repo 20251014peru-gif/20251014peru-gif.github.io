@@ -1,4 +1,4 @@
-# v 20260830-1830  |  수정: cron 을 시간당 3회로 분산(깃허브가 예약 실행을 자주 건너뜀),
+# v 20260904-1247  |  수정: archive 30일 지난 파일 자동 삭제 스텝 추가 (이전 v 20260830-1830: cron 3회 분산·push 재시도·concurrency)
 #                        push 재시도 3회 + 끝내 실패하면 조용히 넘어가지 않고 알림,
 #                        concurrency 로 수집끼리 겹치지 않게
 name: News Radar Collector
@@ -38,6 +38,18 @@ jobs:
           NAVER_SECRET: ${{ secrets.NAVER_SECRET }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: python collector.py
+
+      - name: archive 30일 지난 파일 정리
+        run: |
+          # 원칙: 저장소가 하루 2~7MB 씩 커지는 걸 막는다. 파일 이름(YYYY-MM-DD)이 30일보다 오래되면 삭제.
+          cutoff=$(date -u -d '30 days ago' +%Y-%m-%d)
+          n=0
+          for f in archive/*.json; do
+            [ -e "$f" ] || continue
+            d=$(basename "$f" .json)
+            if [[ "$d" < "$cutoff" ]]; then git rm -q "$f" && n=$((n+1)); fi
+          done
+          echo "::notice::archive 30일 정리: ${n}개 삭제 (기준일 $cutoff 이전)"
 
       - name: 변경분 커밋
         run: |
