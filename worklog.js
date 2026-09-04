@@ -23335,7 +23335,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v263-0903-1330';
+  var JS_BUILD = 'v265-0904-1156';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -26182,7 +26182,7 @@ window.wlAskText = function(title, value, opt){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   🚨 공통 경고 띠 (wlAlerts)   v263-0903-1330
+   🚨 공통 경고 띠 (wlAlerts)   v264-0904-1029
    달님 : 「구글 캘린더 끊기면 빨간 띠로 알려주듯이, 중요한 문제는 다 그렇게 —
            모르고 지나가면 문제 되니까. 8개 다 하고 색만 다르게」
    · 화면 맨 위에 문제마다 한 줄씩 쌓인다. 해결되면 스스로 사라진다.
@@ -26338,7 +26338,7 @@ window.wlAskText = function(title, value, opt){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   🔄 다시 읽기 (wlRefresh)   v263-0903-1330
+   🔄 다시 읽기 (wlRefresh)   v264-0904-1029
    달님 : 「컴이랑 모바일이랑 데이터가 안 맞아 — 왜 그런지 알아보고 확실히 고쳐」
    ▸ 원인 (확인됨) : loadAll() 은 앱을 켤 때 딱 한 번만 클라우드를 읽는다 (worklog.js 1440행).
        실시간 구독(onSnapshot)이 없고, 탭으로 돌아와도 다시 읽지 않는다.
@@ -26408,4 +26408,45 @@ window.wlAskText = function(title, value, opt){
     state: function(){ return { 마지막_읽기: new Date(lastAt).toLocaleString('ko-KR'), 다시_읽은_횟수: count, 입력중: editing() }; }
   };
   console.log('[다시 읽기] v254 준비됨 — 탭 복귀·5분·연결 복구 때 클라우드를 다시 읽는다');
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🧲 튀어나온 작은 창 붙잡기 (wlPopFit)   v265-0904-1156
+   달님 : 「폰에서 이상하게 나와 — 다른 부분도 그런지 확인해서 전체 수정」
+   · ⚙ 설정 서랍(#wlSetDrawer) · 개인 탭 ⚙ 더보기(.lf-morep) 는 단추 오른쪽 끝에 맞춰
+     붙는(right:0) 작은 창이라, 폰처럼 단추가 줄 왼쪽에 서면 창이 화면 왼쪽 밖으로 나갔다.
+   · 창이 열릴 때마다 화면 밖으로 나간 만큼 안쪽으로 밀어 넣는다 (양쪽 8px 여백).
+   · 새 작은 창이 생기면 SEL 에 선택자만 추가하면 된다.
+   ══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var SEL = ['#wlSetDrawer', '.lf-more.on > .lf-morep'];
+  var PAD = 8;
+  function fit(el){
+    try{
+      if(!el) return;
+      el.style.transform = '';                                   /* 지난번 밀어 넣은 값은 지우고 다시 잰다 */
+      if(getComputedStyle(el).display === 'none') return;
+      var W = window.innerWidth;
+      el.style.maxWidth = (W - PAD*2) + 'px';
+      var r = el.getBoundingClientRect(), dx = 0;
+      if(!r.width) return;
+      if(r.left < PAD) dx = PAD - r.left;
+      else if(r.right > W - PAD) dx = (W - PAD) - r.right;
+      if(dx) el.style.transform = 'translateX(' + Math.round(dx) + 'px)';
+    }catch(e){ console.warn('[작은 창 붙잡기] 실패', e); }
+  }
+  function fitAll(){
+    SEL.forEach(function(s){
+      var list = document.querySelectorAll(s);
+      for(var i=0;i<list.length;i++) fit(list[i]);
+    });
+  }
+  /* 클릭이 창을 여는 코드보다 먼저 잡히므로(캡처) 한 박자 뒤에 잰다 */
+  document.addEventListener('click', function(){ setTimeout(fitAll, 0); }, true);
+  document.addEventListener('touchend', function(){ setTimeout(fitAll, 30); }, true);
+  window.addEventListener('resize', function(){ setTimeout(fitAll, 0); });
+  window.wlPopFit = { fit:fit, all:fitAll, list:SEL };
+  console.log('[작은 창 붙잡기] v265 준비됨 — wlPopFit.all()');
 })();

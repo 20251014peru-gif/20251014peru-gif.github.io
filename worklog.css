@@ -1623,3 +1623,7 @@ tr.settle-add:hover .settle-addhint{ color:#3f7cb8; font-weight:800 }
 .lf-page-ov.as-modal .pg-top #pgPEdit.on{ background:#fff; color:#1d4f86 }
 .lf-page-ov.as-modal .pg-top > div[style*="flex:1"]{ min-width:8px }
 .lf-page-ov.as-modal > .lf-page{ border-radius:14px; overflow:hidden }
+
+/* ── v265 · 작은 창(서랍·더보기)은 화면 폭을 넘지 않는다 — 넘친 만큼은 worklog.js 의 wlPopFit 가 밀어 넣는다 ── */
+#wlSetDrawer, .lf-morep{ max-width:calc(100vw - 16px); box-sizing:border-box }
+#wlSetDrawer > *{ min-width:0; white-space:normal }
