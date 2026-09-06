@@ -654,7 +654,7 @@ def main():
                       actions="; ".join(acts))
         # (2) 수집 완료 알림: 새 뉴스 있을 때만, 매 회차 1건 (확실히 도착)
         hhmm = now.strftime("%H:%M")
-        titles = [("🔴 " if n.get("sig")=="red" else "· ") + n.get("title","") for n in new_added[:6]]
+        titles = [("🔴 " if n.get("sig")=="red" else "· ") + n.get("title","") + (("\n" + n["url"]) if n.get("url") else "") for n in new_added[:6]]
         more = ("\n…외 %d건" % (len(new_added)-6)) if len(new_added) > 6 else ""
         title = f"✅ 수집 완료 {hhmm} · 새 뉴스 {len(new_added)}건"
         if reds_new:
