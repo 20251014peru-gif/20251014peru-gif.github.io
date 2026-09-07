@@ -158,7 +158,11 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
+<<<<<<< Updated upstream
   window.APP_VERSION = "v270-0907-1032";      /* ★ 여기 한 줄만 고친다 ★ */
+=======
+  window.APP_VERSION = "v271-0907-1041";      /* ★ 여기 한 줄만 고친다 ★ */
+>>>>>>> Stashed changes
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -2443,7 +2447,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
             </label>
             <button class="btn btn-ghost btn-sm" id="btnAIExtract">🤖 AI 텍스트 추출</button>
             <button class="btn btn-ghost btn-sm" id="btnMatExcel">📋 엑셀 복사</button>
-            <button class="btn btn-ghost btn-sm" id="btnGitUpload" style="background:#24292e;color:#fff;border-color:#24292e">🚀 GitHub 업로드</button>
+            <!-- v271 — [GitHub 업로드] 단추 제거: 서빙 중인 파일을 같은 저장소에 되올리는 무용 기능 + 토큰 평문 보관 위험 (2026-09-07) -->
           </div>
         </div>
         <p class="desc">품목을 한 번 등록해두면, 입출고를 기록할 때마다 자동으로 재고가 계산됩니다.</p>
@@ -3271,7 +3275,11 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<<<<<<< Updated upstream
 <script src="worklog.js?v=270-20260907t1032"></script>
+=======
+<script src="worklog.js?v=271-20260907t1041"></script>
+>>>>>>> Stashed changes
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -20854,7 +20862,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
+<<<<<<< Updated upstream
 <script src="personal.js?v=270-20260907t1032"></script>
+=======
+<script src="personal.js?v=271-20260907t1041"></script>
+>>>>>>> Stashed changes
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에

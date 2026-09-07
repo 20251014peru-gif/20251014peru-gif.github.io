@@ -7029,23 +7029,7 @@ function wireMaterialTab(){
   $("btnAddItem").addEventListener("click",()=>{ if(window.wlAddNew) window.wlAddNew("item"); else openEditor("item",null); });
   $("btnAddStock").addEventListener("click",()=>{ if(window.wlAddNew) window.wlAddNew("stock"); else openEditor("stock",null); });
   $("btnMatExcel").addEventListener("click",matExcelCopy);
-  $("btnGitUpload").addEventListener("click", async ()=>{
-    let tok = localStorage.getItem('_ghToken')||'';
-    if(!tok){
-      tok = prompt('GitHub Personal Access Token 입력:\n(한 번만 입력하면 저장)');
-      if(!tok) return;
-      localStorage.setItem('_ghToken', tok.trim());
-      tok = tok.trim();
-    }
-    toast('🚀 GitHub 업로드 중...');
-    try{
-      await githubUpload(tok);
-      toast('✅ GitHub 업로드 완료!');
-    }catch(e){
-      toast('❌ 업로드 실패: '+e.message);
-      localStorage.removeItem('_ghToken');
-    }
-  });
+  /* v271 — [GitHub 업로드] 단추·리스너 제거 (단추는 worklog.html 에서 뺐다 · githubUpload() 는 호출처 없이 남김) */
   $("btnAIExtract").addEventListener("click",aiExtractDialog);
   $("matFileUpload").addEventListener("change",handleMatFileUpload);
 }
@@ -23335,7 +23319,11 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
+<<<<<<< Updated upstream
   var JS_BUILD = 'v270-0907-1032';
+=======
+  var JS_BUILD = 'v271-0907-1041';
+>>>>>>> Stashed changes
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
