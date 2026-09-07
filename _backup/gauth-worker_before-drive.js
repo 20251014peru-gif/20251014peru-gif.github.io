@@ -20,8 +20,7 @@
 
 const GAUTH_SCOPE = [
   'https://www.googleapis.com/auth/calendar',
-  'https://www.googleapis.com/auth/calendar.events',
-  'https://www.googleapis.com/auth/drive.file'      /* 2026-09-07 — 드라이브 자동 백업도 같은 열쇠로 (worklog v269) */
+  'https://www.googleapis.com/auth/calendar.events'
 ].join(' ');
 
 function gaCors(body, status, type) {
