@@ -1,26 +1,24 @@
 {
- "updated_at": "2026-09-07T08:20:07.701314+09:00",
+ "updated_at": "2026-09-07T14:23:45.972766+09:00",
  "topics": [
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 12,
-   "channel_count": 8,
-   "total_views": 1143653,
-   "latest": "2026-09-07T07:50:48+09:00",
+   "video_count": 10,
+   "channel_count": 7,
+   "total_views": 1231260,
+   "latest": "2026-09-07T12:20:05+09:00",
    "video_ids": [
-    "WzAytqw-_mk",
-    "KVRGQGhMGEU",
+    "zDoL5gjsVq4",
+    "FIO1sgSdL20",
+    "lA6Sd-hboac",
     "eL6_LcFkR4c",
     "atOR1qP80Fw",
     "TfgEzopq2Aw",
     "6OKulGCmhE8",
     "hfdHfCC_egk",
     "D7BNPiC-Xis",
-    "ULo7fkSYH9Q",
-    "PuJi96pxEDo",
-    "Evd14rWtTeA",
-    "uBLJOeswjKk"
+    "ULo7fkSYH9Q"
    ],
    "channels": [
     "815머니톡",
@@ -29,7 +27,6 @@
     "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
     "이효석아카데미",
-    "증시각도기TV",
     "체슬리TV (박세익)"
    ],
    "subtopics": [
@@ -44,12 +41,12 @@
      "channels": 2
     },
     {
-     "word": "금리",
+     "word": "반도체주",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "9월",
+     "word": "급등",
      "videos": 2,
      "channels": 2
     },
@@ -64,56 +61,58 @@
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 9,
-   "channel_count": 5,
-   "total_views": 857057,
-   "latest": "2026-09-07T06:05:35+09:00",
+   "video_count": 10,
+   "channel_count": 6,
+   "total_views": 1121370,
+   "latest": "2026-09-07T12:00:13+09:00",
    "video_ids": [
+    "FIO1sgSdL20",
+    "k7w1x4YeFag",
+    "kR8byAXJiCk",
     "E2QuP2e85gk",
     "A3DdYah0Vkg",
     "3hPgMEaWlts",
     "fiINV2VrfO4",
-    "lC3gGvyxoTE",
     "i-JUh8PVKPM",
     "ULo7fkSYH9Q",
-    "Xi16tuChtiY",
-    "N1SDphUu7vU"
+    "Xi16tuChtiY"
    ],
    "channels": [
+    "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
     "이효석아카데미",
+    "증시각도기TV",
     "체슬리TV (박세익)"
    ],
    "subtopics": [
     {
-     "word": "미국",
+     "word": "데이터센터",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "금리인상",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "9월",
      "videos": 2,
      "channels": 2
     },
     {
      "word": "박세익",
-     "videos": 3,
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "급등",
+     "videos": 2,
      "channels": 1
     },
     {
      "word": "전무",
-     "videos": 3,
-     "channels": 1
-    },
-    {
-     "word": "학습부장",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "별주부전",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "체슬리",
      "videos": 2,
      "channels": 1
     }
@@ -123,13 +122,14 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 6,
+   "video_count": 7,
    "channel_count": 5,
-   "total_views": 281812,
-   "latest": "2026-09-07T07:50:48+09:00",
+   "total_views": 1092645,
+   "latest": "2026-09-07T12:20:05+09:00",
    "video_ids": [
-    "WzAytqw-_mk",
-    "KVRGQGhMGEU",
+    "zDoL5gjsVq4",
+    "7-hNQ7Pe-Yg",
+    "k7w1x4YeFag",
     "A3DdYah0Vkg",
     "eL6_LcFkR4c",
     "atOR1qP80Fw",
@@ -144,19 +144,70 @@
    ],
    "subtopics": [
     {
+     "word": "금리인상",
+     "videos": 3,
+     "channels": 3
+    },
+    {
      "word": "9월",
      "videos": 3,
      "channels": 3
     },
+    {
+     "word": "뉴욕증시",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "반도체주",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "급등",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "공포",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "미국증시",
+   "name": "미국증시",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 843523,
+   "latest": "2026-09-07T12:20:05+09:00",
+   "video_ids": [
+    "zDoL5gjsVq4",
+    "k7w1x4YeFag",
+    "atOR1qP80Fw"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
+    "삼프로TV 3PROTV"
+   ],
+   "subtopics": [
     {
      "word": "금리인상",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "반도체",
+     "word": "뉴욕증시",
      "videos": 2,
-     "channels": 1
+     "channels": 2
+    },
+    {
+     "word": "급등",
+     "videos": 2,
+     "channels": 2
     }
    ],
    "active": true
@@ -164,30 +215,23 @@
   {
    "id": "중국경제",
    "name": "중국경제",
-   "video_count": 4,
-   "channel_count": 4,
-   "total_views": 847663,
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 796972,
    "latest": "2026-09-06T17:00:11+09:00",
    "video_ids": [
     "6OKulGCmhE8",
     "MNAqVMj5SLc",
-    "lC3gGvyxoTE",
     "Xi16tuChtiY"
    ],
    "channels": [
     "815머니톡",
     "달란트투자",
-    "삼프로TV 3PROTV",
     "이효석아카데미"
    ],
    "subtopics": [
     {
      "word": "중국",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "AI",
      "videos": 2,
      "channels": 2
     }
