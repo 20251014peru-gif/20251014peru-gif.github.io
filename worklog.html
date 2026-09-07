@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v266-0907-0930";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v267-0907-0949";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=266-20260907t0930"></script>
+<script src="worklog.js?v=267-20260907t0949"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -19610,6 +19610,31 @@ if('serviceWorker' in navigator){
       .catch(function(){ return null; });
   }
 
+  /* ── v267: 한꺼번에 쓰지 않는다 (2026-09-07 전수조사 — 업무 loadAll 은 v213 에서 고쳤는데 개인 쪽은 안 고쳐져 있었다)
+        30건 초과면 보류하고 이유를 남긴다 · 30건 이하는 1.5초 간격으로 하나씩 · 수동 wlPSync.push() */
+  var P_HOLD = { list:[], kind:'', run:null };
+  function pStrip(x){ var o={}; for(var k in x){ if(k!=='id') o[k]=x[k]; } return o; }
+  function pSlow(kind, list, fn, force){
+    if(!list || !list.length) return;
+    if(list.length > 30 && !force){
+      P_HOLD = { list:list, kind:kind, run:fn };
+      console.warn('[개인] 클라우드 ' + kind + ' ' + list.length + '건 — 한꺼번에 쓰면 쓰기 줄이 막히므로 보류했습니다. 올리려면 wlPSync.push()');
+      return;
+    }
+    var i = 0, ok = 0, bad = 0;
+    (function step(){
+      if(i >= list.length){ console.log('[개인] 클라우드 ' + kind + ' ' + ok + '건' + (bad ? ' / 실패 ' + bad : '')); return; }
+      var x = list[i++];
+      Promise.resolve().then(function(){ return fn(x); })
+        .then(function(){ ok++; }, function(e){ bad++; console.warn('[개인] ' + kind + ' 실패 ' + (x && x.id), e); })
+        .then(function(){ setTimeout(step, 1500); });
+    })();
+  }
+  window.wlPSync = {
+    state: function(){ return { 보류:P_HOLD.list.length, 종류:P_HOLD.kind, 이_기기:pLocal().length }; },
+    push:  function(){ var h = P_HOLD; P_HOLD = { list:[], kind:'', run:null }; if(!h.list.length){ console.log('[개인] 보류된 것이 없습니다'); return; } pSlow(h.kind, h.list, h.run, true); }
+  };
+
   /* 클라우드 + 로컬 합치기 */
   function pLoad(){
     if(!pOnline()){ P=pLocal(); pReady=true; return Promise.resolve(P); }
@@ -19618,11 +19643,11 @@ if('serviceWorker' in navigator){
         .filter(function(x){ return x.id!==SCHEMA_ID && !x._schema; });   /* 속성 정의는 기록이 아니다 */
       var zombie=all.filter(function(x){ return pIsDel(x.id); });
       var cloud =all.filter(function(x){ return !pIsDel(x.id); });
-      zombie.forEach(function(x){ db.collection(PCOL).doc(x.id).delete().catch(function(){}); });
+      pSlow('지우기', zombie, function(x){ return db.collection(PCOL).doc(x.id).delete(); });   /* v267 */
       var ids={}; cloud.forEach(function(x){ ids[x.id]=1; });
       var extra=pLocal().filter(function(x){ return !ids[x.id] && !pIsDel(x.id); });
       P=cloud.concat(extra);
-      extra.forEach(function(x){ pPush(x.id, x); });
+      pSlow('되올리기', extra, function(x){ return db.collection(PCOL).doc(x.id).set(pStrip(x)); });   /* v267 */
       pReady=true; ls(PLS,P);
       try{ if(window.wlSyncMark) window.wlSyncMark('personal'); }catch(e){}
       return P;
@@ -20803,7 +20828,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=266-20260907t0930"></script>
+<script src="personal.js?v=267-20260907t0949"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에
