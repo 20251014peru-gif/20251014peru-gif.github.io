@@ -1,22 +1,98 @@
 {
- "updated_at": "2026-09-07T14:23:45.972766+09:00",
+ "updated_at": "2026-09-07T22:06:31.952996+09:00",
  "topics": [
+  {
+   "id": "AI_엔비디아",
+   "name": "AI·엔비디아",
+   "video_count": 13,
+   "channel_count": 10,
+   "total_views": 1037975,
+   "latest": "2026-09-07T20:59:29+09:00",
+   "video_ids": [
+    "e5EGbgAFna4",
+    "nZIGCuFOr6Y",
+    "GToun2lJtSM",
+    "uXPGOVuoX-0",
+    "xHDdIwM92HQ",
+    "mA-OGfdU_C4",
+    "_pauG5PpKaw",
+    "kR8byAXJiCk",
+    "E2QuP2e85gk",
+    "A3DdYah0Vkg",
+    "3hPgMEaWlts",
+    "ULo7fkSYH9Q",
+    "Xi16tuChtiY"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
+    "달란트투자",
+    "삼프로TV 3PROTV",
+    "소수몽키",
+    "슈퍼개미 이세무사TV",
+    "이효석아카데미",
+    "증시각도기TV",
+    "체슬리TV (박세익)",
+    "티타임즈TV"
+   ],
+   "subtopics": [
+    {
+     "word": "반도체",
+     "videos": 4,
+     "channels": 4
+    },
+    {
+     "word": "대표",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "9월",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "데이터센터",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "GPU",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "미국",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 10,
-   "channel_count": 7,
-   "total_views": 1231260,
-   "latest": "2026-09-07T12:20:05+09:00",
+   "video_count": 18,
+   "channel_count": 9,
+   "total_views": 895888,
+   "latest": "2026-09-07T22:00:39+09:00",
    "video_ids": [
-    "zDoL5gjsVq4",
-    "FIO1sgSdL20",
+    "lMD15jQi6oc",
+    "gZY5zkMnrqQ",
+    "DqDeXvnTzbY",
+    "ulrUMkild6c",
+    "HfPUHcruTT8",
+    "Y_cYOxlt6Is",
+    "nZIGCuFOr6Y",
+    "7C66aQtOODA",
+    "mKZF7FScD68",
+    "uXPGOVuoX-0",
+    "lVe_DyrdPYQ",
+    "xHDdIwM92HQ",
+    "mA-OGfdU_C4",
+    "cXLuiKs-2F8",
     "lA6Sd-hboac",
-    "eL6_LcFkR4c",
     "atOR1qP80Fw",
-    "TfgEzopq2Aw",
-    "6OKulGCmhE8",
-    "hfdHfCC_egk",
     "D7BNPiC-Xis",
     "ULo7fkSYH9Q"
    ],
@@ -24,97 +100,43 @@
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
     "달란트투자",
+    "미주은 (미국주식으로 은퇴하기)",
     "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
+    "염블리와 함께 (염승환)",
     "이효석아카데미",
-    "체슬리TV (박세익)"
+    "증시각도기TV"
    ],
    "subtopics": [
     {
-     "word": "삼성전자",
-     "videos": 3,
-     "channels": 2
-    },
-    {
      "word": "대표",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "반도체주",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "급등",
-     "videos": 2,
-     "channels": 2
+     "videos": 4,
+     "channels": 3
     },
     {
      "word": "SK하이닉스",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "AI_엔비디아",
-   "name": "AI·엔비디아",
-   "video_count": 10,
-   "channel_count": 6,
-   "total_views": 1121370,
-   "latest": "2026-09-07T12:00:13+09:00",
-   "video_ids": [
-    "FIO1sgSdL20",
-    "k7w1x4YeFag",
-    "kR8byAXJiCk",
-    "E2QuP2e85gk",
-    "A3DdYah0Vkg",
-    "3hPgMEaWlts",
-    "fiINV2VrfO4",
-    "i-JUh8PVKPM",
-    "ULo7fkSYH9Q",
-    "Xi16tuChtiY"
-   ],
-   "channels": [
-    "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "슈퍼개미 이세무사TV",
-    "이효석아카데미",
-    "증시각도기TV",
-    "체슬리TV (박세익)"
-   ],
-   "subtopics": [
-    {
-     "word": "데이터센터",
-     "videos": 2,
-     "channels": 2
+     "videos": 3,
+     "channels": 3
     },
     {
-     "word": "금리인상",
-     "videos": 2,
-     "channels": 2
+     "word": "증시",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "미국",
+     "videos": 3,
+     "channels": 3
     },
     {
      "word": "9월",
-     "videos": 2,
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "코스피",
+     "videos": 3,
      "channels": 2
-    },
-    {
-     "word": "박세익",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "급등",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "전무",
-     "videos": 2,
-     "channels": 1
     }
    ],
    "active": true
@@ -122,54 +144,39 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 7,
-   "channel_count": 5,
-   "total_views": 1092645,
-   "latest": "2026-09-07T12:20:05+09:00",
+   "video_count": 6,
+   "channel_count": 6,
+   "total_views": 308152,
+   "latest": "2026-09-07T18:13:40+09:00",
    "video_ids": [
-    "zDoL5gjsVq4",
-    "7-hNQ7Pe-Yg",
-    "k7w1x4YeFag",
+    "glGTrMcmeDc",
+    "7C66aQtOODA",
+    "zoV8daFxLfM",
     "A3DdYah0Vkg",
-    "eL6_LcFkR4c",
     "atOR1qP80Fw",
     "-zk98kSF3LM"
    ],
    "channels": [
-    "815머니톡",
     "경제 읽어주는 남자 (김광석)",
     "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
+    "언더스탠딩",
+    "염블리와 함께 (염승환)",
     "이효석아카데미"
    ],
    "subtopics": [
     {
-     "word": "금리인상",
-     "videos": 3,
-     "channels": 3
-    },
-    {
      "word": "9월",
-     "videos": 3,
-     "channels": 3
+     "videos": 4,
+     "channels": 4
     },
     {
-     "word": "뉴욕증시",
+     "word": "코스피",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "반도체주",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "급등",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "공포",
+     "word": "미국",
      "videos": 2,
      "channels": 2
     }
@@ -177,39 +184,80 @@
    "active": true
   },
   {
-   "id": "미국증시",
-   "name": "미국증시",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 843523,
-   "latest": "2026-09-07T12:20:05+09:00",
+   "id": "국내증시",
+   "name": "국내증시",
+   "video_count": 7,
+   "channel_count": 5,
+   "total_views": 402863,
+   "latest": "2026-09-07T22:00:39+09:00",
    "video_ids": [
-    "zDoL5gjsVq4",
-    "k7w1x4YeFag",
-    "atOR1qP80Fw"
+    "lMD15jQi6oc",
+    "mxH76sUshVU",
+    "glGTrMcmeDc",
+    "40chz7mNmzg",
+    "7C66aQtOODA",
+    "uXPGOVuoX-0",
+    "UXtdMbb9RG4"
    ],
    "channels": [
     "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "삼프로TV 3PROTV"
+    "삼프로TV 3PROTV",
+    "염블리와 함께 (염승환)",
+    "이효석아카데미",
+    "증시각도기TV"
    ],
    "subtopics": [
     {
-     "word": "금리인상",
+     "word": "코스피",
+     "videos": 7,
+     "channels": 5
+    },
+    {
+     "word": "9월",
+     "videos": 4,
+     "channels": 4
+    },
+    {
+     "word": "7일",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "반도체",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "이권희",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "뉴욕증시",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "급등",
+     "word": "미국",
      "videos": 2,
      "channels": 2
     }
    ],
+   "active": true
+  },
+  {
+   "id": "고용_경기",
+   "name": "고용·경기",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 131769,
+   "latest": "2026-09-07T19:41:17+09:00",
+   "video_ids": [
+    "du4btMxv_7Y",
+    "Y_cYOxlt6Is",
+    "KP1NCgq4IJE"
+   ],
+   "channels": [
+    "경제사냥꾼",
+    "미주은 (미국주식으로 은퇴하기)",
+    "언더스탠딩"
+   ],
+   "subtopics": [],
    "active": true
   },
   {
@@ -217,15 +265,15 @@
    "name": "중국경제",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 796972,
-   "latest": "2026-09-06T17:00:11+09:00",
+   "total_views": 351779,
+   "latest": "2026-09-07T18:05:10+09:00",
    "video_ids": [
-    "6OKulGCmhE8",
-    "MNAqVMj5SLc",
+    "nZIGCuFOr6Y",
+    "bEMya0-DnQE",
     "Xi16tuChtiY"
    ],
    "channels": [
-    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
     "달란트투자",
     "이효석아카데미"
    ],
@@ -234,6 +282,45 @@
      "word": "중국",
      "videos": 2,
      "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "배당_ETF",
+   "name": "배당·ETF",
+   "video_count": 3,
+   "channel_count": 1,
+   "total_views": 105011,
+   "latest": "2026-09-07T19:00:35+09:00",
+   "video_ids": [
+    "BygDsfcGqSQ",
+    "DwwNTGwRX48",
+    "albWSsgHuyQ"
+   ],
+   "channels": [
+    "체슬리TV (박세익)"
+   ],
+   "subtopics": [
+    {
+     "word": "체슬리투자자문",
+     "videos": 3,
+     "channels": 1
+    },
+    {
+     "word": "박세익",
+     "videos": 3,
+     "channels": 1
+    },
+    {
+     "word": "전무",
+     "videos": 3,
+     "channels": 1
+    },
+    {
+     "word": "모닝브리프",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
