@@ -15934,7 +15934,70 @@ async function githubUpload(token){
     }catch(e){ return false; }
   }
 
+  /* v272 — 클라우드 창구 3곳 · 저장공간 · 드라이브 · 중계서버 (읽기만, 아무것도 안 보냄) */
+  function cloudSec(head, add, todo){
+    head('클라우드 창구 (막힌 곳이 있나)');
+    var pend = null, held = null;
+    try{ if(window.wlWrite && window.wlWrite.state){ var s = window.wlWrite.state(); pend = s['대기']; held = s['보류']; } }catch(e){}
+    add('업무 wlWrite : ' + (pend == null ? '❌ 창구 없음 (파일이 옛 것)' : ('대기 ' + pend + ' · 보류 ' + held + (held ? '  ⚠ wlSync.push()' : '  ✅'))));
+    if(held) todo.push('업무 쓰기 보류 ' + held + '건 — 콘솔 wlSync() 로 사유 확인 후 wlSync.push()');
+    try{ var ps = window.wlPSync ? window.wlPSync.state() : null;
+      add('개인 wlPSync : ' + (ps ? ('보류 ' + ps['보류'] + (ps['보류'] ? ('  ⚠ ' + ps['종류'] + ' → wlPSync.push()') : '  ✅')) : '❌ 없음 (v267 이전 파일)'));
+      if(ps && ps['보류']) todo.push('개인 ' + ps['종류'] + ' 보류 ' + ps['보류'] + '건 — wlPSync.push()');
+    }catch(e){ add('개인 wlPSync : 확인 실패 — ' + e.message); }
+    add('연락처       : 연락처 앱 콘솔 ctSelfCheck() 로 따로 봅니다 (보류가 있으면 ctPush())');
+    try{ var ob = window.wlOutbox && window.wlOutbox.count ? window.wlOutbox.count() : null;
+      add('캘린더 대기함: ' + (ob == null ? '-' : (ob + '건' + (ob ? '  ⚠ wlOutbox.drain()' : '  ✅')))); }catch(e){}
+
+    head('저장공간 (한도 약 5MB · 3.4MB 넘으면 응급처치가 돈다)');
+    try{
+      var tot = 0, big = [];
+      for(var kk in localStorage){ if(!localStorage.hasOwnProperty(kk)) continue;
+        var n = String(localStorage.getItem(kk) || '').length; tot += n; big.push([kk, n]); }
+      big.sort(function(a,b){ return b[1]-a[1]; });
+      var kb = Math.round(tot/1024);
+      add('합계        : ' + kb + 'KB' + (kb > 3400 ? '  🔴 응급처치 구간' : (kb > 2500 ? '  ⚠ 주의' : '  ✅')));
+      big.slice(0, 5).forEach(function(r){ add('  ' + (r[0] + '                          ').slice(0, 26) + Math.round(r[1]/1024) + 'KB'); });
+      var ct = big.filter(function(r){ return r[0] === 'ct_contacts'; })[0];
+      if(ct && ct[1] > 300*1024) todo.push('연락처 캐시 ' + Math.round(ct[1]/1024) + 'KB — 연락처 앱을 한 번 열면 줄어듭니다 (contacts v47+)');
+      if(kb > 3400) todo.push('저장공간 ' + kb + 'KB — 위 목록의 가장 큰 키부터 살펴보세요');
+    }catch(e){ add('저장공간 : 확인 실패 — ' + e.message); }
+
+    head('드라이브 백업 · 중계서버');
+    try{
+      var c = window.wlDrive && window.wlDrive.cfg ? window.wlDrive.cfg() : null;
+      if(!c || !c.on) add('드라이브    : 꺼짐');
+      else{
+        var age = c.lastAt ? Math.round((Date.now() - c.lastAt) / 3600000) : null;
+        var st = window.wlDrive.stale ? window.wlDrive.stale() : null;
+        add('드라이브    : 켜짐(' + (c.every || 'daily') + ') · 마지막 백업 ' + (age == null ? '없음' : age + '시간 전') + (st ? '  🔴 끊김' : '  ✅') + (c.lastErr ? ('  · 오류: ' + c.lastErr) : ''));
+        if(st) todo.push('드라이브 백업이 ' + (st.days < 0 ? '한 번도 안 됐습니다' : st.days + '일째 멈춤') + ' — 콘솔 wlDrive.upload() 로 지금 시도, 실패면 wlDrive.why()');
+      }
+      var rc = typeof window.wlRelayCfg === 'function' ? window.wlRelayCfg() : null;
+      add('중계서버    : ' + (rc ? ('설정됨 (' + rc.url + ') · 열쇠 ' + (rc.key ? '있음' : '없음')) : '설정 안 됨 — 구글 창 방식으로 돕니다'));
+      if(!rc) todo.push('중계서버가 없어 구글 토큰이 1시간마다 끊깁니다 — 설정 → 중계서버 주소 입력 후 [🔑 무한 로그인]');
+    }catch(e){ add('드라이브 : 확인 실패 — ' + e.message); }
+
+    /* v273 — 컬렉션 분리 잔여. state() 는 즉시, check()(클라우드 대조) 는 뒤에 콘솔로 */
+    head('컬렉션 분리 (지출·자재·입출고)');
+    try{
+      var sp = window.wlSplit && window.wlSplit.state ? window.wlSplit.state() : null;
+      if(!sp) add('나누기      : ❌ 없음 (v149 이전 파일)');
+      else{
+        var left = sp['옛자리에남은_지출자재입출고'];
+        add('나누기      : ' + sp['나누기'] + ' · 이 기기 기준 옛 자리에 남은 것 ' + left + '건' + (left ? '  ⚠' : '  ✅'));
+        if(left) todo.push('옛 자리에 지출·자재·입출고 ' + left + '건 — wlSplit.check() 확인 후 wlSplit.clean()');
+        if(window.wlSplit.check){
+          add('              (클라우드 대조는 잠시 뒤 콘솔에 [나누기 대조] 로 찍힙니다)');
+          Promise.resolve().then(function(){ return window.wlSplit.check(); }).then(function(r){
+            try{ console.log('%c[나누기 대조]', 'color:#2563a8;font-weight:800'); if(Array.isArray(r)) console.table(r); else console.log(r); }catch(e){}
+          }).catch(function(e){ console.warn('[나누기 대조] 실패', e); });
+        }
+      }
+    }catch(e){ add('나누기 : 확인 실패 — ' + e.message); }
+  }
   function run(){
+    var todo0 = [];   /* v272 */
     var L = [];
     function add(s){ L.push(s); }
     function head(s){ L.push(''); L.push('── ' + s + ' ' + '─'.repeat(Math.max(2, 40 - s.length))); }
@@ -16039,8 +16102,11 @@ async function githubUpload(token){
       }else add('화면 점검 도구가 없습니다 — 최신 worklog.js 를 올리세요');
     }catch(e){ add('화면 점검 실패 — ' + e.message); }
 
+    /* v272 — 2026-09-07 저장 폭주·저장공간·드라이브 사고 뒤 추가. 스크린샷 8장 대신 이 한 칸으로 시작한다 */
+    try{ cloudSec(head, add, todo0); }catch(e){ add('클라우드 점검 실패 — ' + e.message); }
+
     head('무엇을 하면 되나');
-    var todo = [];
+    var todo = todo0.slice();   /* v272 — 클라우드 점검이 먼저 모은 할 일 */
     if(on === false) todo.push('인터넷을 연결하고 새로고침 (연락처·클라우드가 이때 살아납니다)');
     if(cts === 0) todo.push('연락처가 0건입니다 — 연결 후 새로고침');
     try{ if(localStorage.getItem('wl_rules')) todo.push('wlRules.reset() 으로 규칙을 새것으로'); }catch(e){}
@@ -23319,7 +23385,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v271-0907-1041';
+  var JS_BUILD = 'v273-0907-1149';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -26315,6 +26381,34 @@ window.wlAskText = function(title, value, opt){
   setTimeout(tick, 8000);
   setInterval(tick, 30000);
   window.addEventListener('focus', function(){ setTimeout(tick, 1500); });
+
+  /* v273 — 중계서버(hwan) 생존 확인. 5분마다 /fx 를 한 번 찔러 본다 (읽기만 · 6초 제한).
+        죽어 있으면 무한 로그인·드라이브 백업이 조용히 예전 방식으로 떨어지므로 띠로 알린다. */
+  var relayFail = 0, relayAt = 0;
+  function relayProbe(){
+    try{
+      var rc = (typeof window.wlRelayCfg === 'function') ? window.wlRelayCfg() : null;
+      var url = rc ? rc.url : (localStorage.getItem('wl_relay_url') || '');
+      if(!url){ clear('relay'); return; }
+      if(Date.now() - relayAt < 5*60*1000) return;
+      relayAt = Date.now();
+      var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+      var tm = setTimeout(function(){ try{ if(ctl) ctl.abort(); }catch(e){} }, 6000);
+      fetch(url.replace(/\/+$/, '') + '/fx', { cache:'no-store', signal: ctl ? ctl.signal : undefined })
+        .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+        .then(function(d){ clearTimeout(tm); if(d && d.usd){ relayFail = 0; clear('relay'); } else throw new Error('응답 모양이 다름'); })
+        .catch(function(e){
+          clearTimeout(tm); relayFail++;
+          console.warn('[경고 띠] 중계서버 응답 없음 (' + relayFail + '회): ' + (e && e.message || e));
+          if(relayFail >= 2) set('relay', { level:'orange',
+            text:'🛰 중계서버(hwan)가 ' + relayFail + '번 연속 응답이 없어요 — 무한 로그인·드라이브 백업이 옛 방식으로 돌아갑니다',
+            btn:'주소 열어 보기', run:function(){ try{ window.open(url + '/fx', '_blank'); }catch(e){} } });
+        });
+    }catch(e){ console.warn('[경고 띠] 중계서버 점검 실패', e); }
+  }
+  setTimeout(relayProbe, 15000);
+  setInterval(relayProbe, 60000);
+  window.wlRelayProbe = function(){ relayAt = 0; relayProbe(); return '5초 뒤 콘솔·띠를 보세요'; };
 
   window.wlAlerts = { set:set, clear:clear, check:tick, list:function(){ return Object.keys(items); } };
   console.log('[경고 띠] v252 준비됨 — 구글·대기함·오프라인·저장공간·드라이브·오류');
