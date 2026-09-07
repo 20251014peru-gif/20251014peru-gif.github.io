@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v267-0907-0949";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v268-0907-1005";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=267-20260907t0949"></script>
+<script src="worklog.js?v=268-20260907t1005"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -19516,6 +19516,7 @@ if('serviceWorker' in navigator){
   var PCOL='personal_entries', PLS='wl_personal_v1';
   var PDEL='wl_p_deleted_ids', DEL_DAYS=120;
   var TRASH_P='wl_p_trash_v1', TRASH_W='wl_trash_v1', TRASH_DAYS=90;
+  var TRASH_LOCAL_DAYS=30;   /* v268 — 기기 사본은 30일만 (클라우드는 90일 그대로) */
   var SNAP_DB='wl-snapshots', SNAP_ST='snap', SNAP_KEEP=14;
   var GUARD='wl_guard_counts';
 
@@ -19698,7 +19699,7 @@ if('serviceWorker' in navigator){
   var TCLOUD={ personal:[], worklog:[] };   /* 클라우드에서 받아온 휴지통 */
   function trashLocal(src){
     var a=lg(trashKey(src),[]); if(!Array.isArray(a)) a=[];
-    var cut=now()-TRASH_DAYS*86400000;
+    var cut=now()-TRASH_LOCAL_DAYS*86400000;   /* v268 */
     var keep=a.filter(function(x){ return (x.at||0)>cut; });
     if(keep.length!==a.length) ls(trashKey(src),keep);
     return keep;
@@ -19706,9 +19707,10 @@ if('serviceWorker' in navigator){
   /* 로컬 + 클라우드 합치기 (같은 것은 한 번만) */
   function trashList(src){
     var out=[], seen={};
-    trashLocal(src).forEach(function(x){
-      var k=(x.rec&&x.rec.id)+'|'+x.at; if(seen[k]) return; seen[k]=1; out.push(x); });
+    /* v268 — 클라우드 사본을 먼저 (기기 사본은 사진을 뺀 슬림본이라, 되살릴 때는 클라우드 것이 온전하다) */
     (TCLOUD[src]||[]).forEach(function(x){
+      var k=(x.rec&&x.rec.id)+'|'+x.at; if(seen[k]) return; seen[k]=1; out.push(x); });
+    trashLocal(src).forEach(function(x){
       var k=(x.rec&&x.rec.id)+'|'+x.at; if(seen[k]) return; seen[k]=1; out.push(x); });
     return out.sort(function(a,b){ return b.at-a.at; });
   }
@@ -19734,8 +19736,9 @@ if('serviceWorker' in navigator){
     try{ var _last=trashList(src)[0]; if(_last && _last.at>=at) at=_last.at+1; }catch(e){}
     try{ if(window.wlTrashCloud) window.wlTrashCloud.put(src, rec, at); }catch(e){}
     try{
-      var a=trashList(src);
+      var a=trashLocal(src);   /* v268 — 클라우드 사본까지 기기에 베끼던 것을 멈춤 (wl_trash_v1 305KB 의 원인) */
       var slim={}; for(var k in rec){ if(k!=='photos') slim[k]=rec[k]; }
+      try{ if(typeof slim.body==='string' && slim.body.indexOf('data:image')>=0){ slim.body=slim.body.replace(/<img[^>]*>/gi,'[사진]'); slim._hv=1; } }catch(e){}   /* v268 */
       if(rec.photos && rec.photos.length) slim._photoN=rec.photos.length;
       a.unshift({ at:at, rec:slim });
       /* 용량 안전 — 200건까지만 */
@@ -20828,7 +20831,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=267-20260907t0949"></script>
+<script src="personal.js?v=268-20260907t1005"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에

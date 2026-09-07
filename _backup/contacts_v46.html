@@ -328,7 +328,7 @@ table.tbl a{color:var(--primary-deep);text-decoration:none;font-weight:600}
 
 /* ===== 버전 ===== */
 /* ⚠️ 버전은 여기 한 곳뿐. 배지·제목이 이걸 읽는다. 손으로 적지 말 것. */
-var APP_VERSION='v47-0907-1002';
+var APP_VERSION='v46-0828-1226';
 document.title='업체 연락처 '+APP_VERSION;
 (function(){
   var vb=document.getElementById('verBadge');if(vb)vb.textContent=APP_VERSION;
@@ -484,15 +484,6 @@ function syncSet(id,rec){ if(!online) return; const {id:_x,...payload}=rec; db.c
 function addRecord(data){ const id=genId(); const rec={...data,id}; items.push(rec); if(online) syncSet(id,rec); lsSave(); return rec; }
 function updateRecord(id,patch){ const i=items.findIndex(x=>x.id===id); if(i<0) return; items[i]={...items[i],...patch}; if(online) syncSet(id,items[i]); lsSave(); }
 function deleteRecord(id){ items=items.filter(x=>x.id!==id); if(online) db.collection(COL).doc(id).delete().catch(()=>{}); lsSave(); }
-function ctSlowPush(list){
-  var i=0, ok=0, bad=0;
-  (function step(){
-    if(i>=list.length){ console.log('[연락처] 되올리기 ' + ok + '건' + (bad?' / 실패 '+bad:'')); return; }
-    var x=list[i++]; var p={}; for(var k in x){ if(k!=='id') p[k]=x[k]; }
-    db.collection(COL).doc(x.id).set(p).then(function(){ ok++; }, function(e){ bad++; console.warn('[연락처] 되올리기 실패 '+x.id, e); })
-      .then(function(){ setTimeout(step, 1500); });
-  })();
-}
 async function loadAll(){
   if(online){
     try{
@@ -501,13 +492,7 @@ async function loadAll(){
       const ids=new Set(fb.map(x=>x.id));
       const extra=lsLoad().filter(x=>!ids.has(x.id));
       items=[...fb,...extra];
-      /* v47 — 한꺼번에 올리지 않는다 (2026-09-07: 업무·개인·연락처 세 곳이 같은 모양이었다) */
-      if(extra.length > 30){
-        console.warn('[연락처] 클라우드에 없는 것 ' + extra.length + '건 — 한꺼번에 올리면 쓰기 줄이 막히므로 보류. 올리려면 ctPush()');
-        window.ctPush = function(){ ctSlowPush(extra); };
-      } else if(extra.length){ ctSlowPush(extra); }
-      /* v47 — 읽을 때마다 기기 캐시를 슬림 형태로 다시 쓴다 (v46 이전에 적힌 2MB 명함 캐시가 안 지워지던 원인) */
-      lsSave();
+      extra.forEach(x=>{ const {id,...p}=x; db.collection(COL).doc(id).set(p).catch(()=>{}); });
     }catch(e){ items=lsLoad(); }
   } else items=lsLoad();
 }
