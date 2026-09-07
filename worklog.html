@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v265-0904-1156";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v266-0907-0930";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=265-20260904t1156"></script>
+<script src="worklog.js?v=266-20260907t0930"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -15856,6 +15856,10 @@ if('serviceWorker' in navigator){
     if(/token|apikey|api_key|secret|passwd|password/i.test(k)) return true;   // 비밀은 안 올린다
     /* v249 — 메모 임시 초안은 잠깐만 있는 값이라 백업·복원 대상이 아니다 (지워도 되살아나던 원인) */
     if(/^wl_memo_draft_/.test(k)) return true;
+    /* v266 — 원본이 파이어스토어에 있는 큰 캐시·대기함·임시값은 백업 대상이 아니다
+       (2026-09-07 사고: 이 키들을 13초마다 창구 밖에서 올려 쓰기 줄이 막혔다) */
+    if(k === 'wl_worklog_entries' || k === 'wl_personal_v1' || k === 'wl_write_q') return true;
+    if(/_ts$|_cache$|snap|draft|tempbackup|_q$|_outbox|_log$/i.test(k)) return true;
     return false;
   }
   /* 이 앱이 쓰는 키만 (다른 사이트 흔적은 건드리지 않음) */
@@ -15903,6 +15907,12 @@ if('serviceWorker' in navigator){
       return force || sentHash[k] !== hashOf(snap[k]);
     });
     if(!todo.length){ if(cb) cb(true, 0); return; }
+    /* v266 — 한 번에 보내는 총량 상한. 넘치면 큰 것부터 보류하고 이유를 남긴다 */
+    var LIMIT = 300*1024, total = 0, held = [];
+    todo.sort(function(a,b){ return sizeOf(snap[a]) - sizeOf(snap[b]); });   /* 작은 것부터 */
+    todo = todo.filter(function(k){ var n = sizeOf(snap[k]); if(total + n > LIMIT){ held.push(k+'('+Math.round(n/1024)+'KB)'); return false; } total += n; return true; });
+    if(held.length) log('보류 ' + held.length + '개 (1회 300KB 상한): ' + held.join(', '));
+    if(!todo.length){ if(cb) cb(false, '전부 보류'); return; }
     var done = 0, failN = 0, lastErr = '';
     var chain = Promise.resolve();
     todo.forEach(function(k){
@@ -15920,7 +15930,7 @@ if('serviceWorker' in navigator){
         .catch(function(){});
     }).then(function(){
       try{ localStorage.setItem(TS_LS, String(Date.now())); }catch(e){}
-      log('백업 ' + done + '개 키' + (failN ? (' / 실패 ' + failN) : ''));
+      log('백업 ' + done + '개 키: ' + todo.map(function(k){ return k + '(' + Math.round(sizeOf(snap[k])/1024) + 'KB)'; }).join(', ') + (failN ? (' / 실패 ' + failN + ' — ' + lastErr) : ''));
       if(cb) cb(failN === 0, failN ? lastErr : done);
     });
   }
@@ -16052,8 +16062,8 @@ if('serviceWorker' in navigator){
   };
 
   /* ── 바뀌면 자동 백업 ── */
-  function watch(){
-    if(!ready()) return;
+  function watch(evenHidden){
+    if(!ready() || (document.hidden && !evenHidden)) return;   /* v266 */
     var snap = localSnap(), changed = 0;
     for(var k in snap){ if(sentHash[k] !== hashOf(snap[k])) changed++; }
     if(changed) pushLater();
@@ -16286,7 +16296,10 @@ if('serviceWorker' in navigator){
 
   setTimeout(autoRestore, 4000);
   setTimeout(autoRestore, 11000);
-  setInterval(watch, 8000);
+  /* v266 — 8초 → 10분. 뒤에 숨은 탭은 감시하지 않는다(탭 2개가 서로 캐시를 다시 써서 되풀이 백업이 나던 원인).
+     탭을 숨길 때 한 번 더 살핀다. */
+  setInterval(function(){ if(document.hidden) return; watch(); }, 10*60*1000);
+  document.addEventListener('visibilitychange', function(){ if(document.hidden) try{ watch(true); }catch(e){} });
   console.log('[백업] 앱 데이터 클라우드 백업 로드');
 })();
 </script>
