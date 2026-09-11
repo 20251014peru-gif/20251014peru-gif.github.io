@@ -1,14 +1,17 @@
 {
- "updated_at": "2026-09-12T06:25:21.945524+09:00",
+ "updated_at": "2026-09-12T08:40:19.749964+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 11,
-   "channel_count": 9,
-   "total_views": 1605623,
-   "latest": "2026-09-12T03:12:43+09:00",
+   "video_count": 14,
+   "channel_count": 10,
+   "total_views": 1684568,
+   "latest": "2026-09-12T08:24:34+09:00",
    "video_ids": [
+    "ev79s2IN_H4",
+    "65w5LOv0-ig",
+    "0pR0HbngsB4",
     "CEaGe1yomSI",
     "Dhh2HNHF8u4",
     "TKauj_S3tFA",
@@ -23,6 +26,7 @@
    ],
    "channels": [
     "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
     "내일은 투자왕 - 김단테",
     "달란트투자",
     "미주은 (미국주식으로 은퇴하기)",
@@ -39,9 +43,24 @@
      "channels": 2
     },
     {
+     "word": "9월",
+     "videos": 2,
+     "channels": 2
+    },
+    {
      "word": "대표",
      "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "박세익",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "전무",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -49,23 +68,22 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 15,
-   "channel_count": 7,
-   "total_views": 1446848,
-   "latest": "2026-09-11T22:03:27+09:00",
+   "video_count": 14,
+   "channel_count": 8,
+   "total_views": 1092252,
+   "latest": "2026-09-12T08:35:01+09:00",
    "video_ids": [
+    "iAFSvtOe_X8",
+    "8j2XGy58zHI",
+    "ev79s2IN_H4",
     "pEmboi4S6DU",
     "DcTMVof_ydI",
-    "XGQpZ8j991c",
     "8rOR4lHbHeU",
     "__4uB6dRH3U",
     "kqz0AwEJOVU",
-    "kz_0mBcf8qM",
     "-8xR5s1m35A",
     "imeTAehzYfg",
-    "I_gUxVMa8aY",
     "2T56xXWEPAQ",
-    "sfEjQuzVeGE",
     "zQseAeqlvPg",
     "WAiblP2EfPA",
     "0NrUuQQ2HUY"
@@ -77,31 +95,32 @@
     "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
     "염블리와 함께 (염승환)",
+    "이효석아카데미",
     "증시각도기TV"
    ],
    "subtopics": [
     {
-     "word": "유가",
+     "word": "9월",
      "videos": 6,
      "channels": 4
     },
     {
-     "word": "9월",
-     "videos": 6,
-     "channels": 3
-    },
-    {
-     "word": "11일",
+     "word": "금리인상",
      "videos": 4,
      "channels": 3
     },
     {
-     "word": "미국",
+     "word": "유가",
      "videos": 4,
      "channels": 3
     },
     {
      "word": "FOMC",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "미국",
      "videos": 3,
      "channels": 3
     },
@@ -114,125 +133,11 @@
    "active": true
   },
   {
-   "id": "유가_에너지",
-   "name": "유가·에너지",
-   "video_count": 10,
-   "channel_count": 7,
-   "total_views": 889167,
-   "latest": "2026-09-11T18:00:34+09:00",
-   "video_ids": [
-    "8rOR4lHbHeU",
-    "__4uB6dRH3U",
-    "kz_0mBcf8qM",
-    "-8xR5s1m35A",
-    "I_gUxVMa8aY",
-    "dYLx5wWQANY",
-    "QLQZEU5ZDiM",
-    "zQseAeqlvPg",
-    "1b6rKiowwIo",
-    "Y_dUmeGm6L4"
-   ],
-   "channels": [
-    "815머니톡",
-    "미주은 (미국주식으로 은퇴하기)",
-    "삼프로TV 3PROTV",
-    "슈퍼개미 이세무사TV",
-    "언더스탠딩",
-    "염블리와 함께 (염승환)",
-    "증시각도기TV"
-   ],
-   "subtopics": [
-    {
-     "word": "9월",
-     "videos": 4,
-     "channels": 3
-    },
-    {
-     "word": "금리",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "100달러",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "FOMC",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "11일",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "급등",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "물가_인플레",
-   "name": "물가·인플레",
-   "video_count": 7,
-   "channel_count": 5,
-   "total_views": 626571,
-   "latest": "2026-09-11T22:15:10+09:00",
-   "video_ids": [
-    "FIYSFys0rPU",
-    "pEmboi4S6DU",
-    "zBJc3jBX4Qo",
-    "--iuSf6PdFg",
-    "sfEjQuzVeGE",
-    "zQseAeqlvPg",
-    "Y_dUmeGm6L4"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "슈퍼개미 이세무사TV",
-    "언더스탠딩",
-    "이효석아카데미",
-    "증시각도기TV"
-   ],
-   "subtopics": [
-    {
-     "word": "CPI",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "유가",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "즉시분석",
-     "videos": 3,
-     "channels": 1
-    },
-    {
-     "word": "미국",
-     "videos": 3,
-     "channels": 1
-    },
-    {
-     "word": "생방송",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "반도체",
    "name": "반도체",
    "video_count": 7,
    "channel_count": 5,
-   "total_views": 500084,
+   "total_views": 515133,
    "latest": "2026-09-11T19:30:20+09:00",
    "video_ids": [
     "Dhh2HNHF8u4",
@@ -285,16 +190,113 @@
    "active": true
   },
   {
-   "id": "배당_ETF",
-   "name": "배당·ETF",
+   "id": "유가_에너지",
+   "name": "유가·에너지",
    "video_count": 7,
    "channel_count": 5,
-   "total_views": 646422,
+   "total_views": 573847,
+   "latest": "2026-09-11T18:00:34+09:00",
+   "video_ids": [
+    "8rOR4lHbHeU",
+    "__4uB6dRH3U",
+    "-8xR5s1m35A",
+    "dYLx5wWQANY",
+    "QLQZEU5ZDiM",
+    "zQseAeqlvPg",
+    "1b6rKiowwIo"
+   ],
+   "channels": [
+    "미주은 (미국주식으로 은퇴하기)",
+    "삼프로TV 3PROTV",
+    "슈퍼개미 이세무사TV",
+    "언더스탠딩",
+    "염블리와 함께 (염승환)"
+   ],
+   "subtopics": [
+    {
+     "word": "FOMC",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "9월",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "금리",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "다시",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "물가_인플레",
+   "name": "물가·인플레",
+   "video_count": 6,
+   "channel_count": 5,
+   "total_views": 436732,
+   "latest": "2026-09-12T08:35:01+09:00",
+   "video_ids": [
+    "iAFSvtOe_X8",
+    "FIYSFys0rPU",
+    "pEmboi4S6DU",
+    "zBJc3jBX4Qo",
+    "--iuSf6PdFg",
+    "zQseAeqlvPg"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "슈퍼개미 이세무사TV",
+    "언더스탠딩",
+    "이효석아카데미",
+    "증시각도기TV"
+   ],
+   "subtopics": [
+    {
+     "word": "CPI",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "다시",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "금리",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "즉시분석",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "미국",
+     "videos": 2,
+     "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "배당_ETF",
+   "name": "배당·ETF",
+   "video_count": 6,
+   "channel_count": 5,
+   "total_views": 622811,
    "latest": "2026-09-11T19:00:39+09:00",
    "video_ids": [
     "y8NhuLQMcls",
     "iKuYaESOq9U",
-    "u0O618QIEmM",
     "zNDY2M1NdJk",
     "l5txdC0y1vw",
     "u6ebrSRJiOU",
@@ -315,21 +317,16 @@
     },
     {
      "word": "체슬리투자자문",
-     "videos": 3,
+     "videos": 2,
      "channels": 1
     },
     {
      "word": "박세익",
-     "videos": 3,
+     "videos": 2,
      "channels": 1
     },
     {
      "word": "전무",
-     "videos": 3,
-     "channels": 1
-    },
-    {
-     "word": "모닝브리프",
      "videos": 2,
      "channels": 1
     }
@@ -337,11 +334,31 @@
    "active": true
   },
   {
+   "id": "환율_달러",
+   "name": "환율·달러",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 43833,
+   "latest": "2026-09-12T08:30:30+09:00",
+   "video_ids": [
+    "8j2XGy58zHI",
+    "XYhepi7nK8g",
+    "-8xR5s1m35A"
+   ],
+   "channels": [
+    "815머니톡",
+    "삼프로TV 3PROTV",
+    "슈퍼개미 이세무사TV"
+   ],
+   "subtopics": [],
+   "active": true
+  },
+  {
    "id": "국내증시",
    "name": "국내증시",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 469766,
+   "total_views": 471353,
    "latest": "2026-09-11T20:10:12+09:00",
    "video_ids": [
     "yTSmOx32AeM",
@@ -367,7 +384,7 @@
    "name": "중국경제",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 270441,
+   "total_views": 281745,
    "latest": "2026-09-11T16:30:30+09:00",
    "video_ids": [
     "xKiLnrJaOsM",
@@ -384,36 +401,6 @@
      "word": "중국",
      "videos": 3,
      "channels": 3
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "환율_달러",
-   "name": "환율·달러",
-   "video_count": 3,
-   "channel_count": 2,
-   "total_views": 165949,
-   "latest": "2026-09-11T22:30:25+09:00",
-   "video_ids": [
-    "XYhepi7nK8g",
-    "kz_0mBcf8qM",
-    "-8xR5s1m35A"
-   ],
-   "channels": [
-    "삼프로TV 3PROTV",
-    "슈퍼개미 이세무사TV"
-   ],
-   "subtopics": [
-    {
-     "word": "100달러",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "유가",
-     "videos": 2,
-     "channels": 2
     }
    ],
    "active": false
