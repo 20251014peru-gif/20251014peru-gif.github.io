@@ -1,12 +1,12 @@
 {
- "updated_at": "2026-09-11T20:55:02.564106+09:00",
+ "updated_at": "2026-09-12T01:48:28.721688+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 11,
    "channel_count": 9,
-   "total_views": 1419641,
+   "total_views": 1787780,
    "latest": "2026-09-11T19:30:20+09:00",
    "video_ids": [
     "Dhh2HNHF8u4",
@@ -49,11 +49,12 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 17,
+   "video_count": 15,
    "channel_count": 7,
-   "total_views": 1637168,
-   "latest": "2026-09-11T20:00:17+09:00",
+   "total_views": 1186347,
+   "latest": "2026-09-11T22:03:27+09:00",
    "video_ids": [
+    "pEmboi4S6DU",
     "DcTMVof_ydI",
     "XGQpZ8j991c",
     "8rOR4lHbHeU",
@@ -63,11 +64,8 @@
     "-8xR5s1m35A",
     "imeTAehzYfg",
     "I_gUxVMa8aY",
-    "aqi3MLsQwyk",
     "2T56xXWEPAQ",
     "sfEjQuzVeGE",
-    "oV_4O2gTNJc",
-    "26yKfSC5Lmc",
     "zQseAeqlvPg",
     "WAiblP2EfPA",
     "0NrUuQQ2HUY"
@@ -84,7 +82,7 @@
    "subtopics": [
     {
      "word": "유가",
-     "videos": 7,
+     "videos": 6,
      "channels": 4
     },
     {
@@ -118,9 +116,9 @@
   {
    "id": "유가_에너지",
    "name": "유가·에너지",
-   "video_count": 11,
+   "video_count": 10,
    "channel_count": 7,
-   "total_views": 1197962,
+   "total_views": 826875,
    "latest": "2026-09-11T18:00:34+09:00",
    "video_ids": [
     "8rOR4lHbHeU",
@@ -128,7 +126,6 @@
     "kz_0mBcf8qM",
     "-8xR5s1m35A",
     "I_gUxVMa8aY",
-    "aqi3MLsQwyk",
     "dYLx5wWQANY",
     "QLQZEU5ZDiM",
     "zQseAeqlvPg",
@@ -146,17 +143,12 @@
    ],
    "subtopics": [
     {
-     "word": "금리",
-     "videos": 4,
-     "channels": 4
-    },
-    {
      "word": "9월",
      "videos": 4,
      "channels": 3
     },
     {
-     "word": "급등",
+     "word": "금리",
      "videos": 3,
      "channels": 3
     },
@@ -174,6 +166,63 @@
      "word": "11일",
      "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "급등",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "물가_인플레",
+   "name": "물가·인플레",
+   "video_count": 7,
+   "channel_count": 5,
+   "total_views": 387666,
+   "latest": "2026-09-11T22:15:10+09:00",
+   "video_ids": [
+    "FIYSFys0rPU",
+    "pEmboi4S6DU",
+    "zBJc3jBX4Qo",
+    "--iuSf6PdFg",
+    "sfEjQuzVeGE",
+    "zQseAeqlvPg",
+    "Y_dUmeGm6L4"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "슈퍼개미 이세무사TV",
+    "언더스탠딩",
+    "이효석아카데미",
+    "증시각도기TV"
+   ],
+   "subtopics": [
+    {
+     "word": "CPI",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "유가",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "즉시분석",
+     "videos": 3,
+     "channels": 1
+    },
+    {
+     "word": "미국",
+     "videos": 3,
+     "channels": 1
+    },
+    {
+     "word": "생방송",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -183,7 +232,7 @@
    "name": "반도체",
    "video_count": 7,
    "channel_count": 5,
-   "total_views": 191485,
+   "total_views": 422644,
    "latest": "2026-09-11T19:30:20+09:00",
    "video_ids": [
     "Dhh2HNHF8u4",
@@ -240,7 +289,7 @@
    "name": "배당·ETF",
    "video_count": 7,
    "channel_count": 5,
-   "total_views": 517047,
+   "total_views": 594754,
    "latest": "2026-09-11T19:00:39+09:00",
    "video_ids": [
     "y8NhuLQMcls",
@@ -288,71 +337,16 @@
    "active": true
   },
   {
-   "id": "물가_인플레",
-   "name": "물가·인플레",
-   "video_count": 6,
-   "channel_count": 4,
-   "total_views": 653102,
-   "latest": "2026-09-11T17:00:25+09:00",
-   "video_ids": [
-    "--iuSf6PdFg",
-    "sfEjQuzVeGE",
-    "oV_4O2gTNJc",
-    "26yKfSC5Lmc",
-    "zQseAeqlvPg",
-    "Y_dUmeGm6L4"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "슈퍼개미 이세무사TV",
-    "이효석아카데미",
-    "증시각도기TV"
-   ],
-   "subtopics": [
-    {
-     "word": "급등",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "금리",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "유가",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "즉시분석",
-     "videos": 3,
-     "channels": 1
-    },
-    {
-     "word": "ECB",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "PPI",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "환율_달러",
    "name": "환율·달러",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 129056,
-   "latest": "2026-09-11T17:06:43+09:00",
+   "total_views": 204364,
+   "latest": "2026-09-11T22:30:25+09:00",
    "video_ids": [
+    "XYhepi7nK8g",
     "kz_0mBcf8qM",
     "-8xR5s1m35A",
-    "4mGitLarevU",
     "dG3cliYELn8"
    ],
    "channels": [
@@ -379,7 +373,7 @@
    "name": "국내증시",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 282588,
+   "total_views": 460770,
    "latest": "2026-09-11T20:10:12+09:00",
    "video_ids": [
     "yTSmOx32AeM",
@@ -401,37 +395,11 @@
    "active": true
   },
   {
-   "id": "채권_크레딧",
-   "name": "채권·크레딧",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 322806,
-   "latest": "2026-09-11T19:14:22+09:00",
-   "video_ids": [
-    "46hS86DndEs",
-    "8rOR4lHbHeU",
-    "oV_4O2gTNJc"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "경제사냥꾼",
-    "삼프로TV 3PROTV"
-   ],
-   "subtopics": [
-    {
-     "word": "국채금리",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": false
-  },
-  {
    "id": "중국경제",
    "name": "중국경제",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 139493,
+   "total_views": 235545,
    "latest": "2026-09-11T16:30:30+09:00",
    "video_ids": [
     "xKiLnrJaOsM",
