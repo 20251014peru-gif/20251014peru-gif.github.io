@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-09-12T01:48:28.721688+09:00",
+ "updated_at": "2026-09-12T06:25:21.945524+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 11,
    "channel_count": 9,
-   "total_views": 1787780,
-   "latest": "2026-09-11T19:30:20+09:00",
+   "total_views": 1605623,
+   "latest": "2026-09-12T03:12:43+09:00",
    "video_ids": [
+    "CEaGe1yomSI",
     "Dhh2HNHF8u4",
     "TKauj_S3tFA",
     "XGQpZ8j991c",
@@ -18,8 +19,7 @@
     "CwBvAHBG2cU",
     "gGJEoJlLErI",
     "PCLMQQCO_i8",
-    "6lmUf6KKt8k",
-    "knGTxa-K9zQ"
+    "6lmUf6KKt8k"
    ],
    "channels": [
     "815머니톡",
@@ -51,7 +51,7 @@
    "name": "금리·연준",
    "video_count": 15,
    "channel_count": 7,
-   "total_views": 1186347,
+   "total_views": 1446848,
    "latest": "2026-09-11T22:03:27+09:00",
    "video_ids": [
     "pEmboi4S6DU",
@@ -118,7 +118,7 @@
    "name": "유가·에너지",
    "video_count": 10,
    "channel_count": 7,
-   "total_views": 826875,
+   "total_views": 889167,
    "latest": "2026-09-11T18:00:34+09:00",
    "video_ids": [
     "8rOR4lHbHeU",
@@ -180,7 +180,7 @@
    "name": "물가·인플레",
    "video_count": 7,
    "channel_count": 5,
-   "total_views": 387666,
+   "total_views": 626571,
    "latest": "2026-09-11T22:15:10+09:00",
    "video_ids": [
     "FIYSFys0rPU",
@@ -232,7 +232,7 @@
    "name": "반도체",
    "video_count": 7,
    "channel_count": 5,
-   "total_views": 422644,
+   "total_views": 500084,
    "latest": "2026-09-11T19:30:20+09:00",
    "video_ids": [
     "Dhh2HNHF8u4",
@@ -289,7 +289,7 @@
    "name": "배당·ETF",
    "video_count": 7,
    "channel_count": 5,
-   "total_views": 594754,
+   "total_views": 646422,
    "latest": "2026-09-11T19:00:39+09:00",
    "video_ids": [
     "y8NhuLQMcls",
@@ -337,43 +337,11 @@
    "active": true
   },
   {
-   "id": "환율_달러",
-   "name": "환율·달러",
-   "video_count": 4,
-   "channel_count": 3,
-   "total_views": 204364,
-   "latest": "2026-09-11T22:30:25+09:00",
-   "video_ids": [
-    "XYhepi7nK8g",
-    "kz_0mBcf8qM",
-    "-8xR5s1m35A",
-    "dG3cliYELn8"
-   ],
-   "channels": [
-    "삼프로TV 3PROTV",
-    "슈퍼개미 이세무사TV",
-    "체슬리TV (박세익)"
-   ],
-   "subtopics": [
-    {
-     "word": "100달러",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "유가",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "국내증시",
    "name": "국내증시",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 460770,
+   "total_views": 469766,
    "latest": "2026-09-11T20:10:12+09:00",
    "video_ids": [
     "yTSmOx32AeM",
@@ -399,7 +367,7 @@
    "name": "중국경제",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 235545,
+   "total_views": 270441,
    "latest": "2026-09-11T16:30:30+09:00",
    "video_ids": [
     "xKiLnrJaOsM",
@@ -416,6 +384,36 @@
      "word": "중국",
      "videos": 3,
      "channels": 3
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "환율_달러",
+   "name": "환율·달러",
+   "video_count": 3,
+   "channel_count": 2,
+   "total_views": 165949,
+   "latest": "2026-09-11T22:30:25+09:00",
+   "video_ids": [
+    "XYhepi7nK8g",
+    "kz_0mBcf8qM",
+    "-8xR5s1m35A"
+   ],
+   "channels": [
+    "삼프로TV 3PROTV",
+    "슈퍼개미 이세무사TV"
+   ],
+   "subtopics": [
+    {
+     "word": "100달러",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "유가",
+     "videos": 2,
+     "channels": 2
     }
    ],
    "active": false
