@@ -1,14 +1,16 @@
 {
- "updated_at": "2026-09-13T06:04:51.813745+09:00",
+ "updated_at": "2026-09-13T08:32:27.285570+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 10,
-   "channel_count": 8,
-   "total_views": 1024151,
-   "latest": "2026-09-12T20:33:52+09:00",
+   "video_count": 12,
+   "channel_count": 9,
+   "total_views": 1038937,
+   "latest": "2026-09-13T07:43:19+09:00",
    "video_ids": [
+    "pkwMDbJEVkg",
+    "aaS2sVh-F10",
     "cs2BI_WH8Tw",
     "N0G96sFTkGE",
     "Sbkv7viyTBM",
@@ -28,7 +30,8 @@
     "언더스탠딩",
     "이효석아카데미",
     "증시각도기TV",
-    "체슬리TV (박세익)"
+    "체슬리TV (박세익)",
+    "티타임즈TV"
    ],
    "subtopics": [
     {
@@ -43,7 +46,12 @@
     },
     {
      "word": "학습부장",
-     "videos": 2,
+     "videos": 3,
+     "channels": 1
+    },
+    {
+     "word": "체슬리",
+     "videos": 3,
      "channels": 1
     },
     {
@@ -55,11 +63,6 @@
      "word": "박세익",
      "videos": 2,
      "channels": 1
-    },
-    {
-     "word": "체슬리",
-     "videos": 2,
-     "channels": 1
     }
    ],
    "active": true
@@ -67,24 +70,23 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 13,
+   "video_count": 12,
    "channel_count": 7,
-   "total_views": 1489115,
-   "latest": "2026-09-12T20:00:38+09:00",
+   "total_views": 1180618,
+   "latest": "2026-09-13T08:30:24+09:00",
    "video_ids": [
+    "f2SHjUm49A0",
     "wGZMV_j_m8s",
     "rfuzqt1eZqg",
     "1-HwzgCXIJ4",
     "2zMJHTENLCw",
     "-yn4nwLDk9w",
     "4lX5KM3lyOc",
-    "JuejvAFHKoY",
     "iAFSvtOe_X8",
     "ev79s2IN_H4",
     "pEmboi4S6DU",
     "__4uB6dRH3U",
-    "-8xR5s1m35A",
-    "2T56xXWEPAQ"
+    "-8xR5s1m35A"
    ],
    "channels": [
     "815머니톡",
@@ -97,18 +99,13 @@
    ],
    "subtopics": [
     {
-     "word": "FOMC",
-     "videos": 4,
-     "channels": 3
-    },
-    {
      "word": "금리인상",
      "videos": 4,
      "channels": 3
     },
     {
-     "word": "9월",
-     "videos": 4,
+     "word": "FOMC",
+     "videos": 3,
      "channels": 3
     },
     {
@@ -117,12 +114,17 @@
      "channels": 3
     },
     {
+     "word": "9월",
+     "videos": 3,
+     "channels": 3
+    },
+    {
      "word": "증시",
-     "videos": 5,
+     "videos": 4,
      "channels": 2
     },
     {
-     "word": "11일",
+     "word": "공포",
      "videos": 2,
      "channels": 2
     }
@@ -132,11 +134,13 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 6,
-   "channel_count": 5,
-   "total_views": 415183,
-   "latest": "2026-09-12T18:05:03+09:00",
+   "video_count": 8,
+   "channel_count": 6,
+   "total_views": 420500,
+   "latest": "2026-09-13T08:30:24+09:00",
    "video_ids": [
+    "f2SHjUm49A0",
+    "pWYo2eeJ2aM",
     "N0G96sFTkGE",
     "1-HwzgCXIJ4",
     "n-IrUa0M5mE",
@@ -147,6 +151,7 @@
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
+    "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
     "염블리와 함께 (염승환)",
     "증시각도기TV"
@@ -154,7 +159,7 @@
    "subtopics": [
     {
      "word": "SK하이닉스",
-     "videos": 2,
+     "videos": 3,
      "channels": 2
     },
     {
@@ -173,12 +178,12 @@
      "channels": 2
     },
     {
-     "word": "AI",
+     "word": "소장",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "금리",
+     "word": "AI",
      "videos": 2,
      "channels": 2
     }
@@ -190,7 +195,7 @@
    "name": "물가·인플레",
    "video_count": 6,
    "channel_count": 5,
-   "total_views": 1031871,
+   "total_views": 1039150,
    "latest": "2026-09-12T14:24:26+09:00",
    "video_ids": [
     "REuUse7dMA0",
@@ -231,7 +236,7 @@
    "name": "유가·에너지",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 235791,
+   "total_views": 238750,
    "latest": "2026-09-12T17:30:19+09:00",
    "video_ids": [
     "rfuzqt1eZqg",
@@ -267,11 +272,12 @@
   {
    "id": "일본_엔화",
    "name": "일본·엔화",
-   "video_count": 3,
+   "video_count": 4,
    "channel_count": 3,
-   "total_views": 1003388,
-   "latest": "2026-09-12T18:27:49+09:00",
+   "total_views": 1053921,
+   "latest": "2026-09-13T08:30:24+09:00",
    "video_ids": [
+    "f2SHjUm49A0",
     "LFBEEft1uFc",
     "rfuzqt1eZqg",
     "NOg_hY6sewQ"
@@ -286,6 +292,16 @@
      "word": "한국",
      "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "엔캐리",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "청산",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
