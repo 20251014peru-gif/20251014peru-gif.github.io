@@ -30,12 +30,16 @@
   function put(store,key,value) { return new Promise((resolve,reject)=>{if(!db)return reject(Error('기기 저장소를 사용할 수 없습니다'));const tx=db.transaction(store,'readwrite');tx.objectStore(store).put(value,key);tx.oncomplete=()=>resolve();tx.onerror=tx.onabort=()=>reject(tx.error||Error('저장 실패'));}); }
   const current=()=>state.docs.find(d=>d.id===state.currentId);
   function newDoc(title='',content='',folder='') {return {id:uid(),title,content,folder,updated:Date.now()};}
+  const imagePattern=/!\[[^\]]*\]\([^\s)]+(?:\s+"[^"]*")?\)/g;
+  function plainTitle(s){return s.replace(imagePattern,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/\\([\\`*{}\[\]()#+.!_>-])/g,'$1').replace(/\*\*|__|`|⟦[1-5]|⟧/g,'').trim().slice(0,240);}
+  function recoverImages(s,full){if(!full)return s;const next=structuredClone(s);for(const d of next.docs){const old=full.docs.find(o=>o.id===d.id);if(!old)continue;const images=[...old.content.matchAll(imagePattern)].map(m=>m[0]);let index=0;function restore(text){return text.replace(imagePattern,img=>{const candidate=images[index++];if(img.includes('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///')&&candidate&&!candidate.includes('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///')&&img.slice(0,img.indexOf(']('))===candidate.slice(0,candidate.indexOf('](')))return candidate;return img;});}d.title=restore(d.title||'');d.content=restore(d.content);}return next;}
   function normalize(s,legacy=false) {
     const docs=s.docs.map(d=>{let title=typeof d.title==='string'?d.title:'',content=d.content;
-      if(legacy){const m=content.match(/^#\s+([^\n]+)\n?/);if(m){title=m[1];content=content.slice(m[0].length).replace(/^\n/,'');}else title=content.split('\n').find(l=>l.trim()&&!/^⟦vid/.test(l))?.replace(/^#+\s*|[*_`]/g,'').slice(0,80)||'';}
+      if(legacy){const m=content.match(/^#\s+([^\n]+)\n?/);if(m){title=m[1];content=content.slice(m[0].length).replace(/^\n/,'');}else title=plainTitle(content.split('\n').find(l=>l.trim()&&!/^⟦vid/.test(l))?.replace(/^#+\s*/,'')||'');}
+      if(legacy||!s.titleCleanup){const images=title.match(imagePattern)||[];if(images.length)content=images.join('\n\n')+'\n\n'+content;title=plainTitle(title);}
       return {...d,title,content,folder:typeof d.folder==='string'?d.folder:'',updated:Number(d.updated)||0};});
     if(!docs.length)docs.push(newDoc());
-    return {...s,version:4,docs,currentId:docs.some(d=>d.id===s.currentId)?s.currentId:docs[0].id,folders:[...new Set([...(s.folders||[]).filter(f=>typeof f==='string'),...docs.map(d=>d.folder).filter(Boolean)])]};
+    return {...s,version:4,titleCleanup:1,docs,currentId:docs.some(d=>d.id===s.currentId)?s.currentId:docs[0].id,folders:[...new Set([...(s.folders||[]).filter(f=>typeof f==='string'),...docs.map(d=>d.folder).filter(Boolean)])]};
   }
   // Full text snapshots are synchronous; IndexedDB writes remain ordered and report transaction completion.
   function cacheSnapshot() {try{localStorage.setItem(KEY,JSON.stringify(state));return true;}catch{return false;} }
@@ -159,16 +163,16 @@
     let idbError=false;try{await openDB();}catch{idbError=true;}
     const errors=[];function readValid(raw){try{return parse(raw);}catch(e){errors.push(e);return null;}}
     const local=readValid(localRead(KEY));let saved=null;try{saved=readValid(await get('kv',KEY));}catch{idbError=true;}
-    if(local||saved){state=normalize((local?.savedAt||0)>(saved?.savedAt||0)?local:saved||local);if(errors.length)notice('저장 사본 하나를 읽지 못해 다른 사본으로 글을 복구했습니다. 전체 글 백업을 권장합니다.');}
+    if(local||saved){let chosen=(local?.savedAt||0)>(saved?.savedAt||0)?local:saved||local;if(!chosen.titleCleanup){try{chosen=recoverImages(chosen,parse(await get('kv','state')));}catch{}}state=normalize(chosen);if(errors.length)notice('저장 사본 하나를 읽지 못해 다른 사본으로 글을 복구했습니다. 전체 글 백업을 권장합니다.');}
     else{if(errors.length)throw Error('저장된 글을 읽지 못했습니다. 기존 저장소는 변경하지 않았습니다.');let legacyLocal=readValid(localRead(LEGACY)),legacyDB=null;try{legacyDB=readValid(await get('kv','state'));}catch{idbError=true;}
-      if(legacyLocal||legacyDB){const source=(legacyLocal?.savedAt||0)>(legacyDB?.savedAt||0)?legacyLocal:legacyDB||legacyLocal;state=normalize(source,true);if(!readOnly&&db)await put('kv','writer-v4-original-backup',JSON.stringify({local:legacyLocal,idb:legacyDB}));notice('기존 글을 가져왔습니다. 이전 버전의 저장 데이터도 그대로 남겨 두었습니다.');}
+      if(legacyLocal||legacyDB){const source=(legacyLocal?.savedAt||0)>(legacyDB?.savedAt||0)?recoverImages(legacyLocal,legacyDB):legacyDB||legacyLocal;state=normalize(source,true);if(!readOnly&&db)await put('kv','writer-v4-original-backup',JSON.stringify({local:legacyLocal,idb:legacyDB}));notice('기존 글을 가져왔습니다. 이전 버전의 저장 데이터도 그대로 남겨 두었습니다.');}
       else{if(errors.length||idbError)throw Error('기존 저장소를 확인할 수 없습니다. 다른 MarkFlow 창을 닫고 새로고침해 주세요.');const d=newDoc();state={version:4,docs:[d],folders:[],currentId:d.id,savedAt:0};}
     }
     mountEditor();renderFolders();renderDocs();initializing=false;if(!readOnly){changed();await persist();}else status('읽기 전용');
     if(idbError)notice('기기 저장소를 열지 못해 브라우저의 작은 저장 공간을 사용합니다. 영상 첨부는 사용할 수 없습니다.');
     sidebar(innerWidth>760);
     // Minimal read-only diagnostics, useful when reporting a storage error.
-    window.markflowDiagnostics=()=>({version:'4.0.0',documents:state.docs.length,indexedDB:!!db,readOnly,unsaved:dirty});
+    window.markflowDiagnostics=()=>({version:'4.0.1',documents:state.docs.length,indexedDB:!!db,readOnly,unsaved:dirty});
   }
   start().catch(e=>{readOnly=true;initializing=false;status('불러오기 실패',true);notice(e.message||'글을 불러오지 못했습니다. 새로고침해 주세요.');});
 })();
