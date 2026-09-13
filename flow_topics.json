@@ -1,12 +1,12 @@
 {
- "updated_at": "2026-09-13T21:51:36.568638+09:00",
+ "updated_at": "2026-09-14T01:43:25.981622+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 13,
    "channel_count": 8,
-   "total_views": 837209,
+   "total_views": 980597,
    "latest": "2026-09-13T20:00:14+09:00",
    "video_ids": [
     "EJhYdt5vavI",
@@ -45,6 +45,11 @@
      "channels": 2
     },
     {
+     "word": "끝났다",
+     "videos": 2,
+     "channels": 2
+    },
+    {
      "word": "주식",
      "videos": 2,
      "channels": 2
@@ -58,11 +63,6 @@
      "word": "체슬리",
      "videos": 3,
      "channels": 1
-    },
-    {
-     "word": "별주부전",
-     "videos": 2,
-     "channels": 1
     }
    ],
    "active": true
@@ -70,11 +70,12 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 9,
+   "video_count": 10,
    "channel_count": 6,
-   "total_views": 829967,
-   "latest": "2026-09-13T20:00:14+09:00",
+   "total_views": 996547,
+   "latest": "2026-09-13T23:43:53+09:00",
    "video_ids": [
+    "W3pIlHYsa1E",
     "EJhYdt5vavI",
     "zA1yF46YS3o",
     "1zfS4u5alQ8",
@@ -96,11 +97,16 @@
    "subtopics": [
     {
      "word": "금리인상",
-     "videos": 6,
+     "videos": 7,
      "channels": 4
     },
     {
      "word": "9월",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "FOMC",
      "videos": 2,
      "channels": 2
     }
@@ -112,7 +118,7 @@
    "name": "반도체",
    "video_count": 8,
    "channel_count": 5,
-   "total_views": 527998,
+   "total_views": 925441,
    "latest": "2026-09-13T18:15:13+09:00",
    "video_ids": [
     "SkMaMBNFLV0",
@@ -170,7 +176,7 @@
    "name": "일본·엔화",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 1436231,
+   "total_views": 1536323,
    "latest": "2026-09-13T14:55:09+09:00",
    "video_ids": [
     "YW2Sp5BYAUs",
@@ -196,7 +202,7 @@
    "name": "유가·에너지",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 151057,
+   "total_views": 175686,
    "latest": "2026-09-13T14:29:35+09:00",
    "video_ids": [
     "KXpPADYK4go",
@@ -212,31 +218,11 @@
    "active": true
   },
   {
-   "id": "물가_인플레",
-   "name": "물가·인플레",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 532989,
-   "latest": "2026-09-12T14:24:26+09:00",
-   "video_ids": [
-    "REuUse7dMA0",
-    "iAFSvtOe_X8",
-    "FIYSFys0rPU"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "김영익의 경제스쿨",
-    "증시각도기TV"
-   ],
-   "subtopics": [],
-   "active": true
-  },
-  {
    "id": "부동산",
    "name": "부동산",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 153838,
+   "total_views": 214695,
    "latest": "2026-09-13T20:55:09+09:00",
    "video_ids": [
     "3JdtiRMK4P8",
