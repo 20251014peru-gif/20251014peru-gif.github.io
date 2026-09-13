@@ -1473,7 +1473,7 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
    ════════════════════════════════════════════════════════ */
 
 /* ⚠️ 배포할 때 이 줄만 바꾸면 제목·헤더·콘솔이 전부 따라간다 */
-const APP_VER='v20260722-085000';
+const APP_VER='v015-20260914053816-KST';
 
 /* 📄 서류·명함 촬영 직후 자동 감지. 끄려면 콘솔에서:
    localStorage.setItem('scanapp_autoscan','0') */
@@ -2644,7 +2644,7 @@ async function renderGallery(){
     if(catFilter!=='all'&&p.cat!==catFilter)return false;
     if(searchQ){
       const q=searchQ.toLowerCase();
-      return [p.title,p.memo,p.cat].some(v=>(v||'').toLowerCase().includes(q));
+      return [p.title,p.memo,p.cat,p.location,p.status,(p.tags||[]).join(' ')].some(v=>(v||'').toLowerCase().includes(q));
     }
     return true;
   });
@@ -2661,7 +2661,7 @@ async function renderGallery(){
       <img class="thumb" data-thumb="${thumb}" alt="">
       <div class="info">
         <div class="title">${esc(p.title||'(제목 없음)')}</div>
-        <div class="meta">${esc(p.date||'')}${p.imgIds&&p.imgIds.length>1?' · '+p.imgIds.length+'장':''}</div>
+        <div class="meta">${esc([p.date,p.time].filter(Boolean).join(' · '))}${p.imgIds&&p.imgIds.length>1?' · '+p.imgIds.length+'장':''}</div>
         <span style="display:inline-block;padding:2px 8px;border-radius:6px;background:var(--blue-lt);color:var(--blue);font-size:10px;font-weight:700;margin-top:4px">${esc(p.cat||'기타')}</span>
         <div class="card-actions" style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
           <button class="row-act-btn" data-pact="edit">✏️ 수정</button>
@@ -2733,7 +2733,7 @@ function openAddModal(photo){
         try{
           const url=(photo.imgUrls||{})[id];
           const data=await loadPhotoSmart(id,url);
-          if(data)mImgs.push({id,data});
+          if(data)mImgs.push({id,data,...((photo.imageNotes||{})[id]||{})});
         }catch(e){}
       }
       renderPreviews();
@@ -2767,7 +2767,7 @@ function renderPreviews(){
       e.stopPropagation();
       const i=parseInt(b.dataset.crop);
       openCropModal(mImgs[i].data, cropped=>{
-        mImgs[i].data=cropped;
+        mImgs[i].data=cropped;mImgs[i].dirty=true;
         renderPreviews();
       }, '✂️ 사진 자르기');
     };
@@ -2861,17 +2861,18 @@ $('addSave').onclick=async()=>{
       $('addSave').textContent='☁️ 업로드 중…';
       for(let i=0;i<mImgs.length;i++){
         // 이미 URL 있으면 건너뜀 (편집 시 기존 사진)
-        if(imgUrls[ids[i]])continue;
+        if(imgUrls[ids[i]]&&!mImgs[i].dirty)continue;
         const url=await uploadPhotoToStorage(`photos/${ids[i]}.jpg`,mImgs[i].data);
         if(url)imgUrls[ids[i]]=url;
       }
     }
     const data={
       id:editingId||uid(),
+      ...window.ScannerFields.values(),
       title,cat:$('fCat').value,memo:$('fMemo').value.trim(),
       date:$('fDate').value||today(),
       secure:curSection==='secure',
-      imgIds:ids,imgUrls,updated:Date.now(),
+      imgIds:ids,imgUrls,imageNotes:Object.fromEntries(mImgs.map((m,i)=>[ids[i],{role:m.role||'일반',caption:m.caption||''}])),updated:Date.now(),
     };
     if(editingId){
       const idx=photos.findIndex(x=>x.id===editingId);
@@ -2886,7 +2887,7 @@ $('addSave').onclick=async()=>{
       }
     }else photos.unshift(data);
     if(!savePhotos())return;
-    toast('✅ 저장됐어요');closeAddModal();renderGallery();
+    toast('✅ 사진 보관함에 저장됐어요');closeAddModal();renderGallery();
   }catch(e){toast('저장 실패: '+e.message);}
   finally{$('addSave').disabled=false;$('addSave').textContent='💾 저장';}
 };
@@ -2906,8 +2907,8 @@ async function openDetail(pid){
   $('detailTitle').textContent=p.title||'(제목 없음)';
   $('detailT').textContent=p.title||'(제목 없음)';
   $('detailCat').textContent=p.cat||'기타';
-  $('detailDate').textContent=p.date||'';
-  $('detailMemoBox').textContent=p.memo||'(메모 없음)';
+  $('detailDate').textContent=[p.date,p.time].filter(Boolean).join(' · ');
+  $('detailMemoBox').textContent=[p.memo,p.scopeLabel,p.status,p.location,(p.tags||[]).join(' · '),...Object.values(p.imageNotes||{}).map(n=>[n.role,n.caption].filter(Boolean).join(': '))].filter(Boolean).join('\n')||'(메모 없음)';
   /* 여러 장이면 전부 불러온다 — 예전엔 imgIds[0] 만 봐서 첫 장밖에 안 보였다 */
   const strip=$('detailStrip'), cnt=$('detailCount');
   $('detailImg').src=''; strip.innerHTML=''; strip.style.display='none'; cnt.style.display='none';
@@ -7151,5 +7152,6 @@ console.log('[사진 스캐너 '+APP_VER+'] 로드 완료');
 /* 영수증 필터/정렬 이벤트 — 페이지 로드 후 1회 직접 바인딩 */
 _bindReceiptTableEvents();
 </script>
+<script src="scan-photo-integration-v15.js"></script>
 </body>
 </html>
