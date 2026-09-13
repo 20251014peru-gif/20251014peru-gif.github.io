@@ -38635,13 +38635,15 @@ table.ProseMirror-selectednode {
   (*! @license DOMPurify 2.3.3 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/2.3.3/LICENSE *)
 */
 </script>
-<link rel="stylesheet" href="markflow/usability.css?v=3.9.1">
-<script src="markflow/usability.js?v=3.9.1"></script>
+<link rel="stylesheet" href="markflow/usability.css?v=3.9.2">
+<script src="markflow/usability.js?v=3.9.2"></script>
 <script src="markflow/ai-costs.js?v=3.9.1"></script>
+<script src="markflow/photo-recovery.js?v=3.9.2"></script>
 <script src="markflow/restore-v38.js?v=3.8-restored-1"></script>
 <script>
 (async function(){
   try { await window.markflowRestoreV38; } catch(e) { console.error('MarkFlow recovery:',e); }
+  var photoRecovery=await window.markflowPhotos.prepare();
   "use strict";
   var Editor = toastui.Editor;
   var vidBlobUrls={};
@@ -38687,9 +38689,8 @@ table.ProseMirror-selectednode {
     return s; }
   function uid(){ return "d"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
   function docTitle(md){
-    var lines=(md||"").split("\n");
-    for(var i=0;i<lines.length;i++){ if(/^⟦vid [^⟧]+⟧$/.test(lines[i].trim())) continue; var t=lines[i].replace(/^#{1,6}\s+/,"").trim(); t=t.replace(/⟦[1-5]/g,"").replace(/⟧/g,""); if(t) return t.replace(/[*_`~#>\[\]]/g,"").slice(0,60); }
-    return "무제";
+    var cleaned=(md||'').replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/⟦vid(?:file:| )[^⟧]*⟧/g,'').replace(/data:image\/[^\s)]+/g,'');
+    var lines=cleaned.split('\n');for(var i=0;i<lines.length;i++){var t=lines[i].replace(/^#{1,6}\s+/,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/⟦[1-5]|⟧/g,'').replace(/[*_\x60~#>]/g,'').trim();if(t)return t.slice(0,100);}return '제목 없는 문서';
   }
   function decodeVidMarkers(md){ return (md||"").replace(/⟦vid ([^⟧]+)⟧/g, function(_,e){ var u=(function(){ try{ return decodeURIComponent(escape(atob(e))); }catch(x){ return ""; } })(); return u?("[▶ 동영상]("+u+")"):_; }); }
   function countWords(t){
@@ -38711,7 +38712,7 @@ table.ProseMirror-selectednode {
     }
   }
   (function load(){
-    var raw=sget(SKEY);
+    var raw=photoRecovery.state?JSON.stringify(photoRecovery.state):sget(SKEY);
     if(raw){ try{ var d=JSON.parse(raw); if(d&&Array.isArray(d.docs)&&d.docs.length){ state.docs=d.docs; state.currentId=d.currentId||d.docs[0].id; state.theme=d.theme||"light"; state.folders=d.folders||null; state.collapsed=d.collapsed||[]; state.savedAt=d.savedAt||0; } }catch(e){} }
     if(!state.docs){ var id=uid(); state.docs=[{id:id,content:DEFAULT,updated:Date.now(),folder:""}]; state.currentId=id; }
     migrate();
@@ -38721,6 +38722,7 @@ table.ProseMirror-selectednode {
 
   var saveTimer=null, loading=false, saveErrShown=false;
   function persistNow(){
+    if(photoRecovery.blocked)return;
     state.savedAt=Date.now();
     // 1) 가벼운 사본(사진 제외)을 localStorage에 → 목록·본문은 항상 안전
     sset(SKEY, JSON.stringify(slimState()));
@@ -38874,19 +38876,23 @@ table.ProseMirror-selectednode {
     var icoHtml=d.icon? '<span class="di-emo">'+d.icon+'</span>' : DOCIC;
     row.innerHTML='<span class="di">'+icoHtml+'</span><div class="dm"><div class="dt"></div><div class="ds"></div></div><button class="dd" title="문서 메뉴">'+DOTS+'</button>';
     row.querySelector(".dt").textContent=docTitle(d.content);
-    row.querySelector(".ds").textContent=countWords(d.content)+" 단어";
+    var photos=((d.content||'').match(/!\[[^\]]*\]\(/g)||[]).length;var date=d.updated?new Date(d.updated).toLocaleDateString('ko-KR',{month:'short',day:'numeric'}):'';
+    row.querySelector('.ds').textContent=date+(photos?' · 사진 '+photos+'장':'');row.title=docTitle(d.content);
     row.addEventListener("click",function(){ if(d.id!==state.currentId) loadDoc(d.id); else if(window.innerWidth<=760) toggleSidebar(false); });
     row.addEventListener("dblclick",function(){ startRename(row,d); });
     row.querySelector(".dd").addEventListener("click",function(e){ e.stopPropagation(); openDocMenu(e.currentTarget,d); });
     return row;
   }
+  var docQuery="";
   function renderDocs(){
     var list=document.getElementById("doc-list"); list.innerHTML="";
     var groups=state.folders.slice();
     var by={}; groups.forEach(function(f){ by[f]=[]; }); var un=[];
     state.docs.forEach(function(d){ if(d.folder&&groups.indexOf(d.folder)>=0) by[d.folder].push(d); else un.push(d); });
     function group(name,docs,isUn){
-      var collapsed=state.collapsed.indexOf(name)>=0;
+      docs=docs.filter(function(d){return !docQuery||docTitle(d.content).toLowerCase().indexOf(docQuery)>=0;}).slice().sort(function(a,b){return (b.updated||0)-(a.updated||0);});
+      if(docQuery&&!docs.length)return;
+      var collapsed=!docQuery&&state.collapsed.indexOf(name)>=0;
       var head=document.createElement("div"); head.className="folder-head"+(collapsed?" collapsed":"");
       head.innerHTML='<span class="fcaret">▾</span><span class="fname"></span><span class="fcount">'+docs.length+'</span>';
       head.querySelector(".fname").textContent=isUn?"미분류":name;
@@ -40440,6 +40446,7 @@ table.ProseMirror-selectednode {
     });
   }
   function syncPush(){
+    if(photoRecovery.blocked)return Promise.resolve();
     if(!GH.token) return Promise.resolve();
     if(syncing){ syncQueued=true; return Promise.resolve(); }
     syncing=true; setSyncState("syncing");
@@ -40452,6 +40459,8 @@ table.ProseMirror-selectednode {
   }
   function applyRemote(remote){
     if(!remote||!Array.isArray(remote.docs)||!remote.docs.length) return false;
+    if(photoRecovery.blocked)return false;
+    remote=window.markflowPhotos.repair(remote).state;
     state.docs=remote.docs; state.folders=remote.folders||state.folders; state.collapsed=remote.collapsed||[]; state.theme=remote.theme||state.theme; state.currentId=remote.currentId||state.currentId; state.savedAt=remote.savedAt||Date.now();
     migrate(); if(!state.docs.some(function(x){return x.id===state.currentId;})) state.currentId=state.docs[0].id;
     sset(SKEY, JSON.stringify(slimState())); if(idbAvailable){ idbSet(JSON.stringify(state)).catch(function(){}); }
@@ -40619,8 +40628,13 @@ table.ProseMirror-selectednode {
   // init
   applyTheme(); applyNumHeadings(); renderDocs(); updateCounts(current().content);
   if(window.innerWidth<=760) toggleSidebar(false);
-  hydrateFromIdb();
+  // The full snapshot is loaded before editor creation; no late overwrite from a lightweight cache.
+  if(photoRecovery.blocked)setViewMode(true);
   // Keep original video blobs: automatic pruning races uploads and breaks undo/recovered documents.
+  var search=document.createElement('input');search.type='search';search.className='mf-doc-search';search.placeholder='문서 제목 검색';search.setAttribute('aria-label','문서 제목 검색');document.querySelector('.side-actions').after(search);search.oninput=function(){docQuery=search.value.trim().toLowerCase();renderDocs();};
+  var recovery=document.createElement('details');recovery.className='mf-photo-report';var summary=document.createElement('summary');summary.textContent=photoRecovery.blocked?'사진 보호 · 저장 일시 중지':('사진 확인 · '+photoRecovery.restored+'장 복구'+(photoRecovery.missing?' / '+photoRecovery.missing+'장 원본 확인 필요':''));recovery.appendChild(summary);
+  var explanation=document.createElement('p');explanation.textContent=photoRecovery.blocked?'원본 복구 사본을 만들지 못해 자동저장을 멈췄습니다. 다른 MarkFlow 창을 닫거나 저장공간을 확보한 뒤 다시 열어 주세요.':'현재 데이터의 복구 사본을 이 기기에 보관했습니다. 사진이 확실하게 일치하는 경우에만 원본으로 복구합니다.';recovery.appendChild(explanation);
+  window.markflowPhotos.alternatives(state).forEach(function(old){var btn=document.createElement('button');btn.textContent=docTitle(old.content)+' · 사진 있는 이전 글 복사';btn.onclick=function(){if(photoRecovery.blocked)return;var d=JSON.parse(JSON.stringify(old));d.id=uid();d.folder='사진 복구본';d.updated=Date.now();state.docs.unshift(d);if(state.folders.indexOf(d.folder)<0)state.folders.push(d.folder);loadDoc(d.id);persistNow();btn.disabled=true;btn.textContent='사진 복구본 폴더에 복사됨';};recovery.appendChild(btn);});document.querySelector('#side-docs').appendChild(recovery);
   window.installMarkflowUsability({
     closeMenus:function(){closeTbMore();closeVidInput();closeEmojiPop();closeHlPop();closeAiMenu();},
     isReadOnly:function(){return viewMode;},toast:mfToast,
