@@ -38635,15 +38635,12 @@ table.ProseMirror-selectednode {
   (*! @license DOMPurify 2.3.3 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/2.3.3/LICENSE *)
 */
 </script>
-<link rel="stylesheet" href="markflow/usability.css?v=3.9.0">
-<script src="markflow/usability.js?v=3.9.0"></script>
 <script src="markflow/restore-v38.js?v=3.8-restored-1"></script>
 <script>
 (async function(){
   try { await window.markflowRestoreV38; } catch(e) { console.error('MarkFlow recovery:',e); }
   "use strict";
   var Editor = toastui.Editor;
-  var vidBlobUrls={};
 
   var DEFAULT = [
     "# MarkFlow에 오신 걸 환영합니다 👋",
@@ -39613,11 +39610,11 @@ table.ProseMirror-selectednode {
             var vm=vt.match(/^⟦vid ([^⟧]+)⟧$/); if(vm){ (function(vpos,enc,len,mk){
               var base=vpos+1;
               decos.push(window.PM.Decoration.inline(base, base+len, {class:"mf-vidmark"}));
-              decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ var el=buildVideoEmbed(decVid(enc)); el.setAttribute("data-vidmarker", mk); return el; }, {side:1, ignoreSelection:true, stopEvent:function(e){return !!(e.target.closest&&e.target.closest(".mf-video"));}, key:"vid:"+enc})); })(pos, vm[1], vt.length, vt); }
+              decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ var el=buildVideoEmbed(decVid(enc)); el.setAttribute("data-vidmarker", mk); return el; }, {side:1, ignoreSelection:true, key:"vid:"+enc})); })(pos, vm[1], vt.length, vt); }
             var fm=vt.match(/^⟦vidfile:([A-Za-z0-9]+)⟧$/); if(fm){ (function(vpos,id,len,mk){
               var base2=vpos+1;
               decos.push(window.PM.Decoration.inline(base2, base2+len, {class:"mf-vidmark"}));
-              decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ var el=buildLocalVideo(id); el.setAttribute("data-vidmarker", mk); return el; }, {side:1, ignoreSelection:true, stopEvent:function(e){return !!(e.target.closest&&e.target.closest(".mf-video"));}, key:"vidfile:"+id})); })(pos, fm[1], vt.length, vt); }
+              decos.push(window.PM.Decoration.widget(vpos+node.nodeSize, function(){ var el=buildLocalVideo(id); el.setAttribute("data-vidmarker", mk); return el; }, {side:1, ignoreSelection:true, key:"vidfile:"+id})); })(pos, fm[1], vt.length, vt); }
           }
         });
         hlScan(state.doc, function(n, of, ot, cf, ct){
@@ -39891,8 +39888,6 @@ table.ProseMirror-selectednode {
         setTimeout(function(){ focusCur(); try{ it.run(); }catch(e){} editor.focus(); },0);
       });
       tbMoreMenu.appendChild(row); });
-    var extra=document.createElement('div');extra.className='bmenu-chips';
-    [['취소선',function(){editor.exec('strike');}],['이모지',function(){openInlineEmoji(rect);}]].forEach(function(item){var b=document.createElement('button');b.type='button';b.className='bchip';b.textContent=item[0];b.addEventListener('mousedown',function(e){e.preventDefault();closeTbMore();item[1]();});extra.appendChild(b);});tbMoreMenu.appendChild(extra);
     document.body.appendChild(tbMoreMenu);
     if(!mobile){ var x=Math.min(rect.left, window.innerWidth-262); if(x<6)x=6; var y=rect.bottom+6; tbMoreMenu.style.left=x+"px"; tbMoreMenu.style.top=y+"px"; tbMoreMenu.style.maxHeight=(window.innerHeight-y-12)+"px"; tbMoreMenu.style.overflowY="auto"; }
     setTimeout(function(){ document.addEventListener("mousedown",tbMoreOutside); },0);
@@ -40006,35 +40001,11 @@ table.ProseMirror-selectednode {
   // 영상 위 작은 도구막대(삭제 · 아래에 추가) — iframe이 클릭을 먹어서 오버레이 대신 위에 항상 표시
   function makeVidTools(wrap){
     var bar=document.createElement("div"); bar.className="mf-vidtools"; bar.setAttribute("contenteditable","false");
-    function mk(txt,title,fn,cls){ var b=document.createElement("button"); b.type="button"; b.className="mf-vidtool"+(cls?" "+cls:""); b.textContent=txt; b.title=title; b.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); if(viewMode)return; var m=wrap.getAttribute("data-vidmarker"); if(m) fn(m); }); return b; }
+    function mk(txt,title,fn,cls){ var b=document.createElement("button"); b.type="button"; b.className="mf-vidtool"+(cls?" "+cls:""); b.textContent=txt; b.title=title; b.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); var m=wrap.getAttribute("data-vidmarker"); if(m) fn(m); }); return b; }
     bar.appendChild(mk("＋ 아래 추가","영상 아래에 새 줄 추가", addAfterVideoByMarker, ""));
     bar.appendChild(mk("🗑 삭제","이 영상 삭제", deleteVideoByMarker, "del"));
     return bar;
   }
-  function mediaButton(text, fn){ var b=document.createElement('button'); b.type='button'; b.textContent=text; b.addEventListener('mousedown',function(e){ e.stopPropagation(); e.preventDefault(); }); b.addEventListener('click',function(e){ e.stopPropagation(); fn(); }); return b; }
-  function videoFileOK(file){ if(!file||!file.size){ mfToast('빈 영상 파일은 저장할 수 없습니다.'); return false; } if(file.type&&!/^video\//.test(file.type)&&! /\.(mp4|mov|m4v|webm|ogg|ogv)$/i.test(file.name||'')){mfToast('동영상 파일을 선택해 주세요.');return false;} return true; }
-  function mediaErrorUI(vd, wrap, name){
-    var note=document.createElement('div'); note.className='mf-media-note'; note.hidden=true; wrap.appendChild(note);
-    vd.addEventListener('error',function(){ note.hidden=false; note.textContent=vd.error&&vd.error.code===4?'이 브라우저에서 재생할 수 없는 영상 형식입니다. 원본을 내려받아 기기 플레이어에서 열어 주세요.':'영상을 읽지 못했습니다. 다시 재생하거나 원본을 내려받아 확인해 주세요.';
-      note.appendChild(mediaButton('다시 재생',function(){ note.hidden=true; vd.load(); vd.play().catch(function(){note.hidden=false;}); }));
-      var a=document.createElement('a'); a.href=vd.src; a.download=name||'video'; a.textContent='원본 내려받기'; a.target='_blank'; a.rel='noopener'; note.appendChild(a);
-    });
-  }
-  function driveVideoId(url){ var m=(url||'').match(/drive\.google\.com\/(?:file\/d\/([A-Za-z0-9_-]+)|open\?id=([A-Za-z0-9_-]+))/);return m&&(m[1]||m[2]); }
-  // Stable Drive IDs keep the original playable copy across reloads without changing shared document markers.
-  function driveLocalKey(id){ return 'drive'+id; }
-  function driveOriginalKey(id){return idbDB().then(function(db){return new Promise(function(resolve,reject){var r=db.transaction('kv').objectStore('kv').get('drive-original:'+id);r.onsuccess=function(){resolve(r.result||driveLocalKey(id));};r.onerror=function(){reject(r.error);};});});}
-  function linkDriveOriginal(id,key){return idbDB().then(function(db){return new Promise(function(resolve,reject){var tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(key,'drive-original:'+id);tx.oncomplete=resolve;tx.onerror=tx.onabort=function(){reject(tx.error);};});});}
-  function enhanceDriveVideo(wrap,url,id){
-    var help=document.createElement('div');help.className='mf-media-note';
-    var text=document.createElement('div');text.textContent='Drive에서 “처리 중”이라고 나오면 업로드는 끝났지만 재생 준비가 아직 안 된 상태입니다. 이 기기에 원본을 연결하면 바로 재생할 수 있습니다.';help.appendChild(text);
-    var open=document.createElement('a');open.href=url;open.target='_blank';open.rel='noopener noreferrer';open.textContent='Drive에서 열기';help.appendChild(open);
-    help.appendChild(mediaButton('재생 새로고침',function(){var f=wrap.querySelector('iframe');if(f)f.src=f.src;var v=wrap.querySelector('video');if(v)v.load();}));
-    var attach=mediaButton('원본 영상 연결',function(){var input=document.createElement('input');input.type='file';input.accept='video/*,.mp4,.mov,.m4v,.webm';input.onchange=function(){var file=input.files[0];if(!videoFileOK(file))return;driveOriginalKey(id).then(function(key){return idbPutMedia(key,file);}).then(function(){showOriginal(file);mfToast('원본을 이 기기에 저장했습니다. Drive 링크는 유지됩니다.');}).catch(function(){mfToast('원본 저장 실패 — 기기 저장공간을 확인해 주세요.');});};input.click();});help.appendChild(attach);wrap.appendChild(help);
-    function showOriginal(blob){var frame=wrap.querySelector('.mf-video-frame');if(frame)frame.remove();var old=wrap.querySelector('video');if(old)old.remove();wrap.querySelectorAll('.mf-media-note:not(:last-child)').forEach(function(n){if(n!==help)n.remove();});var key=driveLocalKey(id);var src=URL.createObjectURL(blob);vidBlobUrls[key]=src;var vd=document.createElement('video');vd.src=src;vd.controls=true;vd.playsInline=true;vd.preload='metadata';wrap.insertBefore(vd,help);mediaErrorUI(vd,wrap,blob.name);text.textContent='이 기기에 저장한 원본으로 재생합니다. 다른 기기에서는 Drive의 재생 준비가 끝나야 볼 수 있습니다.';attach.textContent='원본 다시 연결';}
-    driveOriginalKey(id).then(idbGetMedia).then(function(blob){if(blob)showOriginal(blob);}).catch(function(){text.textContent='기기 원본을 읽지 못했습니다. Drive에서 열거나 원본을 다시 연결해 주세요.';});
-  }
-
   function buildVideoEmbed(url){
     var wrap=document.createElement("div"); wrap.className="mf-video"; wrap.setAttribute("contenteditable","false");
     wrap.appendChild(makeVidTools(wrap));
@@ -40042,8 +40013,6 @@ table.ProseMirror-selectednode {
     if(info.type==="iframe"){ var fr=document.createElement("div"); fr.className="mf-video-frame ratio"; var f=document.createElement("iframe"); f.src=info.src; f.setAttribute("allow","accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"); f.setAttribute("allowfullscreen",""); f.setAttribute("referrerpolicy","strict-origin-when-cross-origin"); f.loading="lazy"; fr.appendChild(f); wrap.appendChild(fr); }
     else if(info.type==="video"){ var vd=document.createElement("video"); vd.src=info.src; vd.controls=true; vd.setAttribute("playsinline",""); vd.preload="metadata"; wrap.appendChild(vd); }
     else { var a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener noreferrer"; a.className="mf-video-link"; a.textContent="▶ 동영상 열기 — "+url; wrap.appendChild(a); }
-    var driveId=driveVideoId(url); if(driveId) enhanceDriveVideo(wrap,url,driveId);
-    if(info.type==="video") mediaErrorUI(vd,wrap);
     return wrap;
   }
   function vidNodePos(marker){ var v=wwView_(); if(!v) return -1; var hit=-1; v.state.doc.descendants(function(node,pos){ if(hit>=0) return false; if(node.isTextblock && node.textContent===marker){ hit=pos; return false; } }); return hit; }
@@ -40058,10 +40027,10 @@ table.ProseMirror-selectednode {
   }
   function insertVideoMarker(url){ insertParaMarker(makeVidMarker(url)); }
   // 휴대폰/PC 영상 파일을 이 기기(IndexedDB)에 저장하고 문서엔 참조 마커만 넣음
-
+  var vidBlobUrls={};
   function newVidId(){ return "v"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
   function addLocalVideo(file, insertFn){
-    if(!videoFileOK(file)) return; if(!idbAvailable){ if(typeof mfToast==="function") mfToast("이 브라우저에선 기기 저장이 안 돼요. 링크로 넣어 주세요."); return; }
+    if(!file) return; if(!idbAvailable){ if(typeof mfToast==="function") mfToast("이 브라우저에선 기기 저장이 안 돼요. 링크로 넣어 주세요."); return; }
     var id=newVidId();
     if(typeof mfToast==="function") mfToast("영상을 저장하는 중…");
     idbPutMedia(id, file).then(function(){
@@ -40078,7 +40047,7 @@ table.ProseMirror-selectednode {
   function buildLocalVideo(id){
     var wrap=document.createElement("div"); wrap.className="mf-video"; wrap.setAttribute("contenteditable","false");
     var tools=makeVidTools(wrap);
-    function showVideo(url){ var vd=document.createElement("video"); vd.src=url; vd.controls=true; vd.setAttribute("playsinline",""); vd.preload="metadata"; wrap.innerHTML=""; wrap.appendChild(tools); wrap.appendChild(vd); mediaErrorUI(vd,wrap); }
+    function showVideo(url){ var vd=document.createElement("video"); vd.src=url; vd.controls=true; vd.setAttribute("playsinline",""); vd.preload="metadata"; wrap.innerHTML=""; wrap.appendChild(tools); wrap.appendChild(vd); }
     wrap.appendChild(tools);
     if(vidBlobUrls[id]){ showVideo(vidBlobUrls[id]); return wrap; }
     var ph=document.createElement("div"); ph.className="mf-video-load"; ph.textContent="영상 불러오는 중…"; wrap.appendChild(ph);
@@ -40134,27 +40103,22 @@ table.ProseMirror-selectednode {
       }catch(e){ reject(e); }
     });
   }
-  function gdShare(id){ return gdEnsure().then(function(tok){ return fetch("https://www.googleapis.com/drive/v3/files/"+id+"/permissions",{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json"},body:JSON.stringify({role:"reader",type:"anyone"})}).then(function(r){ if(!r.ok) throw new Error("공유 설정 실패 ("+r.status+")"); return id; }); }); }
+  function gdShare(id){ return gdEnsure().then(function(tok){ return fetch("https://www.googleapis.com/drive/v3/files/"+id+"/permissions",{method:"POST",headers:{authorization:"Bearer "+tok,"content-type":"application/json"},body:JSON.stringify({role:"reader",type:"anyone"})}).then(function(){ return id; }); }); }
   // 업로드 동안 화면이 저절로 꺼지지 않게(잠자기 방지) — 폰을 내려놔도 업로드가 끝까지 진행되게
   var wakeLock=null, wakeWanted=false;
   function acquireWake(){ wakeWanted=true; try{ if(navigator.wakeLock && navigator.wakeLock.request && document.visibilityState==="visible"){ navigator.wakeLock.request("screen").then(function(w){ wakeLock=w; try{ w.addEventListener("release",function(){ wakeLock=null; }); }catch(e){} }).catch(function(){}); } }catch(e){} }
   function releaseWake(){ wakeWanted=false; try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
   document.addEventListener("visibilitychange",function(){ if(wakeWanted && document.visibilityState==="visible" && !wakeLock){ acquireWake(); } });
   function uploadVideoToDrive(file, insertMarker){
-    if(!videoFileOK(file)) return;
-    var originalDoc=current(), localId=newVidId(), localSaved=false, inserted=false;
-    function putMarker(marker){if(inserted)return;inserted=true;if(current().id===originalDoc.id)insertMarker(marker);else{originalDoc.content=(originalDoc.content||'')+'\n\n'+marker;originalDoc.updated=Date.now();persistNow();renderDocs();}}
-    mfToast('영상 원본 저장 및 Drive 업로드 준비 중…');acquireWake();
-    idbPutMedia(localId,file).then(function(){localSaved=true;},function(){mfToast('기기 저장공간이 부족해 Drive에만 업로드합니다.');})
-      .then(function(){return gdUpload(file,function(p){mfToast('Drive 업로드 중 '+Math.round(p*100)+'% · 화면을 켜 두세요');});})
-      .then(function(item){if(!item.id)throw new Error('업로드 결과에 파일 정보가 없습니다.');
-        return (localSaved?linkDriveOriginal(item.id,localId):idbPutMedia(driveLocalKey(item.id),file)).then(function(){return true;},function(){return false;}).then(function(saved){
-          putMarker(makeVidMarker('https://drive.google.com/file/d/'+item.id+'/view'));
-
-          return gdShare(item.id).then(function(){mfToast(saved?'업로드 완료 · 이 기기는 원본 재생, 다른 기기는 Drive 처리 후 재생':'업로드 완료 · Drive 재생 준비에는 시간이 걸릴 수 있습니다.');},function(){mfToast('업로드 완료 · 공유 설정에 실패했습니다. Drive에서 접근 권한을 확인하세요.');});
-        });
-      }).catch(function(e){if(localSaved){putMarker('⟦vidfile:'+localId+'⟧');mfToast('Drive 업로드 실패 · 영상은 이 기기에 저장했습니다. '+e.message);}else mfToast('영상 저장·업로드 실패: '+e.message);})
-      .then(releaseWake,releaseWake);
+    var mb=file&&file.size?(Math.round(file.size/1048576)+"MB"):"";
+    if(typeof mfToast==="function") mfToast("구글 드라이브 업로드 준비 중…"+(mb?" ("+mb+")":""));
+    acquireWake();
+    var lastPc=-1;
+    gdUpload(file, function(p){ var pc=Math.round(p*100); if(pc!==lastPc){ lastPc=pc; if(typeof mfToast==="function") mfToast("구글 드라이브 업로드 중… "+pc+"% — 다 될 때까지 화면 켜두면 돼요"); } })
+      .then(function(item){ return gdShare(item.id); })
+      .then(function(id){ var url="https://drive.google.com/file/d/"+id+"/view"; var mk=makeVidMarker(url); if(mk) insertMarker(mk); if(typeof mfToast==="function") mfToast("업로드 완료 — 노트에 넣었어요 ✅"); })
+      .catch(function(e){ if(typeof mfToast==="function") mfToast("업로드 실패: "+(e&&e.message?e.message.slice(0,70):"오류")); })
+      .then(function(){ releaseWake(); }, function(){ releaseWake(); });
   }
   function pickAndUploadDrive(insertMarker){
     var inp=document.createElement("input"); inp.type="file"; inp.accept="video/*"; inp.style.display="none"; document.body.appendChild(inp);
@@ -40618,16 +40582,7 @@ table.ProseMirror-selectednode {
   applyTheme(); applyNumHeadings(); renderDocs(); updateCounts(current().content);
   if(window.innerWidth<=760) toggleSidebar(false);
   hydrateFromIdb();
-  // Keep original video blobs: automatic pruning races uploads and breaks undo/recovered documents.
-  window.installMarkflowUsability({
-    closeMenus:function(){closeTbMore();closeVidInput();closeEmojiPop();closeHlPop();closeAiMenu();},
-    isReadOnly:function(){return viewMode;},toast:mfToast,
-    setBlock:function(t){var i=curTopIdx();if(i>=0)convertUnit({type:'block',domIdx:i},t);},
-    exec:function(c){editor.exec(c);editor.focus();},
-    link:function(){var v=wwView();var sel=v.state.selection;var label=v.state.doc.textBetween(sel.from,sel.to,' ');var url=prompt('링크 주소 (https://…)', 'https://');if(!url)return;try{var parsed=new URL(url);if(!['https:','http:','mailto:','tel:'].includes(parsed.protocol))throw Error();}catch(e){mfToast('올바른 링크 주소를 입력해 주세요.');return;}editor.exec('addLink',{linkUrl:url,linkText:label||url});editor.focus();},
-    highlight:openHlPicker,bullet:function(){bulletBtn.click();},outdent:function(){outdentBtn.click();},indent:function(){indentBtn.click();},fold:function(){foldAllBtn.click();},photos:pickMultiplePhotos,video:openVideoInput,more:openTbMore,
-    onCaret:function(fn){editor.on('caretChange',fn);},blockType:function(){var v=wwView();if(!v)return 'p';var n=v.state.selection.$from.parent;return n.type.name==='heading'?'h'+n.attrs.level:'p';}
-  });
+  setTimeout(function(){ try{ cleanupOrphanMedia(); }catch(e){} }, 4000);
 })();
 </script>
 </body>
