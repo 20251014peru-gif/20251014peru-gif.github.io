@@ -1,7 +1,7 @@
 /* Arrange existing actions without removing features or replacing the editor. */
 window.installMarkflowUsability=function(api){
   const $=id=>document.getElementById(id), top=document.querySelector('.topbar');
-  document.documentElement.dataset.markflowUi='3.9.0';
+  document.documentElement.dataset.markflowUi='3.9.1';
   let anchor=null;
   document.addEventListener('pointerdown',e=>{const b=e.target.closest('button,.dd,.fmenu,.mf-handle');if(b)anchor=b.getBoundingClientRect();},true);
   function place(el){
@@ -30,7 +30,7 @@ window.installMarkflowUsability=function(api){
   const format=group('글 서식'), list=group('목록과 구조'),insert=group('첨부와 추가');
   function button(parent,label,content,fn,cls=''){const b=document.createElement('button');b.type='button';b.className='mf-action '+cls;b.title=label;b.setAttribute('aria-label',label);b.innerHTML=content;b.addEventListener('mousedown',e=>e.preventDefault());b.onclick=()=>{if(api.isReadOnly()){api.toast('읽기 모드를 끄면 편집할 수 있습니다.');return;}fn(b);};parent.append(b);return b;}
   const style=document.createElement('select');style.id='mf-paragraph-style';style.setAttribute('aria-label','문단 형식');[['p','본문'],['h1','제목 1'],['h2','제목 2'],['h3','제목 3']].forEach(([v,l])=>style.add(new Option(l,v)));format.append(style);style.onchange=()=>{if(api.isReadOnly())return;api.setBlock(style.value);};
-  button(format,'굵게','<b>B</b>',()=>api.exec('bold'));button(format,'기울임','<i>I</i>',()=>api.exec('italic'));button(format,'형광펜','<span class="mf-highlight-icon">가</span>',b=>api.highlight(b.getBoundingClientRect()));
+  button(format,'굵게','<b>B</b>',()=>api.exec('bold'));button(format,'기울임','<i>I</i>',()=>api.exec('italic'));button(format,'취소선','<s>S</s>',()=>api.exec('strike'));button(format,'형광펜','<span class="mf-highlight-icon">가</span>',b=>api.highlight(b.getBoundingClientRect()));
   button(list,'글머리 목록','☷',api.bullet);button(list,'내어쓰기','⇤',api.outdent);button(list,'들여쓰기','⇥',api.indent);button(list,'모두 접기 / 펼치기','⌃⌄',api.fold);
   button(insert,'사진 넣기','▧',api.photos);button(insert,'동영상 넣기','▷',api.video);button(insert,'링크 넣기','↗',api.link);button(insert,'더보기 · 표·아이콘·추가 서식','<span>＋</span><span class="mf-more-label">더보기</span>',b=>api.more(b.getBoundingClientRect(),b),'mf-more-action');
   const iconPairs=[['글머리 목록','.mf-tbtn.bullet'],['내어쓰기','.mf-tbtn.outdent'],['들여쓰기','.mf-tbtn.indent'],['모두 접기 / 펼치기','.mf-tbtn.foldall'],['사진 넣기','[aria-label="사진 넣기"]']];
@@ -42,5 +42,6 @@ window.installMarkflowUsability=function(api){
   api.onCaret(()=>{style.value=api.blockType();});
   $('btn-view').addEventListener('click',()=>setTimeout(()=>{toolbar.querySelectorAll('button,select').forEach(b=>b.disabled=api.isReadOnly());},0));
   document.querySelectorAll('.topbar .tb').forEach(el=>{if(!el.getAttribute('aria-label'))el.setAttribute('aria-label',el.title||el.textContent);});
-  const version=document.querySelector('.status');if(version){const nodes=[...version.querySelectorAll('*')];const old=nodes.find(el=>el.children.length===0&&el.textContent.trim()==='v3.8');if(old)old.textContent='v3.9';}
+  window.markflowCosts?.mount();
+  const version=document.querySelector('.status');if(version){const nodes=[...version.querySelectorAll('*')];const old=nodes.find(el=>el.children.length===0&&el.textContent.trim()==='v3.8');if(old)old.textContent='v3.9.1';}
 };

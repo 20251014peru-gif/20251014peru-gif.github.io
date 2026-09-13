@@ -38635,8 +38635,9 @@ table.ProseMirror-selectednode {
   (*! @license DOMPurify 2.3.3 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/2.3.3/LICENSE *)
 */
 </script>
-<link rel="stylesheet" href="markflow/usability.css?v=3.9.0">
-<script src="markflow/usability.js?v=3.9.0"></script>
+<link rel="stylesheet" href="markflow/usability.css?v=3.9.1">
+<script src="markflow/usability.js?v=3.9.1"></script>
+<script src="markflow/ai-costs.js?v=3.9.1"></script>
 <script src="markflow/restore-v38.js?v=3.8-restored-1"></script>
 <script>
 (async function(){
@@ -40496,12 +40497,13 @@ table.ProseMirror-selectednode {
     if(btn) btn.classList.toggle("sync-on", !!AIK.key);
   }
   function aiComplete(system,text,maxTok){
+    var requestedModel=AIK.model;
     return fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
       headers:{"content-type":"application/json","x-api-key":AIK.key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:AIK.model,max_tokens:maxTok||1200,system:system,messages:[{role:"user",content:text}]})
+      body:JSON.stringify({model:requestedModel,max_tokens:maxTok||1200,system:system,messages:[{role:"user",content:text}]})
     }).then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error(r.status+" "+t.slice(0,140)); }); return r.json(); })
-     .then(function(j){ return (j.content&&j.content[0]&&j.content[0].text)||""; });
+     .then(function(j){ if(window.markflowCosts)window.markflowCosts.record(j,requestedModel); return (j.content&&j.content[0]&&j.content[0].text)||""; });
   }
   var AI_PROMPTS={
     polish:{sys:"너는 한국어 글쓰기 편집자야. 준 글을 뜻은 그대로 유지하면서 더 자연스럽고 깔끔한 문장으로 다듬어. 마크다운 기호 없이 다듬은 텍스트만 출력해. 설명이나 따옴표 붙이지 마.",busy:"다듬는 중…",tok:1200},

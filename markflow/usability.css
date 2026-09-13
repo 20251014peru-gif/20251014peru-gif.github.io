@@ -7,3 +7,17 @@
 
 .mf-action svg,#mf-settings-button svg{width:20px;height:20px;flex-shrink:0}.mf-tool-group .mf-action{color:var(--text-soft)}
 .topbar{z-index:100!important}
+
+/* Two evenly filled tool rows under the app row on phones. */
+.mf-ai-cost-button{flex-direction:column!important;gap:0!important;min-width:66px!important;height:46px!important}.mf-ai-cost-button>.lbl{display:none!important}.mf-cost-total{font:10px/14px var(--sans);white-space:nowrap}.mf-cost-box{padding:10px;border-top:1px solid var(--border);white-space:normal;line-height:1.5;font-size:12px}.mf-cost-box strong{display:block}.mf-cost-detail{color:var(--accent);margin:5px 0;font-weight:600}.mf-cost-box small{display:block;color:var(--text-soft);font-size:11px}.mf-cost-box a{display:block;margin-top:5px;font-size:11px;color:var(--accent)}
+@media(max-width:760px){
+ .mf-organized-toolbar{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:2px;padding:4px 6px;}
+ .mf-organized-toolbar .mf-tool-group{display:contents!important;}
+ .mf-organized-toolbar button,.mf-organized-toolbar .tb{width:100%;min-width:0!important;height:44px;padding:0!important;margin:0;justify-content:center;}
+ .mf-organized-toolbar select{grid-column:span 2;width:calc(100% - 6px);max-width:none;justify-self:center;height:38px;}
+ .mf-tool-group:nth-child(3) button,.mf-tool-group:nth-child(4) button{border-top:1px solid var(--border);border-radius:0;}
+ .topbar .mf-ai-cost-button{width:66px;min-width:66px;}
+ .mf-app-name{flex-shrink:1;font-size:14px;margin-right:0;}
+ .topbar>.grow{min-width:0;}
+}
+#ai-menu>button[data-ai]{width:100%!important;min-width:0!important;min-height:42px;height:auto!important;display:flex!important;justify-content:flex-start!important;padding:10px!important;white-space:normal!important;text-align:left!important;line-height:1.4}#ai-menu>.mf-menu-close{width:38px!important;min-width:38px!important;left:auto!important;right:6px!important;text-align:center!important}.mf-cost-total{max-width:66px;overflow:hidden;text-overflow:ellipsis}
