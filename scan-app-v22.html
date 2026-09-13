@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>사진 스캐너 v22</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}#app{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}</style>
+</head>
+<body>
+<iframe id="app" src="scan-app.html?host=v22" allow="camera;clipboard-read;clipboard-write"></iframe>
+<script>
+(()=>{
+ const frame=document.getElementById('app');
+ function uiFix(d){
+  if(d.getElementById('v22UiFix'))return;
+  const s=d.createElement('style');s.id='v22UiFix';s.textContent=`
+   #sfManageAll{display:none!important}
+   #scannerFields .sf-head{display:block!important;margin:0 0 10px!important}
+   #scannerFields .sf-head button,#scannerFields .sf-help{display:none!important}
+   #scannerFields{padding:12px!important;margin-top:10px!important;border-radius:16px!important}
+   #scannerFields .sf-grid{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:8px!important}
+   #scannerFields .field,#scannerFields .sf-field{min-width:0!important;margin:0!important}
+   #scannerFields .sf-tags{grid-column:1/-1!important}
+   #scannerFields select,#scannerFields input{width:100%!important;min-width:0!important;height:44px!important;box-sizing:border-box!important}
+   .sf-edit,.sf-editrow{display:none!important}
+  `;d.head.appendChild(s);
+ }
+ function receiptEnhancer(){
+  if(window.__receiptProV22)return;window.__receiptProV22=1;
+  const RULE_KEY='scanapp_receipt_owner_rules_v1';
+  const $=id=>document.getElementById(id);
+  const money=n=>(Number(n)||0).toLocaleString('ko-KR')+'원';
+  const today=()=>new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
+  const ym=()=>today().slice(0,7);
+  const norm=s=>(s||'').toLowerCase().replace(/\s+/g,'').replace(/[^0-9a-z가-힣]/g,'');
+  const active=()=>receipts.filter(r=>!r.deletedAt);
+  function dupGroups(){
+   const m=new Map();active().forEach(r=>{const k=[r.date||'',norm(r.place),Number(r.amount)||0].join('|');if(!r.date||!r.place||!r.amount)return;(m.get(k)||m.set(k,[]).get(k)).push(r)});return [...m.values()].filter(a=>a.length>1);
+  }
+  function dupIds(){return new Set(dupGroups().flat().map(r=>r.id))}
+  function needsReview(r,dset){return !r.date||!r.place||!(Number(r.amount)>0)||!r.owner||dset.has(r.id)}
+  function rules(){try{return JSON.parse(localStorage.getItem(RULE_KEY)||'{}')}catch(e){return {}}}
+  function saveRule(place,owner){if(!place||!owner)return;const x=rules();x[norm(place)]={owner,updated:Date.now(),place};localStorage.setItem(RULE_KEY,JSON.stringify(x))}
+  const st=document.createElement('style');st.textContent=`
+   #receiptPro{margin:10px 0 12px;padding:12px;border:1px solid var(--blue-bd);border-radius:14px;background:var(--surface)}
+   #receiptPro .rp-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+   #receiptPro .rp-title{font-size:14px;font-weight:800}.rp-export{border:0;border-radius:10px;background:var(--accent);color:#fff;padding:9px 11px;font-weight:800}
+   #receiptPro .rp-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.rp-card{padding:9px;border-radius:11px;background:var(--blue-soft);min-width:0}.rp-card b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rp-card span{font-size:10px;color:var(--ink-faint)}
+   #receiptPro .rp-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.rp-action{border:0;border-radius:10px;padding:9px;background:var(--surface-2);font-weight:750;color:var(--ink)}
+   #rpOv{display:none;position:fixed;inset:0;z-index:20000;background:#0007;align-items:center;justify-content:center;padding:12px}#rpOv.show{display:flex}.rp-modal{width:min(560px,100%);max-height:88dvh;overflow:auto;background:var(--surface);color:var(--ink);border-radius:18px;padding:16px}.rp-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.rp-h button{border:0;background:transparent;font-size:22px;color:var(--ink)}.rp-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.rp-row label{font-size:11px;color:var(--ink-faint);font-weight:700}.rp-row select{width:100%;height:44px;border:0;border-radius:10px;background:var(--blue-soft);padding:0 10px;color:var(--ink);font-size:15px}.rp-go{width:100%;height:48px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:800;margin-top:12px}.rp-list{display:grid;gap:7px}.rp-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px;border-radius:10px;background:var(--blue-soft)}.rp-item small{display:block;color:var(--ink-faint)}.rp-edit{border:0;border-radius:9px;padding:8px 10px;background:var(--accent);color:#fff;font-weight:700}
+   @media(max-width:430px){#receiptPro .rp-grid{grid-template-columns:1fr 1fr}.rp-row{grid-template-columns:1fr 1fr}}
+  `;document.head.appendChild(st);
+  const panel=document.createElement('div');panel.id='receiptPro';panel.innerHTML=`<div class="rp-top"><div class="rp-title">🧾 영수증 보관·증빙</div><button class="rp-export" id="rpExport">📦 기간·연말 내보내기</button></div><div class="rp-grid"><div class="rp-card"><b id="rpCount">0건</b><span>이번 달</span></div><div class="rp-card"><b id="rpAmount">0원</b><span>이번 달 합계</span></div><div class="rp-card"><b id="rpCompany">0건</b><span>회사</span></div><div class="rp-card"><b id="rpPersonal">0건</b><span>개인</span></div></div><div class="rp-actions"><button class="rp-action" id="rpReview">⚠️ 검토 필요 0</button><button class="rp-action" id="rpDup">♻️ 중복 가능 0</button></div>`;
+  const list=$('receiptList');if(list)list.parentNode.insertBefore(panel,list);
+  const ov=document.createElement('div');ov.id='rpOv';ov.innerHTML=`<div class="rp-modal"><div class="rp-h"><b id="rpModalTitle">내보내기</b><button id="rpClose">✕</button></div><div id="rpModalBody"></div></div>`;document.body.appendChild(ov);
+  function renderPro(){
+   const all=active(), month=all.filter(r=>(r.date||'').slice(0,7)===ym()), ds=dupIds(), review=all.filter(r=>needsReview(r,ds));
+   $('rpCount').textContent=month.length+'건';$('rpAmount').textContent=money(month.reduce((a,r)=>a+(Number(r.amount)||0),0));$('rpCompany').textContent=month.filter(r=>r.owner==='회사').length+'건';$('rpPersonal').textContent=month.filter(r=>r.owner==='개인').length+'건';$('rpReview').textContent='⚠️ 검토 필요 '+review.length;$('rpDup').textContent='♻️ 중복 가능 '+ds.size;
+  }
+  function showList(title,arr){$('rpModalTitle').textContent=title;$('rpModalBody').innerHTML='<div class="rp-list">'+(arr.length?arr.map(r=>`<div class="rp-item"><div><b>${(r.place||'상호 없음')}</b><small>${r.date||'날짜 없음'} · ${money(r.amount)} · ${r.owner||'구분 없음'}</small></div><button class="rp-edit" data-id="${r.id}">수정</button></div>`).join(''):'<div style="padding:24px;text-align:center;color:var(--ink-faint)">해당 항목이 없습니다.</div>')+'</div>';ov.classList.add('show');$('rpModalBody').querySelectorAll('.rp-edit').forEach(b=>b.onclick=()=>{const r=receipts.find(x=>x.id===b.dataset.id);ov.classList.remove('show');if(r)openReceiptModal(r)})}
+  $('rpReview').onclick=()=>{const ds=dupIds();showList('⚠️ 검토 필요',active().filter(r=>needsReview(r,ds)))};
+  $('rpDup').onclick=()=>showList('♻️ 중복 가능',dupGroups().flat());
+  $('rpClose').onclick=()=>ov.classList.remove('show');ov.onclick=e=>{if(e.target===ov)ov.classList.remove('show')};
+  function csvCell(v){const s=String(v??'').replace(/"/g,'""');return '"'+s+'"'}
+  function loadZip(){return new Promise((res,rej)=>{if(window.JSZip)return res();const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';s.onload=res;s.onerror=()=>rej(new Error('ZIP 라이브러리를 불러오지 못했습니다'));document.head.appendChild(s)})}
+  async function exportYear(year,owner){
+   const arr=active().filter(r=>(r.date||'').startsWith(year+'-')&&(!owner||r.owner===owner));if(!arr.length){toast('내보낼 영수증이 없습니다');return}
+   const btn=$('rpDoExport');btn.disabled=true;btn.textContent='⏳ 자료 만드는 중…';
+   try{
+    await loadZip();const zip=new JSZip();const head=['날짜','시간','상호','총금액','구분','결제수단','전화','주소','메모'];const rows=arr.map(r=>[r.date,r.payTime||'',r.place,r.amount,r.owner,r.payMethod,r.phone,r.addr,r.memo]);zip.file('receipts.csv','\ufeff'+[head,...rows].map(x=>x.map(csvCell).join(',')).join('\n'));
+    const byOwner={};arr.forEach(r=>{const k=r.owner||'미분류';byOwner[k]||(byOwner[k]={count:0,sum:0});byOwner[k].count++;byOwner[k].sum+=Number(r.amount)||0});zip.file('summary.csv','\ufeff구분,건수,합계\n'+Object.entries(byOwner).map(([k,v])=>[k,v.count,v.sum].map(csvCell).join(',')).join('\n'));
+    const folder=zip.folder('images');let ok=0;
+    for(let i=0;i<arr.length;i++){const r=arr[i];try{const data=await loadPhotoSmart(r.photoId,r.photoUrl);if(data&&data.startsWith('data:')){const m=data.match(/^data:(image\/[^;]+);base64,(.+)$/);if(m){const ext=m[1].includes('png')?'png':'jpg';folder.file(`${String(i+1).padStart(4,'0')}_${(r.date||'no-date')}_${(r.place||'receipt').replace(/[\\/:*?"<>|]/g,'_')}.${ext}`,m[2],{base64:true});ok++}}}catch(e){}}
+    const sum=arr.reduce((a,r)=>a+(Number(r.amount)||0),0);zip.file('README.txt',`${year}년 영수증 보관함\n대상: ${owner||'전체'}\n건수: ${arr.length}건\n합계: ${sum.toLocaleString('ko-KR')}원\n포함 사진: ${ok}장\n생성일: ${today()}\n`);
+    const blob=await zip.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${year}_영수증_${owner||'전체'}_${arr.length}건.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),30000);toast('📦 영수증 자료를 만들었습니다');ov.classList.remove('show');
+   }catch(e){console.error(e);toast('내보내기 실패: '+e.message)}finally{btn.disabled=false;btn.textContent='📦 ZIP 만들기'}
+  }
+  $('rpExport').onclick=()=>{const y=today().slice(0,4);$('rpModalTitle').textContent='📦 기간·연말 내보내기';$('rpModalBody').innerHTML=`<div class="rp-row"><label>연도<select id="rpYear"></select></label><label>구분<select id="rpOwner"><option value="">전체</option><option>회사</option><option>개인</option><option>부동산</option></select></label></div><div style="font-size:12px;color:var(--ink-faint);margin-top:10px;line-height:1.6">CSV 목록 + 구분별 합계 + 영수증 원본 이미지를 ZIP 하나로 묶습니다.</div><button class="rp-go" id="rpDoExport">📦 ZIP 만들기</button>`;const sy=$('rpYear');for(let n=Number(y);n>=Number(y)-7;n--)sy.add(new Option(n+'년',String(n)));$('rpDoExport').onclick=()=>exportYear(sy.value,$('rpOwner').value);ov.classList.add('show')};
+  const oldOpen=openReceiptModal;openReceiptModal=function(r){oldOpen(r);setTimeout(()=>{const place=$('r_place'),owner=$('r_owner');if(!r&&place&&owner){const apply=()=>{if(owner.value)return;const rule=rules()[norm(place.value)];if(rule&&rule.owner){const b=[...document.querySelectorAll('.r-owner-btn')].find(x=>x.dataset.owner===rule.owner);if(b)b.click()}};place.addEventListener('blur',apply,{once:false});setTimeout(apply,50)}},0)};
+  const saveBtn=$('receiptSave');if(saveBtn&&!saveBtn.dataset.pro22){saveBtn.dataset.pro22='1';const old=saveBtn.onclick;saveBtn.onclick=async function(e){const p=$('r_place')?.value.trim(),o=$('r_owner')?.value.trim();if(p&&o)saveRule(p,o);const ret=await old.call(this,e);renderPro();return ret}}
+  const oldRender=renderReceiptList;renderReceiptList=function(q){const v=oldRender(q);renderPro();return v};
+  renderPro();
+ }
+ function install(){
+  let d,w;try{d=frame.contentDocument;w=frame.contentWindow}catch(e){return}if(!d||!d.body)return;uiFix(d);
+  if(!d.getElementById('receiptProInject')){const s=d.createElement('script');s.id='receiptProInject';s.textContent='('+receiptEnhancer.toString()+')();';d.body.appendChild(s)}
+ }
+ frame.addEventListener('load',()=>{setTimeout(install,300);setTimeout(install,1000)});setInterval(install,1200);
+})();
+</script>
+</body>
+</html>
