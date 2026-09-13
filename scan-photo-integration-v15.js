@@ -3,27 +3,28 @@
 const $g=id=>document.getElementById(id);
 const style=document.createElement('style');
 style.textContent=`
-#scannerFields{margin-top:12px;padding:14px;border:1px solid rgba(0,0,0,.08);border-radius:16px;background:rgba(118,118,128,.06)}
+#scannerFields{margin-top:12px;padding:12px;border:1px solid rgba(0,0,0,.08);border-radius:16px;background:rgba(118,118,128,.06)}
 #scannerFields .sf-title{font-size:15px;font-weight:800;margin-bottom:10px}
-#scannerFields .sf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.sf-field{position:relative;margin:0}.sf-labelrow{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
+#scannerFields .sf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.sf-field{position:relative;margin:0;min-width:0}.sf-labelrow{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
 .sf-labelrow label{margin:0!important;font-size:12px;font-weight:700;color:#6e6e73}
 .sf-editrow{display:none;justify-content:flex-end;margin-top:6px}.sf-field.sf-active .sf-editrow{display:flex}
-.sf-edit{border:0;border-radius:999px;background:#e8effb;color:#2354a0;padding:7px 12px;font-size:12px;font-weight:800;min-height:34px}
-#scannerFields select,#scannerFields input{width:100%;min-width:0;height:48px;border:0;border-radius:12px;background:rgba(118,118,128,.10);padding:0 12px;font-size:16px;color:inherit}
+.sf-edit{border:0;border-radius:999px;background:#e8effb;color:#2354a0;padding:6px 10px;font-size:11px;font-weight:800;min-height:30px}
+#scannerFields select,#scannerFields input{box-sizing:border-box;width:100%;min-width:0;height:46px;border:0;border-radius:12px;background:rgba(118,118,128,.10);padding:0 12px;font-size:16px;color:inherit}
 #scannerFields .sf-tags{grid-column:1/-1}#tagChoices{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}#tagChoices button{border:0;border-radius:999px;padding:7px 10px;background:#edf2f8;color:#405069;font-weight:700}#tagChoices button.active{background:#2563eb;color:#fff}
 #listSync{display:block;margin-top:8px;font-size:11px;color:#8e8e93}#listRetry{margin-top:6px;border:0;border-radius:9px;padding:7px 10px;background:#edf2f8;color:#2354a0;font-weight:700}
 #listOv{display:none;position:fixed;inset:0;background:#0008;z-index:15000;align-items:center;justify-content:center;padding:12px}#listOv.show{display:flex}#listOv .lm{background:#fff;color:#172235;width:min(540px,100%);max-height:90dvh;overflow:auto;border-radius:20px;padding:16px}#listOv .lmh,#listOv .lmf{display:flex;align-items:center;justify-content:space-between;gap:8px}.lmh{margin-bottom:10px}.lmh button,.lmf button,#listAdd{border:0;border-radius:10px;min-height:42px;padding:8px 12px;font-weight:750}.lmf{margin-top:12px}.lmf .blue,#listAdd{background:#2563eb;color:#fff}.listEditRow{display:flex;gap:8px;margin:8px 0}.listEditRow input,#listNew{flex:1;min-width:0;border:1px solid #d7dee8;border-radius:10px;padding:10px;font-size:16px}.listEditRow button{border:0;border-radius:9px;padding:8px 10px;color:#b91c1c}.listNewRow{display:flex;gap:8px;margin-top:12px}#listError{color:#b91c1c;font-size:12px;min-height:18px}
-.sf-category-field{position:relative}.sf-category-field .sf-editrow{margin-top:6px}.sf-category-field label{padding-right:0}
+.sf-category-field{position:relative}.sf-category-field .sf-editrow{margin-top:6px}
 #scannerPhotoFrame{position:fixed;inset:0;width:100%;height:100dvh;border:0;z-index:20000;background:#0b111b}
 .preview-item:has(.sf-notes){width:170px;flex:none;overflow:visible;height:auto;background:#f1f5f9;border:1px solid #dbe3ee}.preview-item:has(.sf-notes)>img{height:110px}.sf-notes{display:grid;gap:6px;padding:7px}.sf-notes button,.sf-notes select{min-height:38px;border:0;border-radius:9px;background:#e8effb;color:#2354a0;padding:7px;font-weight:700}.sf-notes input{width:100%;min-width:0;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:15px}
 #fCat{width:100%}#addOverlay .modal{width:min(720px,calc(100vw - 24px));max-width:720px}
-@media(max-width:600px){#scannerFields{padding:12px}#scannerFields .sf-grid{grid-template-columns:1fr 1fr}#scannerFields select,#scannerFields input{height:46px}}
-@media(max-width:420px){#scannerFields .sf-grid{grid-template-columns:1fr}.sf-tags{grid-column:auto!important}}
+@media(max-width:420px){#scannerFields{padding:10px}#scannerFields .sf-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#scannerFields select,#scannerFields input{height:44px;padding:0 9px;font-size:15px}.sf-edit{font-size:10px;padding:5px 8px}}
 `;
 document.head.appendChild(style);
 const field=(kind,label,id,control)=>`<div class="field sf-field" data-sf-kind="${kind}"><div class="sf-labelrow"><label for="${id}">${label}</label></div>${control}<div class="sf-editrow"><button type="button" class="sf-edit" data-edit-kind="${kind}">목록 편집</button></div></div>`;
-const panel=document.createElement('div');panel.id='scannerFields';panel.innerHTML=`<div class="sf-title">업무 정보</div><div class="sf-grid">${field('scope','구분','sfScope','<select id="sfScope"></select>')}${field('status','상태','sfStatus','<select id="sfStatus"></select>')}${field('location','위치','sfLocation','<select id="sfLocation"></select>')}<div class="field"><div class="sf-labelrow"><label for="sfTime">시간</label></div><input type="time" id="sfTime"></div>${field('tags','태그','sfTags','<div id="tagChoices"></div><input id="sfTags" placeholder="태그 선택 또는 쉼표로 입력">').replace('class="field sf-field"','class="field sf-field sf-tags"')}</div><span id="listSync"></span><button id="listRetry" type="button" hidden>동기화 재시도</button>`;
+const panel=document.createElement('div');
+panel.id='scannerFields';
+panel.innerHTML=`<div class="sf-title">업무 정보</div><div class="sf-grid">${field('scope','구분','sfScope','<select id="sfScope"></select>')}${field('status','상태','sfStatus','<select id="sfStatus"></select>')}${field('location','위치','sfLocation','<select id="sfLocation"></select>')}<div class="field"><div class="sf-labelrow"><label for="sfTime">시간</label></div><input type="time" id="sfTime"></div>${field('tags','태그','sfTags','<div id="tagChoices"></div><input id="sfTags" placeholder="태그 선택 또는 쉼표로 입력">').replace('class="field sf-field"','class="field sf-field sf-tags"')}</div><span id="listSync"></span><button id="listRetry" type="button" hidden>동기화 재시도</button>`;
 $g('fMemo')?.closest('.field')?.after(panel);
 const catField=$g('fCat')?.closest('.field');if(catField){catField.classList.add('sf-field','sf-category-field');catField.dataset.sfKind='category';const row=document.createElement('div');row.className='sf-editrow';const b=document.createElement('button');b.type='button';b.className='sf-edit';b.dataset.editKind='category';b.textContent='목록 편집';row.appendChild(b);catField.appendChild(row)}
 const modal=document.createElement('div');modal.innerHTML=`<div id="listOv"><div class="lm"><div class="lmh"><b id="listTitle">목록 편집</b><button id="listClose">✕</button></div><div id="listRows"></div><div class="listNewRow"><input id="listNew" maxlength="80" placeholder="새 항목"><button id="listAdd">추가</button></div><div id="listError"></div><div class="lmf"><button id="listCancel">취소</button><button id="listSave" class="blue">저장</button></div></div></div>`;document.body.appendChild(modal);
