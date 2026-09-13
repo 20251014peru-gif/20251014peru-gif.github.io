@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>사진 스캐너</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}#app{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}
+</style>
+</head>
+<body>
+<iframe id="app" src="scan-app.html?host=v21" allow="camera;clipboard-read;clipboard-write"></iframe>
+<script>
+(()=>{
+  const frame=document.getElementById('app');
+  const KIND_BY_ID={sfScope:'scope',sfStatus:'status',sfLocation:'location',sfTags:'tags',fCat:'category'};
+  function install(){
+    let d;try{d=frame.contentDocument}catch(e){return}
+    if(!d||!d.head||!d.body)return;
+    if(!d.getElementById('v21Style')){
+      const s=d.createElement('style');s.id='v21Style';s.textContent=`
+        /* v21: 캐시된 구형 UI까지 강제로 정리 */
+        #sfManageAll{display:none!important}
+        #scannerFields .sf-head{display:block!important;margin:0 0 10px!important}
+        #scannerFields .sf-head button{display:none!important}
+        #scannerFields .sf-help{display:none!important}
+        #scannerFields{padding:12px!important;margin-top:10px!important;border-radius:16px!important}
+        #scannerFields .sf-grid{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:10px!important}
+        #scannerFields .field,#scannerFields .sf-field{min-width:0!important;margin:0!important}
+        #scannerFields .sf-tags{grid-column:1/-1!important}
+        #scannerFields label,.v21-label{display:block!important;margin:0 0 6px!important;font-size:12px!important;font-weight:700!important;color:#6e6e73!important}
+        #scannerFields select,#scannerFields input{width:100%!important;min-width:0!important;height:46px!important;border:0!important;border-radius:12px!important;background:rgba(118,118,128,.10)!important;padding:0 12px!important;font-size:16px!important;box-sizing:border-box!important}
+        .v21-editrow{display:none;justify-content:flex-end;margin-top:5px}
+        .v21-field.v21-active>.v21-editrow{display:flex}
+        .v21-editbtn{border:0;border-radius:999px;background:#e8effb;color:#2354a0;padding:7px 12px;font-size:12px;font-weight:800;min-height:34px}
+        .sf-edit,.sf-editrow{display:none!important}
+        #addOverlay .modal{width:min(720px,calc(100vw - 24px))!important;max-width:720px!important}
+        #fCat{width:100%!important;min-width:0!important}
+        .v21-catwrap{position:relative;min-width:0}
+        .v21-catwrap.v21-active>.v21-editrow{display:flex}
+        @media(max-width:430px){
+          #scannerFields .sf-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:8px!important}
+          #scannerFields{padding:10px!important}
+          #scannerFields select,#scannerFields input{height:44px!important;font-size:15px!important;padding:0 9px!important}
+        }
+      `;d.head.appendChild(s);
+    }
+    function openManager(kind){
+      const own=d.querySelector(`[data-edit-kind="${kind}"]`);
+      if(own && !own.classList.contains('v21-editbtn')){ own.click(); return; }
+      const all=d.getElementById('sfManageAll');
+      if(all){
+        all.click();
+        setTimeout(()=>{const k=d.getElementById('listKind');if(k){k.value=kind;k.dispatchEvent(new Event('change',{bubbles:true}))}},0);
+        return;
+      }
+      const legacy=Array.from(d.querySelectorAll('button')).find(b=>/목록 편집|분류 목록 편집/.test(b.textContent||''));
+      if(legacy)legacy.click();
+    }
+    function deactivate(){d.querySelectorAll('.v21-active').forEach(x=>x.classList.remove('v21-active'))}
+    function attach(control,kind){
+      if(!control||control.dataset.v21==='1')return;
+      control.dataset.v21='1';
+      let host=control.closest('.sf-field,.field');
+      if(!host)return;
+      host.classList.add('v21-field');
+      let row=host.querySelector(':scope > .v21-editrow');
+      if(!row){row=d.createElement('div');row.className='v21-editrow';const b=d.createElement('button');b.type='button';b.className='v21-editbtn';b.textContent='목록 편집';b.onclick=e=>{e.preventDefault();e.stopPropagation();openManager(kind)};row.appendChild(b);host.appendChild(row)}
+      const activate=e=>{if(e.target.closest('.v21-editrow'))return;deactivate();host.classList.add('v21-active')};
+      host.addEventListener('pointerdown',activate,true);
+      control.addEventListener('focus',activate,true);
+    }
+    Object.entries(KIND_BY_ID).forEach(([id,k])=>attach(d.getElementById(id),k));
+    // 예전 상단 관리 버튼은 DOM에는 남겨 기능 호출용으로만 사용하고 화면에서는 숨긴다.
+    const p=d.getElementById('scannerFields');if(p){
+      const title=p.querySelector('.sf-title');if(title)title.textContent='업무 정보';
+      Array.from(p.querySelectorAll('div,p')).forEach(x=>{if(/항목 관리.*한 번에 수정/.test(x.textContent||''))x.style.display='none'});
+    }
+    // 카테고리/날짜는 기존 2열 배치 유지, 카테고리만 선택 시 아래 편집 노출
+    const cat=d.getElementById('fCat');if(cat){let h=cat.closest('.field');if(h){h.classList.add('v21-catwrap');attach(cat,'category')}}
+    if(!d.body.dataset.v21Outside){d.body.dataset.v21Outside='1';d.addEventListener('pointerdown',e=>{if(!e.target.closest('.v21-field,.v21-catwrap,#listOv'))deactivate()},true)}
+  }
+  frame.addEventListener('load',()=>{install();setTimeout(install,300);setTimeout(install,1200)});
+  setInterval(install,700);
+})();
+</script>
+</body>
+</html>
