@@ -2,8 +2,9 @@
 
 > 이 파일을 읽고 작업을 시작할 것. 새 대화 시작 시 항상 이 파일 먼저 읽기.
 >
-> **최우선 규칙: 모든 프로그램의 신규 개발·수정·확장 전에 반드시 `SYSTEM_PHILOSOPHY.md`를 먼저 읽는다.**
+> **최우선 규칙: 모든 프로그램의 신규 개발·수정·확장 전에 반드시 `SYSTEM_PHILOSOPHY.md`와 `DESIGN_SYSTEM.md`를 먼저 읽는다.**
 > 개별 앱의 편의나 기능만 최적화하지 말고, 그 앱이 전체 투자 인식·추론 시스템에서 어떤 '감각'을 담당하며 종합추론 머리에 어떤 신호를 전달하는지 먼저 검토한다.
+> 기능과 디자인을 분리하지 않는다. 정보 우선순위·시각화·배치·모바일·출력까지 포함해 기능이 실제로 충분히 활용되는 구조인지 검토한다.
 > 각 앱은 다른 앱 없이도 독립적으로 작동해야 하며, 연결될 때 서로의 판단 품질을 높여야 한다. 임시 패치보다 전체 구조와 장기적인 추론 능력을 우선한다.
 
 ---
@@ -11,6 +12,7 @@
 ## 0. 전체 시스템 헌장 — 모든 작업보다 우선
 
 - 절대 기준 원본: `SYSTEM_PHILOSOPHY.md`
+- 디자인 기준 원본: `DESIGN_SYSTEM.md`
 - 핵심 문장: **프로그램은 감각이고, 종합추론은 6번째 감각이다. 부분을 만들되 항상 전체를 본다.**
 - 뉴스·유튜브·공시·매크로·가격/수급·기록보관실 등은 각각 독립적인 감각 모듈이다.
 - 종합추론은 여러 감각, 시간, 돈의 흐름, 과거 경험을 연결해 가설·반대가설·현재 방향을 판단하는 머리다.
@@ -18,14 +20,18 @@
 - 추세형(반도체/AI/전력/환율 등)은 방향·속도·자금흐름·사이클 전환을 추적한다.
 - 뉴스/유튜브의 '말'과 가격·수급의 '돈의 행동'을 항상 비교하고, 둘의 괴리를 중요한 신호로 본다.
 - 새 기능은 반드시 "전체 시스템의 지능을 실제로 높이는가?"를 먼저 검토한다.
-- 헌장과 이 파일의 세부 규칙이 충돌하면 `SYSTEM_PHILOSOPHY.md`의 상위 철학을 우선하고, 충돌 사실을 사용자에게 알린다.
+- 헌장과 세부 규칙이 충돌하면 `SYSTEM_PHILOSOPHY.md`를 우선한다. 디자인 구현은 `DESIGN_SYSTEM.md`를 따른다.
 
-### 모든 작업 시작 전 5문장 확인
+### 모든 작업 시작 전 확인
 1. 이 프로그램은 어떤 감각인가?
 2. 이번 수정으로 무엇을 더 빨리·정확하게 관찰하게 되는가?
 3. 종합추론 머리에 어떤 표준 신호를 전달할 수 있는가?
 4. 다른 모듈 없이도 독립 작동하는가?
-5. 다른 모듈과 연결되면 어떤 새로운 추론이 가능해지는가?
+5. 다른 모듈과 연결되면 어떤 새로운 추론이 가능한가?
+6. 화면을 열고 3초 안에 핵심을 알 수 있는가?
+7. 현재 데이터 표현(숫자/표/차트/흐름도/타임라인)이 목적에 가장 적합한가?
+8. 불필요한 버튼을 줄이거나 통합할 수 있는가?
+9. PC·모바일·출력에서 같은 판단 구조가 유지되는가?
 
 ### 0-1. 객관성·근거 우선 규칙 — 사용자 동의보다 검증이 우선
 
@@ -88,6 +94,20 @@
 
 목표는 코드를 많이 만드는 것이 아니라 **가장 짧은 시간에 안정적이고 검증 가능한 기능을 확보하는 것**이다.
 
+### 0-3. 디자인·정보표현 우선 규칙
+
+기능이 작동한다는 이유만으로 완료로 판단하지 않는다. `DESIGN_SYSTEM.md`를 기준으로 기능을 실제로 활용할 수 있는 화면인지 별도로 검수한다.
+
+- 화면을 위→아래, 왼쪽→오른쪽으로 읽으면 판단 흐름이 자연스럽게 완성되어야 한다.
+- 한 페이지에서 핵심 판단이 어렵다면 억지로 압축하지 말고 판단/분석/근거 페이지로 나눈다.
+- 같은 의미의 색·아이콘·버튼·용어는 앱마다 통일한다.
+- 데이터마다 숫자·표·선차트·막대·히트맵·RRG·흐름도·타임라인 중 가장 빠르게 의미를 전달하는 표현을 선택한다.
+- 모든 버튼은 꼭 필요한지, 다른 기능과 통합 가능한지 검토한다.
+- PC 화면을 모바일에 단순 축소하지 않는다. 모바일은 핵심 판단 우선순위로 재배치한다.
+- 주요 분석 화면은 A4/PDF 출력까지 고려한다. 화면의 판단 구조가 출력에서도 유지되어야 한다.
+- 데이터 없음/미확인/수집 실패를 구분하고 마지막 업데이트 시각을 표시한다.
+- AI 추론과 확인된 사실은 시각적으로 구분한다.
+
 ---
 
 ## 1. 프로젝트 기본 정보
@@ -104,9 +124,10 @@
 ## 2. 새 앱 만들 때 체크리스트 (말 안 해도 무조건 적용)
 
 ```
-✅ 0. SYSTEM_PHILOSOPHY.md 먼저 읽고 전체 시스템에서 이 앱의 감각 역할 정의
+✅ 0. SYSTEM_PHILOSOPHY.md + DESIGN_SYSTEM.md 먼저 읽기
 ✅ 0-A. 기존 내부 프로그램·GitHub 오픈소스·공식 API·논문을 먼저 검색하고 재사용 가능성 평가
 ✅ 0-B. 검증된 기존 구현이 충분하면 새로 만들지 말고 최소 수정/어댑터 방식 우선
+✅ 0-C. 사용 목적 → 판단 → 정보 우선순위 → 시각표현 → 페이지 구조를 기능 구현보다 먼저 설계
 ✅ 1. 🐞 디버그 패널 + 버전 표시  ← 가장 먼저
 ✅ 2. 밝은 흰색/라이트 테마 (어두운 배경 절대 금지)
 ✅ 3. 카테고리 추가/삭제 항상 가능
@@ -118,7 +139,7 @@
 ✅ 9. JSON 백업/내보내기 기본 포함
 ✅ 10. 모바일 터치 최적화 (44px, contextmenu 차단)
 ✅ 11. 캐시버스팅 타임스탬프 (Date.now())
-✅ 12. 파일 zip으로 전달
+✅ 12. 인쇄/PDF 출력 검수
 ```
 
 ---
@@ -132,187 +153,80 @@
 // 1. 앱 자체 컬렉션 (예: worklog_entries, psc_photos_personal)
 // 2. 전체검색용 공통 컬렉션
 {
-  app: '앱명',        // 'worklog', 'photos', 'parking' 등
-  type: '데이터종류', // 'entry', 'photo', 'recipe' 등
+  app: '앱명',
+  type: '데이터종류',
   title: '제목',
   memo: '내용',
   cat: '카테고리',
   date: '2026-06-16',
-  secure: false,      // true면 검색 제외
+  secure: false,
   updatedAt: Date.now()
 }
-```
-
-### Firestore REST API 패턴
-```javascript
-const FS_BASE = `https://firestore.googleapis.com/v1/projects/my-system-25497/databases/(default)/documents`;
-
-// toFS() / fromFS() 헬퍼 필수
-// 배열/객체는 JSON.stringify → stringValue로 저장
-// fromFS()가 이미 파싱한 값을 절대 재파싱 금지 (이중 JSON.parse 버그)
 ```
 
 ### 다기기 동기화 패턴
 ```javascript
 // init() 순서
 await openIDB();
-loadData();        // localStorage에서 빠르게 로드
-renderUI();        // 즉시 화면 표시
-syncFromFirebase(); // Firebase 최신 데이터 로드
-renderUI();        // 갱신
+loadData();
+renderUI();
+syncFromFirebase();
+renderUI();
 ```
 
 ---
 
 ## 4. 필수 기본 컴포넌트
 
-### 🐞 디버그 패널 (모든 앱 필수)
-```javascript
-// 전역 에러 자동 캡처
-window.onerror = (msg, src, line) => dbg(`❌ ${msg} @ ${src}:${line}`, 'error');
-
-function dbg(msg, type='log'){
-  const logs = JSON.parse(localStorage.getItem('_dbg_logs')||'[]');
-  const time = new Date().toLocaleTimeString();
-  logs.unshift({time, msg, type});
-  if(logs.length > 100) logs.pop();
-  localStorage.setItem('_dbg_logs', JSON.stringify(logs));
-  renderDbgPanel();
-}
-```
-
-### 버전 표시
-```html
-<span class="hdr-ver" id="appVersion">v1.0</span>
-```
-```javascript
-// init() 안에서
-$('appVersion').textContent = 'v1.0';
-```
-- 파일 수정할 때마다 버전 올리기
-- CSS/JS 쿼리스트링도 같이 갱신: `?v=타임스탬프`
-
-### 비밀번호/PIN 입력창 (갤럭시 크롬 팝업 차단)
-```html
-<!-- 더미 필드로 크롬 속이기 -->
-<input type="text" style="display:none" aria-hidden="true">
-<input type="password" style="display:none" aria-hidden="true">
-
-<!-- 실제 입력 — type="password" 절대 금지 -->
-<input
-  type="text"
-  style="-webkit-text-security:disc"
-  autocomplete="off"
-  inputmode="numeric"
-  placeholder="비밀번호">
-```
+- 🐞 디버그 패널
+- 버전 표시
+- 로딩/오류/데이터 없음 상태
+- 마지막 업데이트 시각
+- 홈/뒤로가기
+- 검색/필터
+- 출력/내보내기(주요 분석 앱)
 
 ---
 
 ## 5. UI/UX 표준
 
-### 검색창
-```css
-/* 높이 48px, 파란 테두리, 라운드 */
-height: 48px;
-border: 2.5px solid var(--primary);
-border-radius: 14px;
-background: #f0f6ff;
-padding-left: 44px; /* 🔍 아이콘 공간 */
-```
+세부 기준은 `DESIGN_SYSTEM.md`를 절대 기준으로 사용한다.
 
 ### 테마
-- 배경: 항상 흰색/라이트 (#fff, #f8fafc 등)
-- 어두운 배경 (#0a0e1a, #111827, #1A1A2E 등) **절대 금지**
-- 예외: 풀스크린 뷰어, 문서감지 화면만 허용
+- 배경: 흰색/라이트 (#fff, #f8fafc 등)
+- 어두운 배경은 풀스크린 뷰어 등 명확한 이유가 있을 때만 예외
 
 ### 모바일
-- 버튼 최소 높이: 44px
-- 꾹 누르기 방지: `oncontextmenu = e => e.preventDefault()`
-- CSS: `touch-action: manipulation`
-- PIN 입력: `onclick` → `ontouchstart` (300ms 딜레이 제거)
+- 버튼 최소 높이 44px
+- PC 화면 단순 축소 금지
+- 핵심 판단 → 변화 → 자금흐름 → 다음 확인 → 상세 순서 우선
 
 ---
 
-## 6. 함정 & 해결책 29가지
+## 6. 구조적 함정 핵심
 
-### JS 이벤트
-| # | 함정 | 해결 |
-|---|---|---|
-| ① | `_inited` 플래그 사용 | `cloneNode` 또는 `document.addEventListener` |
-| ② | 드래그 중 `canvas.width=` 리셋 | `dsRender`(크기+그리기) / `dsRedraw`(그리기만) 분리 |
-| ③ | `overflow:hidden` 부모 안 `setPointerCapture` | `document.addEventListener('pointermove')` |
-| ④ | 모달 열기 함수가 데이터 배열 초기화 | `preserveImgs=true` 파라미터 명시 |
-| ⑮ | 이중 호출로 콜백 덮어씌워짐 | `_sectionLock` 플래그로 차단 |
-| ⑱ | `closeEditor()` 후 배열 비어서 전달 실패 | `const copy=arr.slice(); close(); open(copy)` 순서 |
-| ㉔ | PIN 모바일 300ms 딜레이 | `onclick` → `ontouchstart` |
-| ㉕ | WebAuthn이 PIN 가로챔 | WebAuthn 제거, 수동 PIN만 |
-
-### Firebase
-| # | 함정 | 해결 |
-|---|---|---|
-| ⑥ | Storage REST API CORS 차단 | 이미지 압축 후 Firestore base64 직접 저장 |
-| ⑦ | `fromFS()` 결과 재파싱 | `fromFS()`는 이미 파싱됨, 재파싱 금지 |
-| ⑧ | 고정 docId → 덮어쓰기 | `uid = Date.now().toString(36) + random` |
-| ⑳ | `__conntest__` 예약 ID 오류 | `zz_conntest_` + timestamp 사용 |
-| ㉑ | REST API로 Storage 업로드 불가 | `firebase-storage-compat.js` 로드 필수 |
-| ㉘ | 백그라운드 업로드 후 저장 완료 | `await fsSave()` — 완료 후 저장 완료 처리 |
-
-### CSS
-| # | 함정 | 해결 |
-|---|---|---|
-| ⑤ | `.ghost` 같은 흔한 클래스명 | 앱 전용 접두사 사용 |
-| ㉖ | 검색바 z-index가 팝업보다 높음 | 팝업 z-index를 검색바보다 높게 |
-
-### 코드 작업
-| # | 함정 | 해결 |
-|---|---|---|
-| ⑬ | str_replace 후 고아 코드 잔존 | `node --check` 필수 |
-| ⑭ | 비슷한 파일명 혼동 덮어쓰기 | 파일명 항상 명확히 확인 (realestate vs realestate-project) |
-| ㉒ | select에 `__new__` 같은 특수값 | filter select에 특수 option 절대 금지 |
-| ㉓ | 함수 삭제 후 init()에서 호출 | 삭제 전 호출 위치 전부 확인 |
-
-### Anthropic API
-| # | 함정 | 해결 |
-|---|---|---|
-| ⑯ | 모델명 오류 | 반드시 `claude-sonnet-4-6` |
-| ⑰ | 브라우저 직접 호출 CORS | `anthropic-dangerous-direct-browser-access: true` 헤더 필수 |
-
-### 크로스플랫폼
-| # | 함정 | 해결 |
-|---|---|---|
-| ⑩ | iOS `clientWidth` 0 반환 | `requestAnimationFrame` 재시도 루프 |
-| ⑪ | Fabric.js CDN 모바일 차단 | `cdn.jsdelivr.net/npm/fabric@5.3.0` |
-| ⑫ | 갤럭시 크롬 비번 팝업 | `type=text` + `-webkit-text-security:disc` |
-| ⑲ | iPhone HEIC Android에서 안 보임 | `heic2any@0.0.4` 자동 변환 |
-
-### 구조적 원칙
-| # | 원칙 |
-|---|---|
-| ㉗ | 캔버스 단일 렌더 — div 8개+이벤트보다 canvas 1개+히트테스트가 안정적 |
-| ㉙ | 같은 오류 3번 반복 = 방식 자체를 바꿔라, 증상 패치 금지 |
-| ⑨ | 캐시버스팅 — 매 버전 `Date.now()` 고유 타임스탬프 |
+- 같은 오류가 반복되면 증상 패치가 아니라 구조를 바꾼다.
+- 비슷한 기능을 여러 파일에 복제하지 않는다.
+- 데이터와 UI를 가능한 한 분리한다.
+- AI가 숫자·시간·사실을 임의 생성하지 못하게 구조화한다.
+- 외부 코드 도입 시 라이선스·보안·의존성을 확인한다.
 
 ---
 
 ## 7. 디버깅 방법론
 
-### 폰 버그 신고 최적 형식
-```
-"[버튼명] 누르면 → [기대 결과]인데 → [실제 결과]"
-+ 🐞 로그 복사해서 붙여넣기
-+ 어떤 폰인지 (갤럭시/아이폰)
-```
+문제는 다음 순서로 본다.
 
-### 로그에서 원인 찾기
-- 함수 진입 로그 없음 → 캐시 문제 (시크릿창으로 테스트)
-- 진입은 됐는데 중간에 끊김 → 에러 메시지 확인
-- 완료됐는데 결과 없음 → 데이터 흐름 확인
+1. 재현
+2. 로그
+3. 데이터 흐름
+4. 원인 가설
+5. 반대 가설
+6. 최소 수정
+7. 회귀 테스트
+8. 모바일/출력 영향 확인
 
-### 캐시 문제 해결
-- 폰: 시크릿 창으로 열기
-- PC: F12 → Application → Service Workers → Unregister
-- 강제: URL에 `?v=새타임스탬프` 붙이기
+같은 오류가 반복되면 방식 자체를 재검토한다.
 
 ---
 
@@ -320,45 +234,17 @@ padding-left: 44px; /* 🔍 아이콘 공간 */
 
 ### 새 대화 시작 시
 ```
-"오늘 할 것: [파일명] [작업내용]
+오늘 할 것: [파일명] [작업내용]
 현재 버전: v?.?
 문제: [증상]
-원하는 결과: [목표]"
+원하는 결과: [목표]
 ```
 
-### Claude가 해야 할 것
-1. `SYSTEM_PHILOSOPHY.md` 먼저 읽기
-2. 이 파일 읽었음 확인
-3. 전체 시스템에서 해당 앱의 감각 역할과 이번 수정의 의미 확인
-4. **기존 내부 코드·공개 GitHub·공식 문서/API·관련 논문에서 재사용 가능한 방법 먼저 조사**
-5. 재사용 후보와 직접 구현을 비교해 가장 짧고 안정적인 방법 선택
-6. 함정 체크리스트 확인
-7. 관련 파일 먼저 읽기
-8. 작업 시작
-
----
-
-## 9. 앱 목록 & Firebase 컬렉션
-
-| 앱 | 파일 | 컬렉션 |
-|---|---|---|
-| 업무일지 | worklog.html/css/js | worklog_entries |
-| 개인관리 | personal.html/css/js | 다수 |
-| 부동산 프로젝트 | realestate-project.html/css/js | re_* |
-| 부동산 투자 | realestate.html | re-costs 등 |
-| 방문주차 | parking.html | parking_entries |
-| 업체연락처 | contacts.html | contacts |
-| 사진스캔 | photos-scan.html/css/js | psc_photos_personal/work |
-| 유튜브분석 | youtube.html | youtube-analyses |
-| 링크컬렉션 | links.html | lr_links |
-| 레시피 | recipes.html | lr_recipes |
-| 자재관리 | materials.html | lr_materials |
-| 직원관리 | staff.html | staff-records |
-| 한국주식 | korea-scanner.html | — |
-| 미국주식 | scanner-v15.html | — |
-| 시장체크 | market-check.html | market-flow |
-| 전체검색 | (index.html) | my_system_search |
-
----
-
-*최종 업데이트: 2026-09-13 — SYSTEM_PHILOSOPHY.md 최상위 헌장 연동 + 객관성 검증 + 재사용 우선 원칙*
+### AI가 해야 할 것
+1. `SYSTEM_PHILOSOPHY.md` 읽기
+2. `DESIGN_SYSTEM.md` 읽기
+3. 전체 시스템에서 앱의 감각 역할 확인
+4. 내부/외부 재사용 후보 조사
+5. 관련 파일 읽기
+6. 기능+디자인 설계 검토
+7. 구현
