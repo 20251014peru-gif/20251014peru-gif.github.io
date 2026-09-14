@@ -1,28 +1,26 @@
 {
- "updated_at": "2026-09-14T08:45:19.474897+09:00",
+ "updated_at": "2026-09-14T14:32:47.836352+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 15,
-   "channel_count": 10,
-   "total_views": 782361,
-   "latest": "2026-09-14T08:26:51+09:00",
+   "video_count": 13,
+   "channel_count": 9,
+   "total_views": 926164,
+   "latest": "2026-09-14T13:30:32+09:00",
    "video_ids": [
-    "O-9fNtfLhJI",
+    "t2EbHY3VEE8",
+    "JeRSlJOPAJ4",
+    "4WHEOgNMe1I",
     "IMrhrVP3MS0",
-    "BVYUrEOvXyU",
-    "nGaM_gCtccI",
-    "uuhKDr9a66o",
+    "O-9fNtfLhJI",
     "G5mOcY8a6d8",
     "EJhYdt5vavI",
-    "JSCTaCuGD00",
     "LvVCgRRp6k4",
     "YW2Sp5BYAUs",
-    "1zfS4u5alQ8",
+    "KXpPADYK4go",
     "pkwMDbJEVkg",
     "aaS2sVh-F10",
-    "cs2BI_WH8Tw",
     "N0G96sFTkGE"
    ],
    "channels": [
@@ -32,41 +30,40 @@
     "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
     "언더스탠딩",
-    "이효석아카데미",
     "증시각도기TV",
     "체슬리TV (박세익)",
     "티타임즈TV"
    ],
    "subtopics": [
     {
-     "word": "속도",
-     "videos": 3,
-     "channels": 3
-    },
-    {
      "word": "대표",
-     "videos": 3,
+     "videos": 4,
      "channels": 2
     },
     {
      "word": "끝났다",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "개발",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "주식",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "학습부장",
      "videos": 3,
-     "channels": 1
+     "channels": 2
+    },
+    {
+     "word": "속도조절론",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "반도체",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "9월",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "증시",
+     "videos": 2,
+     "channels": 2
     }
    ],
    "active": true
@@ -75,56 +72,60 @@
    "id": "금리_연준",
    "name": "금리·연준",
    "video_count": 11,
-   "channel_count": 7,
-   "total_views": 899442,
-   "latest": "2026-09-14T08:26:51+09:00",
+   "channel_count": 6,
+   "total_views": 1583560,
+   "latest": "2026-09-14T13:30:32+09:00",
    "video_ids": [
+    "t2EbHY3VEE8",
+    "cYsrlkO4dvU",
+    "wnalIjX0h3A",
+    "wqvOsocrP4k",
     "O-9fNtfLhJI",
     "2VDXzCz9s5E",
     "eJkHtAUVqps",
     "W3pIlHYsa1E",
     "EJhYdt5vavI",
     "zA1yF46YS3o",
-    "1zfS4u5alQ8",
-    "cuCl7n5c7Ko",
-    "f2SHjUm49A0",
-    "-yn4nwLDk9w",
-    "4lX5KM3lyOc"
+    "cuCl7n5c7Ko"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "염블리와 함께 (염승환)",
+    "삼프로TV 3PROTV",
     "이효석아카데미",
     "증시각도기TV",
-    "한문도TV 부동산채널",
-    "홍춘욱의 경제강의노트"
+    "한문도TV 부동산채널"
    ],
    "subtopics": [
     {
      "word": "금리인상",
      "videos": 6,
-     "channels": 2
-    },
-    {
-     "word": "FOMC",
-     "videos": 3,
-     "channels": 2
+     "channels": 3
     },
     {
      "word": "9월",
-     "videos": 3,
+     "videos": 4,
+     "channels": 3
+    },
+    {
+     "word": "FOMC",
+     "videos": 5,
      "channels": 2
     },
     {
      "word": "AI",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "뉴욕증시",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "즉시분석",
+     "word": "5일만",
      "videos": 2,
-     "channels": 1
+     "channels": 2
     }
    ],
    "active": true
@@ -132,16 +133,14 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 7,
+   "video_count": 5,
    "channel_count": 4,
-   "total_views": 932077,
-   "latest": "2026-09-13T18:15:13+09:00",
+   "total_views": 758030,
+   "latest": "2026-09-14T13:30:32+09:00",
    "video_ids": [
+    "t2EbHY3VEE8",
     "SkMaMBNFLV0",
     "t2EXo4p3N9M",
-    "BwQg6O6hwSg",
-    "1zfS4u5alQ8",
-    "f2SHjUm49A0",
     "N0G96sFTkGE",
     "n-IrUa0M5mE"
    ],
@@ -154,23 +153,18 @@
    "subtopics": [
     {
      "word": "SK하이닉스",
-     "videos": 3,
+     "videos": 2,
      "channels": 2
     },
     {
      "word": "삼성전자",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "삼성전기",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "금리인상",
+     "word": "AI",
      "videos": 2,
-     "channels": 1
+     "channels": 2
     },
     {
      "word": "대표",
@@ -181,20 +175,108 @@
    "active": true
   },
   {
+   "id": "유가_에너지",
+   "name": "유가·에너지",
+   "video_count": 5,
+   "channel_count": 4,
+   "total_views": 650168,
+   "latest": "2026-09-14T12:18:40+09:00",
+   "video_ids": [
+    "cYsrlkO4dvU",
+    "wnalIjX0h3A",
+    "4WHEOgNMe1I",
+    "KXpPADYK4go",
+    "Ax-Sl3eniLU"
+   ],
+   "channels": [
+    "815머니톡",
+    "삼프로TV 3PROTV",
+    "슈퍼개미 이세무사TV",
+    "체슬리TV (박세익)"
+   ],
+   "subtopics": [
+    {
+     "word": "대표",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "100달러",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "급등",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "AI",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "금리",
+     "videos": 2,
+     "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "미국증시",
+   "name": "미국증시",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 917095,
+   "latest": "2026-09-14T12:18:40+09:00",
+   "video_ids": [
+    "cYsrlkO4dvU",
+    "wqvOsocrP4k",
+    "RLifBku0Azo"
+   ],
+   "channels": [
+    "815머니톡",
+    "삼프로TV 3PROTV",
+    "증시각도기TV"
+   ],
+   "subtopics": [
+    {
+     "word": "금리인상",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "뉴욕증시",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "5일만",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "확률",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "부동산",
    "name": "부동산",
-   "video_count": 4,
-   "channel_count": 3,
-   "total_views": 314613,
+   "video_count": 3,
+   "channel_count": 2,
+   "total_views": 172436,
    "latest": "2026-09-14T05:53:41+09:00",
    "video_ids": [
     "eJkHtAUVqps",
     "3JdtiRMK4P8",
-    "DDwyrbqHRqI",
     "jpirf3GOp6Q"
    ],
    "channels": [
-    "삼프로TV 3PROTV",
     "언더스탠딩",
     "한문도TV 부동산채널"
    ],
@@ -233,57 +315,11 @@
    "active": true
   },
   {
-   "id": "일본_엔화",
-   "name": "일본·엔화",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 1609076,
-   "latest": "2026-09-13T14:55:09+09:00",
-   "video_ids": [
-    "YW2Sp5BYAUs",
-    "f2SHjUm49A0",
-    "LFBEEft1uFc"
-   ],
-   "channels": [
-    "815머니톡",
-    "슈카월드",
-    "언더스탠딩"
-   ],
-   "subtopics": [
-    {
-     "word": "소장",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "유가_에너지",
-   "name": "유가·에너지",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 191448,
-   "latest": "2026-09-13T14:29:35+09:00",
-   "video_ids": [
-    "KXpPADYK4go",
-    "Ax-Sl3eniLU",
-    "REuUse7dMA0"
-   ],
-   "channels": [
-    "김영익의 경제스쿨",
-    "슈퍼개미 이세무사TV",
-    "체슬리TV (박세익)"
-   ],
-   "subtopics": [],
-   "active": true
-  },
-  {
    "id": "조선_방산",
    "name": "조선·방산",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 612869,
+   "total_views": 923840,
    "latest": "2026-09-14T02:31:37+09:00",
    "video_ids": [
     "G5mOcY8a6d8",
