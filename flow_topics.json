@@ -1,20 +1,99 @@
 {
- "updated_at": "2026-09-15T14:33:34.300138+09:00",
+ "updated_at": "2026-09-15T21:19:34.456820+09:00",
  "topics": [
+  {
+   "id": "금리_연준",
+   "name": "금리·연준",
+   "video_count": 17,
+   "channel_count": 12,
+   "total_views": 980809,
+   "latest": "2026-09-15T20:07:41+09:00",
+   "video_ids": [
+    "AvdNjkuxOcg",
+    "qvbqMyR0rzk",
+    "JVbnjj00Kjk",
+    "vEDckR6FF2g",
+    "6s6uBYMwHjs",
+    "pOvtL-SaCsA",
+    "l5lcgmehcZM",
+    "xB84vw_ltxA",
+    "4vuLiRp1unk",
+    "JwXiSMEIDbA",
+    "VZiTLIEllqc",
+    "Laqkje2jU64",
+    "Sa6TY-0dmO4",
+    "qxdpl_HNFoY",
+    "uQsJhqQUD98",
+    "2VDXzCz9s5E",
+    "eJkHtAUVqps"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
+    "김영익의 경제스쿨",
+    "달란트투자",
+    "삼프로TV 3PROTV",
+    "슈퍼개미 이세무사TV",
+    "언더스탠딩",
+    "염블리와 함께 (염승환)",
+    "증시각도기TV",
+    "체슬리TV (박세익)",
+    "한문도TV 부동산채널",
+    "홍춘욱의 경제강의노트"
+   ],
+   "subtopics": [
+    {
+     "word": "코스피",
+     "videos": 5,
+     "channels": 4
+    },
+    {
+     "word": "AI",
+     "videos": 4,
+     "channels": 4
+    },
+    {
+     "word": "9월",
+     "videos": 4,
+     "channels": 3
+    },
+    {
+     "word": "FOMC",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "코스닥",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "유가",
+     "videos": 3,
+     "channels": 3
+    }
+   ],
+   "active": true
+  },
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 19,
+   "video_count": 21,
    "channel_count": 11,
-   "total_views": 2133454,
-   "latest": "2026-09-15T14:15:24+09:00",
+   "total_views": 2125431,
+   "latest": "2026-09-15T20:30:16+09:00",
    "video_ids": [
-    "QP7d0l2RXmk",
+    "_zE-27FrYmI",
+    "AvdNjkuxOcg",
+    "G68Xhq1hXp8",
+    "05sAQnDr98I",
+    "3iuttfLXJns",
+    "BeeSuExA9wM",
+    "JJ3Id2fjvns",
+    "JwXiSMEIDbA",
     "zevvIAO632w",
     "b6wmE6L2DkY",
     "LSpR-0h-zKE",
-    "oE_Bn8cmupc",
-    "1VrqI-e3ekU",
     "H7aSwAUuBPE",
     "Sa6TY-0dmO4",
     "n8QyEOPrgPI",
@@ -24,19 +103,16 @@
     "Kz9rZvMD9V4",
     "BiKBVWLEW_Y",
     "SBpTfkNJHKY",
-    "IMrhrVP3MS0",
-    "O-9fNtfLhJI",
-    "G5mOcY8a6d8",
-    "YW2Sp5BYAUs"
+    "G5mOcY8a6d8"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
+    "경제사냥꾼",
     "내일은 투자왕 - 김단테",
     "삼프로TV 3PROTV",
     "소수몽키",
     "슈퍼개미 이세무사TV",
-    "언더스탠딩",
     "염블리와 함께 (염승환)",
     "이효석아카데미",
     "증시각도기TV",
@@ -44,27 +120,27 @@
    ],
    "subtopics": [
     {
-     "word": "속도조절론",
-     "videos": 4,
-     "channels": 2
-    },
-    {
-     "word": "9월",
+     "word": "금리",
      "videos": 3,
-     "channels": 2
+     "channels": 3
     },
     {
-     "word": "삼성전자",
-     "videos": 2,
-     "channels": 2
+     "word": "유가",
+     "videos": 3,
+     "channels": 3
     },
     {
-     "word": "그런데",
-     "videos": 2,
-     "channels": 2
+     "word": "개발",
+     "videos": 3,
+     "channels": 3
     },
     {
-     "word": "반도체",
+     "word": "속도",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "메모리",
      "videos": 2,
      "channels": 2
     },
@@ -79,47 +155,42 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 12,
-   "channel_count": 6,
-   "total_views": 2207566,
-   "latest": "2026-09-15T14:15:24+09:00",
+   "video_count": 11,
+   "channel_count": 7,
+   "total_views": 1531105,
+   "latest": "2026-09-15T20:30:16+09:00",
    "video_ids": [
-    "QP7d0l2RXmk",
+    "_zE-27FrYmI",
+    "q836AS_27GE",
+    "TFbv-ucEcw4",
+    "cGJdRvZmbSM",
+    "JwXiSMEIDbA",
     "b6wmE6L2DkY",
-    "3iYs67fEfU0",
-    "NXMrL0GHfIw",
-    "1VrqI-e3ekU",
+    "sFz91Ptuu4k",
     "Sa6TY-0dmO4",
     "n8QyEOPrgPI",
-    "kcJtbLczDn0",
     "Kz9rZvMD9V4",
-    "Dzq-KE5u_TM",
-    "Quz8QjalVGc",
-    "SkMaMBNFLV0"
+    "Dzq-KE5u_TM"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "달란트투자",
-    "박종훈의 지식한방",
     "삼프로TV 3PROTV",
-    "증시각도기TV"
+    "슈카월드",
+    "슈퍼개미 이세무사TV",
+    "증시각도기TV",
+    "체슬리TV (박세익)"
    ],
    "subtopics": [
-    {
-     "word": "삼성전자",
-     "videos": 5,
-     "channels": 4
-    },
     {
      "word": "AI",
      "videos": 5,
      "channels": 4
     },
     {
-     "word": "속도조절론",
+     "word": "삼성전자",
      "videos": 3,
-     "channels": 2
+     "channels": 3
     },
     {
      "word": "SK하이닉스",
@@ -127,110 +198,72 @@
      "channels": 2
     },
     {
-     "word": "반도체주",
-     "videos": 2,
-     "channels": 2
-    },
-    {
      "word": "메모리",
      "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "오를까",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "수요",
+     "videos": 2,
+     "channels": 2
     }
    ],
    "active": true
   },
   {
-   "id": "금리_연준",
-   "name": "금리·연준",
-   "video_count": 8,
-   "channel_count": 5,
-   "total_views": 994228,
-   "latest": "2026-09-15T10:31:16+09:00",
+   "id": "국내증시",
+   "name": "국내증시",
+   "video_count": 6,
+   "channel_count": 4,
+   "total_views": 383122,
+   "latest": "2026-09-15T20:07:41+09:00",
    "video_ids": [
-    "NXMrL0GHfIw",
-    "1VrqI-e3ekU",
-    "Sa6TY-0dmO4",
-    "uQsJhqQUD98",
-    "O-9fNtfLhJI",
-    "2VDXzCz9s5E",
-    "eJkHtAUVqps",
-    "W3pIlHYsa1E"
+    "AvdNjkuxOcg",
+    "JVbnjj00Kjk",
+    "pOvtL-SaCsA",
+    "l5lcgmehcZM",
+    "zZfNZQpQubQ",
+    "uQsJhqQUD98"
    ],
    "channels": [
     "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "슈퍼개미 이세무사TV",
-    "증시각도기TV",
-    "한문도TV 부동산채널"
-   ],
-   "subtopics": [
-    {
-     "word": "유가",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "9월",
-     "videos": 4,
-     "channels": 2
-    },
-    {
-     "word": "금리인상",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "반도체",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "AI",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "급락",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "유가_에너지",
-   "name": "유가·에너지",
-   "video_count": 5,
-   "channel_count": 5,
-   "total_views": 191213,
-   "latest": "2026-09-15T12:43:26+09:00",
-   "video_ids": [
-    "zevvIAO632w",
-    "ntsDLwyjUIA",
-    "uQsJhqQUD98",
-    "BiKBVWLEW_Y",
-    "V-yF7-p38Ho"
-   ],
-   "channels": [
     "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
-    "염블리와 함께 (염승환)",
-    "이효석아카데미",
-    "체슬리TV (박세익)"
+    "염블리와 함께 (염승환)"
    ],
    "subtopics": [
     {
-     "word": "다시",
+     "word": "코스피",
+     "videos": 6,
+     "channels": 4
+    },
+    {
+     "word": "금리",
+     "videos": 4,
+     "channels": 4
+    },
+    {
+     "word": "코스닥",
      "videos": 3,
      "channels": 3
     },
     {
-     "word": "AI",
+     "word": "15일",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "급등",
+     "word": "오후",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "유가",
      "videos": 2,
      "channels": 2
     }
@@ -240,76 +273,25 @@
   {
    "id": "정책_정치",
    "name": "정책·정치",
-   "video_count": 5,
-   "channel_count": 3,
-   "total_views": 519700,
-   "latest": "2026-09-14T21:25:18+09:00",
+   "video_count": 4,
+   "channel_count": 4,
+   "total_views": 376512,
+   "latest": "2026-09-15T18:20:09+09:00",
    "video_ids": [
+    "6s6uBYMwHjs",
+    "dBY4dYC-yzI",
     "muAmC58igV8",
-    "qxdpl_HNFoY",
-    "LC0D_Q4xGd0",
-    "2VDXzCz9s5E",
-    "3JdtiRMK4P8"
+    "2VDXzCz9s5E"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
+    "소수몽키",
     "언더스탠딩",
-    "체슬리TV (박세익)"
+    "증시각도기TV"
    ],
    "subtopics": [
     {
-     "word": "체슬리투자자문",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "중간선거",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "바겐세일",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "박세익",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "전무",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "환율_달러",
-   "name": "환율·달러",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 624920,
-   "latest": "2026-09-15T12:18:57+09:00",
-   "video_ids": [
-    "b6wmE6L2DkY",
-    "NXMrL0GHfIw",
-    "V-yF7-p38Ho"
-   ],
-   "channels": [
-    "815머니톡",
-    "삼프로TV 3PROTV",
-    "체슬리TV (박세익)"
-   ],
-   "subtopics": [
-    {
-     "word": "120달러",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "유가",
+     "word": "9월",
      "videos": 2,
      "channels": 2
     }
@@ -317,25 +299,31 @@
    "active": true
   },
   {
-   "id": "중국경제",
-   "name": "중국경제",
-   "video_count": 3,
+   "id": "유가_에너지",
+   "name": "유가·에너지",
+   "video_count": 4,
    "channel_count": 3,
-   "total_views": 808241,
-   "latest": "2026-09-15T11:34:43+09:00",
+   "total_views": 194859,
+   "latest": "2026-09-15T18:00:01+09:00",
    "video_ids": [
-    "oE_Bn8cmupc",
-    "cDobNNZdj3M",
-    "SkMaMBNFLV0"
+    "jV6L7IVTDc4",
+    "zevvIAO632w",
+    "uQsJhqQUD98",
+    "BiKBVWLEW_Y"
    ],
    "channels": [
-    "박종훈의 지식한방",
-    "삼프로TV 3PROTV",
-    "언더스탠딩"
+    "슈퍼개미 이세무사TV",
+    "염블리와 함께 (염승환)",
+    "이효석아카데미"
    ],
    "subtopics": [
     {
-     "word": "중국",
+     "word": "AI",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "다시",
      "videos": 2,
      "channels": 2
     }
@@ -347,11 +335,11 @@
    "name": "조선·방산",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 702373,
-   "latest": "2026-09-14T18:00:37+09:00",
+   "total_views": 479128,
+   "latest": "2026-09-15T19:30:08+09:00",
    "video_ids": [
+    "JZXQe9QveNE",
     "BiKBVWLEW_Y",
-    "soeKU9Rz8tk",
     "G5mOcY8a6d8"
    ],
    "channels": [
@@ -369,14 +357,91 @@
    "active": true
   },
   {
+   "id": "채권_크레딧",
+   "name": "채권·크레딧",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 81177,
+   "latest": "2026-09-15T18:24:17+09:00",
+   "video_ids": [
+    "vEDckR6FF2g",
+    "VZiTLIEllqc",
+    "Laqkje2jU64"
+   ],
+   "channels": [
+    "김영익의 경제스쿨",
+    "달란트투자",
+    "홍춘욱의 경제강의노트"
+   ],
+   "subtopics": [
+    {
+     "word": "국채금리",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "앞으",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "미국",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "2차전지",
+   "name": "2차전지",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 853705,
+   "latest": "2026-09-15T18:20:09+09:00",
+   "video_ids": [
+    "6s6uBYMwHjs",
+    "TFbv-ucEcw4",
+    "IR9mLZlMZVo"
+   ],
+   "channels": [
+    "슈카월드",
+    "슈퍼개미 이세무사TV",
+    "증시각도기TV"
+   ],
+   "subtopics": [],
+   "active": false
+  },
+  {
+   "id": "중국경제",
+   "name": "중국경제",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 202379,
+   "latest": "2026-09-15T18:00:21+09:00",
+   "video_ids": [
+    "mIbP-Fnu5-Y",
+    "CBs2PAPNnVA",
+    "cDobNNZdj3M"
+   ],
+   "channels": [
+    "달란트투자",
+    "언더스탠딩",
+    "최준영 박사의 지구본 연구소"
+   ],
+   "subtopics": [],
+   "active": false
+  },
+  {
    "id": "배당_ETF",
    "name": "배당·ETF",
-   "video_count": 3,
+   "video_count": 4,
    "channel_count": 2,
-   "total_views": 478803,
-   "latest": "2026-09-15T11:16:20+09:00",
+   "total_views": 491906,
+   "latest": "2026-09-15T19:00:10+09:00",
    "video_ids": [
-    "sFz91Ptuu4k",
+    "59LBPAKwi68",
+    "p-bzpy_fZPQ",
     "VO5UqMFsf78",
     "Dzq-KE5u_TM"
    ],
@@ -387,21 +452,21 @@
    "subtopics": [
     {
      "word": "체슬리투자자문",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "모닝브리프",
-     "videos": 2,
+     "videos": 3,
      "channels": 1
     },
     {
      "word": "박세익",
-     "videos": 2,
+     "videos": 3,
      "channels": 1
     },
     {
      "word": "전무",
+     "videos": 3,
+     "channels": 1
+    },
+    {
+     "word": "워매신박",
      "videos": 2,
      "channels": 1
     }
