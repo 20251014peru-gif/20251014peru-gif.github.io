@@ -4429,7 +4429,7 @@ table.ProseMirror-selectednode {
       return this.next.length;
     }
     /**
-    Get the _n_​th outgoing edge from this node in the finite
+    Get the _n_th outgoing edge from this node in the finite
     automaton that describes the content expression.
     */
     edge(n) {
@@ -39145,12 +39145,12 @@ table.ProseMirror-selectednode {
     {k:"task",lb:"체크리스트",ht:"할 일",ic:"☑",md:"- [ ] 할 일",run:function(){editor.exec("taskList");}},
     {k:"quote",lb:"인용",ht:"인용문",ic:"❝",md:"> 인용문",run:function(){editor.exec("blockQuote");}},
     {k:"callout",lb:"콜아웃 / 표시",ht:"질문·중요·메모 등 →",ic:"💡",pick:"callout",md:"> 💡 강조할 내용을 적어요",run:function(){editor.exec("blockQuote");}},
-    {k:"table",lb:"표",ht:"크기 선택 →",ic:"⊞",pick:"table",md:"| 열1 | 열2 | 열3 |\n| --- | --- | --- |\n| 값 | 값 | 값 |\n| 값 | 값 | 값 |\n\n​",run:function(){editor.exec("addTable",{rowCount:3,columnCount:3});}},
+    {k:"table",lb:"표",ht:"크기 선택 →",ic:"⊞",pick:"table",md:"| 열1 | 열2 | 열3 |\n| --- | --- | --- |\n| 값 | 값 | 값 |\n| 값 | 값 | 값 |\n\n",run:function(){editor.exec("addTable",{rowCount:3,columnCount:3});}},
     {k:"video",lb:"동영상",ht:"유튜브·드라이브·링크 →",ic:"▶",pick:"video",md:"",run:function(){}},
     {k:"hr",lb:"구분선",ht:"———",ic:"—",md:"---",run:function(){editor.exec("hr");}},
     {k:"dots",lb:"장식 구분선",ht:"· · ·",ic:"⁘",md:"·   ·   ·",run:function(){editor.insertText("·   ·   ·");}}
   ];
-  function colTable(n){ var head="|"+Array(n+1).join(" ​ |"); var sep="|"+Array(n+1).join(" --- |"); var body="|"+Array(n+1).join(" 내용 |"); return head+"\n"+sep+"\n"+body+"\n\n​"; }
+  function colTable(n){ var head="|"+Array(n+1).join("  |"); var sep="|"+Array(n+1).join(" --- |"); var body="|"+Array(n+1).join(" 내용 |"); return head+"\n"+sep+"\n"+body+"\n\n"; }
   var COLS=[
     {k:"col2",lb:"2단 나누기",ht:"열 2개",ic:"◫",md:colTable(2)},
     {k:"col3",lb:"3단 나누기",ht:"열 3개",ic:"⁝⁝⁝",md:colTable(3)},
@@ -39340,7 +39340,7 @@ table.ProseMirror-selectednode {
   // 열 나누기: 헤더가 비어있는 표를 컬럼 레이아웃으로 스타일 (위치기반)
   var colStyleEl=null;
   function ensureColStyle(){ if(colStyleEl&&document.head.contains(colStyleEl)) return colStyleEl; colStyleEl=document.createElement("style"); colStyleEl.id="mf-col-style"; document.head.appendChild(colStyleEl); return colStyleEl; }
-  function isColumnTable(tbl){ var ths=tbl.querySelectorAll("thead th"); if(!ths.length) return false; for(var i=0;i<ths.length;i++){ if(ths[i].textContent.replace(/\s/g,"")!=="​") return false; } return true; }
+  function isColumnTable(tbl){ var ths=tbl.querySelectorAll("thead th"); if(!ths.length) return false; for(var i=0;i<ths.length;i++){ if(ths[i].textContent.replace(/\s/g,"")!=="") return false; } return true; }
   function styleColumns(){
     var p=pmEl(); if(!p) return; var kids=Array.prototype.slice.call(p.children); var sel=[];
     var S=".toastui-editor-ww-container .ProseMirror>:nth-child(";
@@ -39848,12 +39848,18 @@ table.ProseMirror-selectednode {
     hEl.style.display="flex"; hEl.style.top=(top+1)+"px"; hEl.style.left=Math.max(40,(refLeft-wr.left)-56)+"px"; hoverUnit=u;
   }
   function onEditorMove(e){ if(dragging||viewMode) return; var u=unitAtY(e.clientY); if(u) positionHandleForUnit(u); else if(!hoverHold&&hEl) hEl.style.display="none"; }
+  // "+"(블록 추가) 메뉴에서 제목/목록/인용처럼 '이 줄의 형식'에 해당하는 항목을 고르면
+  // 새 블록을 끼워넣지 말고 지금 가리키던 줄 자체를 그 형식으로 바꾼다(다른 메뉴의 "유형 바꾸기"와 동일 규칙).
+  // 표/동영상/구분선/콜아웃처럼 실제 '새 내용'인 항목만 계속 삽입으로 남긴다.
+  var PLUS_TURNINTO={h1:1,h2:1,h3:1,ul:1,ol:1,task:1,quote:1};
+  function plusTargetHasText(u){ return !!(u && !u.empty && u.el && u.el.textContent.replace(/​/g,"").trim()!==""); }
   function openPlusMenu(u){
     closePlusMenu(); if(!hEl) return; plusUnit=(u&&u.type==="block")?u:null; var rect=hEl.getBoundingClientRect();
     plusMenu=document.createElement("div"); plusMenu.className="slash";
     SLASH.concat(COLS).forEach(function(it,i){ var row=document.createElement("div"); row.className="slash-item"+(i===0?" active":"");
       row.innerHTML='<span class="slash-ic">'+it.ic+'</span><div class="slash-tx"><div class="slash-lb">'+it.lb+'</div><div class="slash-ht">'+it.ht+'</div></div>';
       row.addEventListener("mousedown",function(ev){ ev.preventDefault(); var tgt=plusUnit;
+        if(PLUS_TURNINTO[it.k] && plusTargetHasText(tgt)){ closePlusMenu(); convertUnit(tgt, it.k); return; }
         if(it.pick==="callout"){ closePlusMenu(); openCalloutPicker(tgt); }
         else if(it.pick==="table"){ closePlusMenu(); openTablePicker(hEl?hEl.getBoundingClientRect():null, function(r,c){ insertBlockAfterUnit(tgt, tableMd(r,c)); }); }
         else if(it.pick==="video"){ closePlusMenu(); openVideoInput(function(m){ insertBlockAfterUnit(tgt, m); }); }
@@ -40258,7 +40264,7 @@ table.ProseMirror-selectednode {
     function rowStr(){ var s="|"; for(var i=0;i<cols;i++) s+="  |"; return s; }
     var lines=[rowStr(), "|"+Array(cols+1).join(" --- |")];
     for(var r=0;r<rows-1;r++) lines.push(rowStr());
-    return lines.join("\n")+"\n\n​";
+    return lines.join("\n")+"\n\n";
   }
   var tblPop=null;
   function closeTblPop(){ if(tblPop){ tblPop.remove(); tblPop=null; document.removeEventListener("mousedown",closeTblOutside); } }
@@ -40320,11 +40326,11 @@ table.ProseMirror-selectednode {
     for(var j=0;j<cur.length;j++){ var s=normTxt(cur[j]); if(s.length>=3&&(s.indexOf(a)===0||a.indexOf(s)===0)) return j; }
     return idx;
   }
-  function deleteBlock(idx, anchor){ var cur=segmentBlocks(editor.getMarkdown()); idx=resolveBlockIdx(cur,idx,anchor); if(idx<0||idx>=cur.length) return; cur.splice(idx,1); if(!cur.length) cur=["​"]; commitDoc(cur); }
+  function deleteBlock(idx, anchor){ var cur=segmentBlocks(editor.getMarkdown()); idx=resolveBlockIdx(cur,idx,anchor); if(idx<0||idx>=cur.length) return; cur.splice(idx,1); if(!cur.length) cur=[""]; commitDoc(cur); }
   // 목록 항목(li) 조작: 해당 목록 블록의 줄을 편집
   function listItemMarker(line){ var m=line.match(/^(\s*)([-*+]\s\[[ xX]\]\s|[-*+]\s|\d+\.\s)/); if(!m) return "- "; var pre=m[1], mk=m[2]; if(/^\d+\./.test(mk)) return pre+"1. "; if(/\[[ xX]\]/.test(mk)) return pre+mk.replace(/\[[xX]\]/,"[ ]"); return pre+mk; }
   function insertLiAfter(blockIdx, liIdx){ var cur=segmentBlocks(editor.getMarkdown()); if(blockIdx<0||blockIdx>=cur.length) return; var lines=cur[blockIdx].split("\n"); var ref=lines[liIdx]||lines[lines.length-1]||"- "; lines.splice(liIdx+1,0,listItemMarker(ref)); cur[blockIdx]=lines.join("\n"); commitDoc(cur); }
-  function deleteLi(blockIdx, liIdx){ var cur=segmentBlocks(editor.getMarkdown()); if(blockIdx<0||blockIdx>=cur.length) return; var lines=cur[blockIdx].split("\n"); lines.splice(liIdx,1); if(!lines.length){ cur.splice(blockIdx,1); if(!cur.length) cur=["​"]; } else cur[blockIdx]=lines.join("\n"); commitDoc(cur); }
+  function deleteLi(blockIdx, liIdx){ var cur=segmentBlocks(editor.getMarkdown()); if(blockIdx<0||blockIdx>=cur.length) return; var lines=cur[blockIdx].split("\n"); lines.splice(liIdx,1); if(!lines.length){ cur.splice(blockIdx,1); if(!cur.length) cur=[""]; } else cur[blockIdx]=lines.join("\n"); commitDoc(cur); }
   function moveLi(blockIdx, liIdx, toIdx){ var cur=segmentBlocks(editor.getMarkdown()); if(blockIdx<0||blockIdx>=cur.length) return; var lines=cur[blockIdx].split("\n"); if(liIdx<0||liIdx>=lines.length) return; var item=lines.splice(liIdx,1)[0]; var t=toIdx>liIdx?toIdx-1:toIdx; if(t<0)t=0; if(t>lines.length)t=lines.length; if(t===liIdx){ return; } lines.splice(t,0,item); cur[blockIdx]=lines.join("\n"); commitDoc(cur); }
   function siblingLis(listEl){ var a=[]; for(var j=0;j<listEl.children.length;j++){ if(listEl.children[j].tagName==="LI") a.push(listEl.children[j]); } return a; }
   var dragMoved=false, dragSX=0, dragSY=0, dragEl=null, dragPid=null, dragUnit=null;
