@@ -1,14 +1,20 @@
 {
- "updated_at": "2026-09-17T06:47:36.750186+09:00",
+ "updated_at": "2026-09-17T08:58:10.304691+09:00",
  "topics": [
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 27,
+   "video_count": 31,
    "channel_count": 13,
-   "total_views": 2541884,
-   "latest": "2026-09-17T03:44:38+09:00",
+   "total_views": 2389681,
+   "latest": "2026-09-17T08:42:26+09:00",
    "video_ids": [
+    "OOgYRRbkoTc",
+    "XSd6ivhqrK8",
+    "NEASsJfFTyA",
+    "UlJb21auuQg",
+    "mAI2llpYH5Q",
+    "QnWU3_Gh1lo",
     "13MbVGpZtmk",
     "bxVHDMXt4qM",
     "fTMkcNJbm-4",
@@ -32,10 +38,8 @@
     "vEDckR6FF2g",
     "6s6uBYMwHjs",
     "pOvtL-SaCsA",
-    "jV6L7IVTDc4",
     "xB84vw_ltxA",
-    "Laqkje2jU64",
-    "Sa6TY-0dmO4"
+    "Laqkje2jU64"
    ],
    "channels": [
     "815머니톡",
@@ -54,14 +58,14 @@
    ],
    "subtopics": [
     {
-     "word": "FOMC",
-     "videos": 7,
+     "word": "9월",
+     "videos": 10,
      "channels": 5
     },
     {
-     "word": "9월",
+     "word": "FOMC",
      "videos": 8,
-     "channels": 4
+     "channels": 5
     },
     {
      "word": "증시",
@@ -69,19 +73,19 @@
      "channels": 4
     },
     {
-     "word": "AI",
+     "word": "인상",
      "videos": 5,
      "channels": 3
     },
     {
-     "word": "대표",
-     "videos": 6,
-     "channels": 2
+     "word": "AI",
+     "videos": 4,
+     "channels": 3
     },
     {
-     "word": "2차전지",
+     "word": "미국",
      "videos": 3,
-     "channels": 2
+     "channels": 3
     }
    ],
    "active": true
@@ -89,9 +93,9 @@
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 13,
+   "video_count": 12,
    "channel_count": 7,
-   "total_views": 977400,
+   "total_views": 763870,
    "latest": "2026-09-16T20:44:37+09:00",
    "video_ids": [
     "pE87I6NVjEM",
@@ -105,8 +109,7 @@
     "3iuttfLXJns",
     "BeeSuExA9wM",
     "JJ3Id2fjvns",
-    "LSpR-0h-zKE",
-    "Sa6TY-0dmO4"
+    "LSpR-0h-zKE"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
@@ -119,22 +122,22 @@
    ],
    "subtopics": [
     {
-     "word": "금리",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "9월",
-     "videos": 3,
-     "channels": 2
-    },
-    {
      "word": "SK하이닉스",
      "videos": 2,
      "channels": 2
     },
     {
      "word": "16일",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "금리",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "9월",
      "videos": 2,
      "channels": 2
     },
@@ -155,10 +158,11 @@
    "id": "반도체",
    "name": "반도체",
    "video_count": 10,
-   "channel_count": 6,
-   "total_views": 1766826,
-   "latest": "2026-09-16T20:00:29+09:00",
+   "channel_count": 7,
+   "total_views": 1565462,
+   "latest": "2026-09-17T08:24:33+09:00",
    "video_ids": [
+    "NEASsJfFTyA",
     "qWcUwzRbRwY",
     "TMFbUdns4Mg",
     "p0D5YEyKO50",
@@ -167,11 +171,11 @@
     "Cr81XqHoLjU",
     "jO1tw2IfQ9U",
     "jenmj0_x4gQ",
-    "q836AS_27GE",
-    "Sa6TY-0dmO4"
+    "q836AS_27GE"
    ],
    "channels": [
     "815머니톡",
+    "삼프로TV 3PROTV",
     "슈카월드",
     "슈퍼개미 이세무사TV",
     "염블리와 함께 (염승환)",
@@ -185,18 +189,8 @@
      "channels": 3
     },
     {
-     "word": "AI",
-     "videos": 3,
-     "channels": 3
-    },
-    {
      "word": "삼성전자",
      "videos": 4,
-     "channels": 2
-    },
-    {
-     "word": "9월",
-     "videos": 3,
      "channels": 2
     },
     {
@@ -205,7 +199,17 @@
      "channels": 2
     },
     {
+     "word": "메모리",
+     "videos": 2,
+     "channels": 2
+    },
+    {
      "word": "16일",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "미국",
      "videos": 2,
      "channels": 2
     }
@@ -217,7 +221,7 @@
    "name": "유가·에너지",
    "video_count": 6,
    "channel_count": 5,
-   "total_views": 250173,
+   "total_views": 278785,
    "latest": "2026-09-16T22:30:02+09:00",
    "video_ids": [
     "bxVHDMXt4qM",
@@ -253,7 +257,7 @@
    "name": "채권·크레딧",
    "video_count": 5,
    "channel_count": 5,
-   "total_views": 657233,
+   "total_views": 663807,
    "latest": "2026-09-16T17:59:25+09:00",
    "video_ids": [
     "v1cZMNRgH9U",
@@ -283,7 +287,7 @@
    "name": "배당·ETF",
    "video_count": 5,
    "channel_count": 3,
-   "total_views": 271528,
+   "total_views": 277776,
    "latest": "2026-09-16T19:51:54+09:00",
    "video_ids": [
     "jWxdT2xc5FU",
@@ -326,7 +330,7 @@
    "name": "일본·엔화",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 69002,
+   "total_views": 71866,
    "latest": "2026-09-16T19:30:05+09:00",
    "video_ids": [
     "-S3lkVVa3pc",
@@ -346,7 +350,7 @@
    "name": "정책·정치",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 424949,
+   "total_views": 426116,
    "latest": "2026-09-15T19:00:15+09:00",
    "video_ids": [
     "05sAQnDr98I",
@@ -372,7 +376,7 @@
    "name": "미국증시",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 246937,
+   "total_views": 251288,
    "latest": "2026-09-16T18:00:05+09:00",
    "video_ids": [
     "d8PtwbUBCnw",
