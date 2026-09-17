@@ -1,14 +1,16 @@
 {
- "updated_at": "2026-09-17T21:17:38.916527+09:00",
+ "updated_at": "2026-09-18T02:21:30.234363+09:00",
  "topics": [
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 27,
+   "video_count": 28,
    "channel_count": 13,
-   "total_views": 2466259,
-   "latest": "2026-09-17T20:36:31+09:00",
+   "total_views": 3134880,
+   "latest": "2026-09-17T22:30:03+09:00",
    "video_ids": [
+    "D9QI4whfIsU",
+    "6sPKrT4_uYA",
     "iQ4iQZxy7zQ",
     "Qf8kS8tPquM",
     "o5ybbyXDKAw",
@@ -16,7 +18,6 @@
     "cm-rI8ODzyg",
     "aHKboElZIr4",
     "J_4VsrrmwQk",
-    "fEkipTgOAD0",
     "iMLFddwRSNI",
     "Kcu4SEGrPxA",
     "DTs-FOUwrso",
@@ -54,19 +55,14 @@
    ],
    "subtopics": [
     {
-     "word": "FOMC",
+     "word": "인상",
      "videos": 10,
      "channels": 7
     },
     {
-     "word": "인상",
+     "word": "FOMC",
      "videos": 9,
      "channels": 6
-    },
-    {
-     "word": "9월",
-     "videos": 11,
-     "channels": 5
     },
     {
      "word": "증시",
@@ -79,8 +75,13 @@
      "channels": 5
     },
     {
-     "word": "17일",
-     "videos": 4,
+     "word": "9월",
+     "videos": 10,
+     "channels": 4
+    },
+    {
+     "word": "금리인상",
+     "videos": 3,
      "channels": 3
     }
    ],
@@ -91,7 +92,7 @@
    "name": "AI·엔비디아",
    "video_count": 11,
    "channel_count": 8,
-   "total_views": 531657,
+   "total_views": 754427,
    "latest": "2026-09-17T18:35:49+09:00",
    "video_ids": [
     "1eV18vbBzZE",
@@ -155,7 +156,7 @@
    "name": "반도체",
    "video_count": 9,
    "channel_count": 6,
-   "total_views": 583520,
+   "total_views": 836800,
    "latest": "2026-09-17T18:00:29+09:00",
    "video_ids": [
     "aHKboElZIr4",
@@ -215,7 +216,7 @@
    "name": "배당·ETF",
    "video_count": 5,
    "channel_count": 3,
-   "total_views": 216285,
+   "total_views": 278135,
    "latest": "2026-09-17T19:10:40+09:00",
    "video_ids": [
     "yfKH--2wjIs",
@@ -254,11 +255,53 @@
    "active": true
   },
   {
+   "id": "중국경제",
+   "name": "중국경제",
+   "video_count": 4,
+   "channel_count": 3,
+   "total_views": 177239,
+   "latest": "2026-09-17T21:25:26+09:00",
+   "video_ids": [
+    "BmuLmL3LL_8",
+    "S8tYpyPSKa0",
+    "fSS8qGO6iRk",
+    "H407_I2hu5Q"
+   ],
+   "channels": [
+    "달란트투자",
+    "언더스탠딩",
+    "이효석아카데미"
+   ],
+   "subtopics": [
+    {
+     "word": "중국",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "한국",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "2부",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "초비상",
+     "videos": 2,
+     "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "유가_에너지",
    "name": "유가·에너지",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 350124,
+   "total_views": 360340,
    "latest": "2026-09-16T21:25:29+09:00",
    "video_ids": [
     "smDRmdQ19SY",
@@ -280,46 +323,11 @@
    "active": true
   },
   {
-   "id": "중국경제",
-   "name": "중국경제",
-   "video_count": 3,
-   "channel_count": 2,
-   "total_views": 16928,
-   "latest": "2026-09-17T19:30:13+09:00",
-   "video_ids": [
-    "S8tYpyPSKa0",
-    "fSS8qGO6iRk",
-    "H407_I2hu5Q"
-   ],
-   "channels": [
-    "달란트투자",
-    "이효석아카데미"
-   ],
-   "subtopics": [
-    {
-     "word": "중국",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "2부",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "초비상",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "조선_방산",
    "name": "조선·방산",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 13407,
+   "total_views": 80211,
    "latest": "2026-09-17T18:00:06+09:00",
    "video_ids": [
     "RtrMUQNq9nQ",
