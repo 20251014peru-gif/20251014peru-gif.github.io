@@ -22,6 +22,17 @@
     var L = (local && local.docs) || [], R = (remote && remote.docs) || [];
     var remoteById = byId(R), localById = byId(L), seen = {};
     var docs = [], report = { fromRemote: [], added: [], conflicts: [], keptDeleted: [], skippedDeleted: [] };
+    // Every id already in play for this merge, mapped to the content hash it currently holds — used only to
+    // find a free slot for a new conflict copy. An id existing here is NOT by itself a reason to drop the
+    // remote version: only a MATCHING content hash means "this copy was already carried over, nothing to add".
+    var used = {};
+    L.forEach(function (d) { if (d && typeof d.id === 'string') used[d.id] = hash(d.content || ''); });
+    R.forEach(function (d) { if (d && typeof d.id === 'string' && used[d.id] === undefined) used[d.id] = hash(d.content || ''); });
+    function conflictSlot(baseId, contentHash) {
+      var id = baseId + '-c' + contentHash.slice(0, 8), n = 2;
+      while (used[id] !== undefined && used[id] !== contentHash && n < 1000) { id = baseId + '-c' + contentHash.slice(0, 8) + '-' + n; n++; }
+      return id;
+    }
     L.forEach(function (ld) {
       if (!ld || typeof ld.id !== 'string') return;
       var rd = remoteById[ld.id];
@@ -36,13 +47,20 @@
         docs.push(ld);
       } else {
         docs.push(ld);
-        var copyId = ld.id + '-c' + hr.slice(0, 8);
-        if (!localById[copyId] && !remoteById[copyId]) {
+        var copyId = conflictSlot(ld.id, hr);
+        if (used[copyId] !== hr) {
+          // No existing copy (local or remote) already holds this exact remote content: create one.
+          // If a copy with this id exists but its content has since changed (the user edited the
+          // earlier conflict copy), conflictSlot found a fresh id instead of reusing it, so the
+          // remote version is preserved separately rather than silently dropped.
+          used[copyId] = hr;
           var copy = clone(rd);
           copy.id = copyId; copy.conflictOf = ld.id; copy.conflictAt = now;
           docs.push(copy); seen[copyId] = 1;
           report.conflicts.push({ id: ld.id, copyId: copyId });
         }
+        // else: a copy with this exact remote content already exists in L or R and will be carried
+        // through by its own entry in the loops below — nothing more to do here.
       }
     });
     R.forEach(function (rd) {

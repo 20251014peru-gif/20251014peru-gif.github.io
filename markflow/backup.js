@@ -7,6 +7,36 @@
 
   function hash(s) { return root.markflowSyncMerge.hash(s); }
   function displayKey(url) { return 'photo-original:' + hash(url); }
+  function safeKey(s) { return String(s == null ? '' : s).replace(/[^A-Za-z0-9]/g, ''); }
+  // Deterministic, content-derived name for a renamed-on-collision media file: restoring the same
+  // backup again computes the exact same name, so the earlier copy is found and reused instead of
+  // growing the media store with a fresh random name every time.
+  function dedupeKeyFor(originalKey, crc, size) { return safeKey(originalKey) + 'd' + (crc >>> 0).toString(36) + 's' + size.toString(36); }
+  // Only these two link shapes may exist in kv: photo-original:<hash> -> {key,...} and
+  // drive-original:<id> -> "<mediaKey>". Any other key (including reserved ones like "state") is refused,
+  // and so is a link whose value does not point at a media file actually present in this backup —
+  // this runs before any write, so a bad links.json rejects the whole ZIP rather than touching kv.
+  var PHOTO_LINK_RE = /^photo-original:[0-9a-f]{16}-[0-9a-z]+$/;
+  var DRIVE_LINK_RE = /^drive-original:[A-Za-z0-9_-]+$/;
+  function validateLinks(links, manifestMedia) {
+    var mediaKeys = {}; (manifestMedia || []).forEach(function (m) { if (m && typeof m.key === 'string') mediaKeys[m.key] = 1; });
+    var out = {};
+    Object.keys(links || {}).forEach(function (k) {
+      var value = links[k];
+      if (PHOTO_LINK_RE.test(k)) {
+        if (!value || typeof value !== 'object' || typeof value.key !== 'string' || !/^[A-Za-z0-9]+$/.test(value.key)) throw new Error('백업의 사진 연결 정보가 손상되었습니다: ' + k);
+        if (!mediaKeys[value.key]) throw new Error('백업의 사진 연결 정보가 존재하지 않는 파일을 가리킵니다: ' + k);
+        out[k] = { key: value.key, name: typeof value.name === 'string' ? value.name : '', type: typeof value.type === 'string' ? value.type : '', size: typeof value.size === 'number' ? value.size : 0, addedAt: typeof value.addedAt === 'number' ? value.addedAt : 0 };
+      } else if (DRIVE_LINK_RE.test(k)) {
+        if (typeof value !== 'string' || !/^[A-Za-z0-9]+$/.test(value)) throw new Error('백업의 Drive 연결 정보가 손상되었습니다: ' + k);
+        if (!mediaKeys[value]) throw new Error('백업의 Drive 연결 정보가 존재하지 않는 파일을 가리킵니다: ' + k);
+        out[k] = value;
+      } else {
+        throw new Error('백업에 허용되지 않는 정보가 들어 있습니다: ' + k);
+      }
+    });
+    return out;
+  }
 
   function openDb() {
     return new Promise(function (resolve, reject) {
@@ -144,6 +174,9 @@
     }).then(function (texts) {
       backupState = JSON.parse(texts[0]); links = JSON.parse(texts[1] || '{}');
       if (!backupState || !Array.isArray(backupState.docs)) throw new Error('백업의 문서 데이터가 손상되었습니다.');
+      // Reject any link that isn't a recognised photo/drive original reference (reserved keys like
+      // "state" included) before touching the database at all — a bad links.json fails the whole restore.
+      links = validateLinks(links, manifest.media);
       // Read and CRC-check every media file before writing anything, so a damaged ZIP changes nothing.
       var media = manifest.media || [], n = 0;
       return media.reduce(function (p, m) {
@@ -160,6 +193,22 @@
     }).then(function () {
       var remap = {}, report = { mediaAdded: 0, mediaSame: 0, mediaRenamed: 0, linksAdded: 0, docsAdded: 0, docsSame: 0, docsCopied: 0 };
       var media = manifest.media || [], n = 0;
+      // Find a slot at `key` (then key2, key3, ...) whose stored content already matches (crc+size),
+      // or the first empty one. Deterministic input (same crc/size) always finds the same slot, so a
+      // collision that was already resolved by an earlier restore is reused rather than duplicated.
+      function findMediaSlot(key, crc, size, attempt) {
+        var slotKey = attempt ? key + attempt : key;
+        return get(db, 'media', slotKey).then(function (existing) {
+          if (!existing) return { key: slotKey, matched: false };
+          if (existing.size === size) {
+            return root.markflowZip.crc32(existing).then(function (c) {
+              if (c === crc) return { key: slotKey, matched: true };
+              return findMediaSlot(key, crc, size, (attempt || 1) + 1);
+            });
+          }
+          return findMediaSlot(key, crc, size, (attempt || 1) + 1);
+        });
+      }
       return media.reduce(function (p, m) {
         return p.then(function () {
           var blob = blobs[m.key];
@@ -167,9 +216,12 @@
             if (!existing) return put(db, 'media', m.key, blob).then(function () { report.mediaAdded++; });
             return Promise.all([root.markflowZip.crc32(existing), root.markflowZip.crc32(blob)]).then(function (c) {
               if (existing.size === blob.size && c[0] === c[1]) { report.mediaSame++; return; }
-              var key = m.key.replace(/[^A-Za-z0-9]/g, '') + 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-              remap[m.key] = key;
-              return put(db, 'media', key, blob).then(function () { report.mediaRenamed++; });
+              var dedupeKey = dedupeKeyFor(m.key, c[1], blob.size);
+              return findMediaSlot(dedupeKey, c[1], blob.size).then(function (slot) {
+                remap[m.key] = slot.key;
+                if (slot.matched) { report.mediaSame++; return; }
+                return put(db, 'media', slot.key, blob).then(function () { report.mediaRenamed++; });
+              });
             });
           }).then(function () { progress(0.5 + ++n / Math.max(1, media.length) / 2); });
         });
@@ -177,8 +229,8 @@
         return Object.keys(links).reduce(function (p, k) {
           return p.then(function () {
             var value = links[k];
-            if (typeof value === 'string' && remap[value]) value = remap[value];
-            else if (value && value.key && remap[value.key]) { value = JSON.parse(JSON.stringify(value)); value.key = remap[value.key]; }
+            if (typeof value === 'string') { if (remap[value]) value = remap[value]; }
+            else if (remap[value.key]) { value = { key: remap[value.key], name: value.name, type: value.type, size: value.size, addedAt: value.addedAt }; }
             return get(db, 'kv', k).then(function (existing) {
               var existingKey = existing && (typeof existing === 'string' ? existing : existing.key);
               if (existing) return existingKey ? get(db, 'media', existingKey).then(function (b) { if (!b) return put(db, 'kv', k, value).then(function () { report.linksAdded++; }); }) : null;
@@ -211,5 +263,5 @@
     }).catch(function (e) { if (db) db.close(); throw e; });
   }
 
-  root.markflowBackup = { create: create, restore: restore, displayKey: displayKey, scanDocs: scanDocs, EXCLUDED: EXCLUDED };
+  root.markflowBackup = { create: create, restore: restore, displayKey: displayKey, scanDocs: scanDocs, EXCLUDED: EXCLUDED, _validateLinks: validateLinks, _dedupeKeyFor: dedupeKeyFor };
 })(window);
