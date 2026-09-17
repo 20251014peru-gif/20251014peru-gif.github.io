@@ -413,6 +413,13 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 #zoomFooter{position:absolute;bottom:0;left:0;right:0;padding:18px 18px 24px;
   background:linear-gradient(transparent,rgba(0,0,0,.6));z-index:10;
   display:flex;justify-content:center;gap:14px}
+#zoomExportBar{display:none;position:absolute;top:66px;left:0;right:0;z-index:10;
+  justify-content:center;gap:6px;padding:0 14px;flex-wrap:wrap;max-width:100%;box-sizing:border-box}
+#zoomExportBar.show{display:flex}
+.zoom-export-btn{border:1.5px solid rgba(255,255,255,.4);background:rgba(0,0,0,.45);color:#fff;
+  font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;-webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(10px);cursor:pointer;font-family:inherit;white-space:nowrap;flex:0 1 auto}
+.zoom-export-btn.on{background:#fff;color:#1d1d1f;border-color:#fff}
 
 /* ── 크롭 ── */
 #cropOverlay{display:none;position:fixed;inset:0;background:#000;z-index:99998;
@@ -948,20 +955,29 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
         <span id="detailCount"></span>
       </div>
       <div id="detailStrip" style="display:none"></div>
-      <div style="margin-top:14px">
-        <div style="font-size:11px;color:var(--ink-faint);font-weight:700">제목</div>
-        <div id="detailT" style="font-size:15px;font-weight:800;color:var(--ink);margin-top:3px"></div>
-      </div>
-      <div style="margin-top:10px;font-size:12px;color:var(--ink-soft)">
-        <span id="detailCat"></span> · <span id="detailDate"></span>
-      </div>
-      <div id="detailMemoBox" style="margin-top:12px;padding:10px;background:var(--blue-soft);border-radius:10px;
-        font-size:13px;line-height:1.6;white-space:pre-wrap"></div>
+      <div id="detailMemoBox" style="margin-top:14px;padding:12px;background:var(--blue-soft);border-radius:10px;
+        font-size:13px;line-height:1.6"></div>
     </div>
-    <div class="modal-foot" style="flex-wrap:wrap">
-      <button class="btn" id="detailSend" style="flex:1 1 100%;background:#fff4e6;color:#c2410c;border:1.5px solid #fdba74;font-weight:800;margin-bottom:6px">📤 업무 작업기록에 첨부</button>
-      <button class="btn btn-ghost btn-flex" id="detailCloseBtn">닫기</button>
-      <button class="btn btn-blue" id="detailEdit">✏️ 수정</button>
+    <div class="modal-foot" style="flex-direction:column;gap:6px;padding:10px 14px">
+      <button class="btn" id="detailSend" style="width:100%;background:#fff4e6;color:#c2410c;border:1.5px solid #fdba74;font-weight:800">📤 업무 작업기록에 첨부</button>
+      <div id="detailExportRow" style="width:100%">
+        <div id="detailExportOpt" style="display:flex;gap:8px;font-size:12px;font-weight:700;color:var(--ink-soft);margin:2px 0 8px">
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+            <input type="radio" name="detailExportMode" value="withDesc" checked> 설명 포함
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+            <input type="radio" name="detailExportMode" value="photoOnly"> 사진만
+          </label>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="btn" id="detailDownload" style="background:var(--green-lt);color:var(--green);border:1.5px solid var(--green);height:44px;font-size:13px">📥 저장</button>
+          <button class="btn" id="detailShare" style="background:var(--surface-2);color:var(--blue);border:1.5px solid var(--blue-bd);height:44px;font-size:13px">📤 공유</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%">
+        <button class="btn btn-ghost" id="detailCloseBtn" style="height:44px;font-size:13px">✕ 닫기</button>
+        <button class="btn btn-blue" id="detailEdit" style="height:44px;font-size:14px;font-weight:800">✏️ 수정</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1443,6 +1459,10 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
       <button class="zoom-btn" id="zoomDownload" title="다운로드">⬇</button>
       <button class="zoom-btn" id="zoomClose" title="닫기">✕</button>
     </div>
+  </div>
+  <div id="zoomExportBar">
+    <button type="button" class="zoom-export-btn" data-mode="withDesc">설명 포함</button>
+    <button type="button" class="zoom-export-btn" data-mode="photoOnly">사진만</button>
   </div>
   <img id="zoomImg" src="" alt="">
   <button class="zoom-nav" id="zoomPrev" aria-label="이전">‹</button>
@@ -2234,19 +2254,33 @@ $('firebaseDisconnect').onclick=()=>{
    ════════════════════════════════════════════════════════ */
 let _zoom={scale:1,x:0,y:0,rot:0,lastTouchDist:0,lastTouchX:0,lastTouchY:0,dragging:false};
 
-/* list 를 주면 좌우로 넘길 수 있다. 안 주면 예전과 똑같이 한 장짜리 */
-function openZoomViewer(src,title,list,idx){
+/* list 를 주면 좌우로 넘길 수 있다. 안 주면 예전과 똑같이 한 장짜리.
+   ctx={item,imgIds} 를 주면(일반사진 상세보기에서 열 때) 전체화면 뷰어의
+   저장·공유도 상세보기와 같은 설명 합성을 쓴다 — 그 외(영수증·명함·서류 등
+   원래부터 이 뷰어를 쓰던 곳)는 ctx 없이 예전처럼 사진 원본만 오간다. */
+function openZoomViewer(src,title,list,idx,ctx){
   const v=$('zoomViewer'),img=$('zoomImg');
   v.classList.add('show');
   $('zoomTitle').textContent=title||'';
   _zoom.list = (list&&list.length>1) ? list : null;
   _zoom.idx  = _zoom.list ? (idx||0) : 0;
   _zoom.title = title||'';
+  _zoom.curSrc = src;
+  _zoom.item = (ctx&&ctx.item)||null;
+  _zoom.noteIds = (ctx&&ctx.imgIds)||null;
   const multi=!!_zoom.list;
   $('zoomPrev').classList.toggle('on',multi);
   $('zoomNext').classList.toggle('on',multi);
   $('zoomCount').classList.toggle('on',multi);
   updateZoomCount();
+  /* 📝 설명 포함/사진만 — 일반사진 컨텍스트가 있을 때만 보이고, 기본값은 항상 설명 포함.
+     잠긴(보안) 사진은 저장·공유 버튼 자체를 숨겨 상세보기와 같은 제한을 유지한다. */
+  _zoomSetMode('withDesc');
+  const secure=!!(_zoom.item&&_zoom.item.secure);
+  const bar=$('zoomExportBar');
+  if(bar)bar.classList.toggle('show',!!_zoom.item&&!secure);
+  if($('zoomDownload'))$('zoomDownload').style.display=secure?'none':'';
+  if($('zoomShare'))$('zoomShare').style.display=secure?'none':'';
   img.src=src;
   img.onload=()=>fitZoom();
 }
@@ -2258,10 +2292,17 @@ function zoomGo(delta){
   const n=_zoom.list.length;
   _zoom.idx=(_zoom.idx+delta+n)%n;   /* 끝에서 처음으로 돌아간다 */
   const img=$('zoomImg');
-  img.src=_zoom.list[_zoom.idx];
+  _zoom.curSrc=_zoom.list[_zoom.idx];
+  img.src=_zoom.curSrc;
   img.onload=()=>fitZoom();
   updateZoomCount();
 }
+/* 설명 포함/사진만 토글 — 사진마다(뷰어를 열 때마다) 기본값은 항상 '설명 포함' */
+function _zoomSetMode(mode){
+  _zoom.exportMode=mode;
+  document.querySelectorAll('.zoom-export-btn').forEach(b=>b.classList.toggle('on',b.dataset.mode===mode));
+}
+document.querySelectorAll('.zoom-export-btn').forEach(b=>{b.onclick=()=>_zoomSetMode(b.dataset.mode);});
 function closeZoomViewer(){$('zoomViewer').classList.remove('show');$('zoomImg').src='';}
 function applyZoomTransform(){
   $('zoomImg').style.transform=`translate(${_zoom.x}px, ${_zoom.y}px) scale(${_zoom.scale}) rotate(${_zoom.rot}deg)`;
@@ -2284,38 +2325,63 @@ $('zoomZoomOut').onclick=()=>zoomBy(0.8);
 $('zoomFit').onclick=fitZoom;
 $('zoomRotL').onclick=()=>{_zoom.rot-=90;applyZoomTransform();};
 $('zoomRotR').onclick=()=>{_zoom.rot+=90;applyZoomTransform();};
-$('zoomDownload').onclick=()=>{
-  const src=$('zoomImg').src;
-  const title=$('zoomTitle').textContent||'사진';
-  if(src.startsWith('data:')){
+/* 전체화면 뷰어에서 지금 보고 있는 사진 하나에 대한 합성 결과.
+   ctx(item) 없이 열린 경우(영수증·명함·서류 등)는 예전처럼 원본 그대로 반환 — 그쪽은 이 기능 대상이 아니다. */
+async function _zoomBuildExport(){
+  const src=_zoom.curSrc||$('zoomImg').src;
+  if(!src){toast('사진 데이터가 없습니다');return null;}
+  if(!_zoom.item)return src;
+  const noteId=(_zoom.noteIds&&_zoom.noteIds[_zoom.idx])||null;
+  try{
+    return await _photoComposeExport(src,_zoom.item,noteId,_zoom.exportMode!=='photoOnly');
+  }catch(e){
+    toast('⚠️ 설명 합성 실패: '+(e.message||e)+' — 다시 시도해주세요');
+    return null;
+  }
+}
+$('zoomDownload').onclick=async()=>{
+  const data=await _zoomBuildExport();
+  if(!data)return;
+  const rawTitle=$('zoomTitle').textContent||'사진';
+  if(data.startsWith('data:')){
     const a=document.createElement('a');
-    a.href=src;
-    a.download=title.replace(/[/\\:*?"<>|]/g,'_')+'.jpg';
+    a.href=data;
+    a.download=_zoom.item?_photoExportFilename(_zoom.item):(rawTitle.replace(/[/\\:*?"<>|]/g,'_')+'.jpg');
     a.click();
+    if(_zoom.item)toast('📥 사진 저장 완료');
   } else {
-    // Firebase Storage URL — 새 탭으로 열기
-    const w=window.open(src,'_blank');
+    // Firebase Storage URL(원본 경로에서만 발생) — 새 탭으로 열기
+    const w=window.open(data,'_blank');
     if(!w) toast('팝업 차단됨 — 브라우저 팝업 허용 후 다시 시도');
     else toast('새 탭에서 열림 — 마우스 우클릭 → 이미지 저장');
   }
 };
 $('zoomShare').onclick=async()=>{
-  const src=$('zoomImg').src;
-  const title=($('zoomTitle').textContent||'사진').replace(/[/\\:*?"<>|]/g,'_');
+  const data=await _zoomBuildExport();
+  if(!data)return;
+  const rawTitle=($('zoomTitle').textContent||'사진').replace(/[/\\:*?"<>|]/g,'_');
   try{
-    if(src.startsWith('data:')&&navigator.share&&navigator.canShare){
-      const res=await fetch(src);
+    if(data.startsWith('data:')&&navigator.share&&navigator.canShare){
+      const res=await fetch(data);
       const blob=await res.blob();
-      const file=new File([blob],title+'.jpg',{type:'image/jpeg'});
+      const fname=_zoom.item?_photoExportFilename(_zoom.item):(rawTitle+'.jpg');
+      const file=new File([blob],fname,{type:'image/jpeg'});
       if(navigator.canShare({files:[file]})){
-        await navigator.share({files:[file],title});
+        await navigator.share({files:[file],title:rawTitle});
         return;
       }
     }
-    /* Storage URL이거나 폴백 — 새 탭 */
-    const w=window.open(src,'_blank');
-    if(w) toast('새 탭에서 열림 — 길게 눌러 저장/공유');
-    else toast('팝업 차단됨 — ⬇ 다운로드 버튼 이용');
+    if(_zoom.item){
+      /* 공유 API 미지원 환경 → 공유 대신 파일로 저장 */
+      toast('📥 공유 대신 파일로 저장합니다');
+      const a=document.createElement('a');
+      a.href=data;a.download=_photoExportFilename(_zoom.item);a.click();
+    } else {
+      /* 이 기능 대상이 아닌 기존 경로(영수증·명함·서류 등) — 예전 폴백 그대로 */
+      const w=window.open(data,'_blank');
+      if(w) toast('새 탭에서 열림 — 길게 눌러 저장/공유');
+      else toast('팝업 차단됨 — ⬇ 다운로드 버튼 이용');
+    }
   }catch(e){
     if(e.name!=='AbortError') toast('공유 실패: '+e.message);
   }
@@ -2384,7 +2450,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowRight'){e.preventDefault();zoomGo(1);}
 });
 
-window.showImg=(src,title,list,idx)=>openZoomViewer(src,title,list,idx);
+window.showImg=(src,title,list,idx,ctx)=>openZoomViewer(src,title,list,idx,ctx);
 
 // CHUNK_3 - 섹션/갤러리/필터
 function selectMode(mode){
@@ -2901,29 +2967,168 @@ $('addDelete').onclick=async()=>{
   }
 };
 
+/* ═══════════════════════════════════════════════════════════
+   📥📤 일반사진 저장·공유 — 사진 + 저장된 정보를 한 장으로 합성
+   원본 사진/기록은 그대로 두고, 내보낼 때만 합성한 이미지를 만든다.
+   (편집기로 그린 동그라미·"작업 후" 표시는 이미 사진 데이터에
+    그려져 있으므로 그대로 따라온다 — 여기서는 아래에 흰 설명칸만 덧붙인다)
+   상세보기(detailOverlay)와 전체화면 뷰어(zoomViewer) 양쪽에서 같은
+   _photoDescParts / _photoComposeExport 를 공유해서 표시·저장·공유가 항상 일치한다.
+   ═══════════════════════════════════════════════════════════ */
+
+/* 제목 / 본문(메모+그 사진의 설명) / 보조정보(날짜시간·상태) 3줄로 정리.
+   위치·구분·분류·태그는 표시하지 않는다(요청에 따름) — 빈 항목은 자연히 빠진다.
+   imgId 를 주면 "그 사진"의 설명만 쓴다(여러 장 있어도 다른 사진 설명이 섞이지 않는다). */
+function _photoDescParts(item,imgId){
+  if(!item)return{title:'',body:'',meta:''};
+  const title=(item.title||'').trim();
+  const note=(imgId&&item.imageNotes)?item.imageNotes[imgId]:null;
+  const rawCap=(note&&note.caption)?String(note.caption).trim():'';
+  const role=(note&&note.role&&note.role!=='일반')?String(note.role).trim():'';
+  const capText=role?(rawCap?`${role}: ${rawCap}`:role):rawCap;
+  const memo=item.memo?String(item.memo).trim():'';
+  const body=[memo,capText].filter(Boolean).join(' · ');
+  const dt=[item.date,item.time].filter(Boolean).join(' ');
+  const statusText=item.status?(item.status==='완료'?'완료':'진행 중'):'';
+  const meta=[dt,statusText].filter(Boolean).join(' · ');
+  return{title,body,meta};
+}
+
+/* 캔버스 텍스트 줄바꿈 — 공백 기준 단어 단위로 먼저 시도하고,
+   공백 없는 긴 한글 덩어리(단어 하나가 폭을 넘는 경우)는 글자 단위로 잘라 잇는다. */
+function _wrapLine(ctx,str,maxWidth){
+  if(!str)return[''];
+  const words=str.split(' '),lines=[];let cur='';
+  const pushChunk=w=>{
+    let chunk='';
+    for(const ch of w){
+      const t=chunk+ch;
+      if(chunk&&ctx.measureText(t).width>maxWidth){lines.push(chunk);chunk=ch;}
+      else chunk=t;
+    }
+    return chunk;
+  };
+  for(const w of words){
+    const test=cur?cur+' '+w:w;
+    if(ctx.measureText(test).width<=maxWidth){cur=test;continue;}
+    if(cur)lines.push(cur);
+    cur=(ctx.measureText(w).width>maxWidth)?pushChunk(w):w;
+  }
+  if(cur)lines.push(cur);
+  return lines.length?lines:[''];
+}
+function _wrapText(ctx,text,maxWidth){
+  const out=[];
+  String(text).split('\n').forEach(line=>out.push(..._wrapLine(ctx,line,maxWidth)));
+  return out;
+}
+
+/* 상세보기용 — 같은 3줄 구성을 화면에도 그대로 반영(내보낸 이미지와 동일 규칙) */
+function _renderDetailMemo(item,imgId){
+  const box=$('detailMemoBox');if(!box)return;
+  const{title,body,meta}=_photoDescParts(item,imgId);
+  if(!title&&!body&&!meta){box.textContent='(메모 없음)';return;}
+  box.innerHTML=[
+    title?`<div style="font-weight:800;font-size:14px;color:var(--ink)">${esc(title)}</div>`:'',
+    body?`<div style="margin-top:4px;white-space:pre-wrap">${esc(body)}</div>`:'',
+    meta?`<div style="margin-top:6px;font-size:11px;color:var(--ink-faint)">${esc(meta)}</div>`:''
+  ].join('');
+}
+
+/* 사진 + 설명을 한 장으로 합성. withDesc=false 면 원본 그대로 반환(사진만).
+   설명이 아예 없으면 흰 칸 없이 원본 그대로 반환(실패가 아니라 정상 상태).
+   사진 자체를 읽지 못하면 조용히 원본을 보내는 대신 에러를 던져 호출쪽에서 실패를 알리게 한다. */
+async function _photoComposeExport(photoData,item,imgId,withDesc){
+  if(!withDesc)return photoData;
+  const img=new Image();
+  await new Promise((res,rej)=>{img.onload=res;img.onerror=()=>rej(new Error('사진을 불러오지 못했습니다'));img.src=photoData;});
+  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
+  if(!iw||!ih)throw new Error('사진 크기를 읽을 수 없습니다');
+
+  const{title,body,meta}=_photoDescParts(item,imgId);
+  const drawW=Math.min(iw,1600),scale=drawW/iw,drawH=Math.round(ih*scale);
+  const pad=Math.round(drawW*0.045);
+  const titleSize=Math.max(18,Math.round(drawW*0.05));
+  const bodySize=Math.max(14,Math.round(drawW*0.036));
+  const metaSize=Math.max(12,Math.round(drawW*0.03));
+  const titleLH=Math.round(titleSize*1.36),bodyLH=Math.round(bodySize*1.55),metaLH=Math.round(metaSize*1.5);
+  const maxTextW=drawW-pad*2;
+
+  const meas=document.createElement('canvas').getContext('2d');
+  const fontStack='-apple-system,BlinkMacSystemFont,"Malgun Gothic","Apple SD Gothic Neo","Segoe UI",sans-serif';
+
+  meas.font=`800 ${titleSize}px ${fontStack}`;
+  const titleLines=title?_wrapText(meas,title,maxTextW):[];
+  meas.font=`400 ${bodySize}px ${fontStack}`;
+  const bodyLines=body?_wrapText(meas,body,maxTextW):[];
+  meas.font=`600 ${metaSize}px ${fontStack}`;
+  const metaLines=meta?_wrapText(meas,meta,maxTextW):[];
+
+  if(!titleLines.length&&!bodyLines.length&&!metaLines.length)return photoData;   /* 표시할 설명이 없으면 원본 그대로 */
+
+  const gapAfterTitle=(titleLines.length&&(bodyLines.length||metaLines.length))?Math.round(titleSize*0.35):0;
+  const gapAfterBody=(bodyLines.length&&metaLines.length)?Math.round(bodySize*0.5):0;
+  const whiteH=pad+titleLines.length*titleLH+gapAfterTitle+bodyLines.length*bodyLH+gapAfterBody+metaLines.length*metaLH+pad;
+
+  const canvas=document.createElement('canvas');
+  canvas.width=drawW;canvas.height=drawH+Math.max(whiteH,pad*2);
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img,0,0,drawW,drawH);
+
+  ctx.textBaseline='top';
+  let y=drawH+pad;
+  ctx.fillStyle='#1d1d1f';
+  ctx.font=`800 ${titleSize}px ${fontStack}`;
+  titleLines.forEach(l=>{ctx.fillText(l,pad,y);y+=titleLH;});
+  y+=gapAfterTitle;
+  ctx.fillStyle='#3a3a3c';
+  ctx.font=`400 ${bodySize}px ${fontStack}`;
+  bodyLines.forEach(l=>{ctx.fillText(l,pad,y);y+=bodyLH;});
+  y+=gapAfterBody;
+  ctx.fillStyle='#8e8e93';
+  ctx.font=`600 ${metaSize}px ${fontStack}`;
+  metaLines.forEach(l=>{ctx.fillText(l,pad,y);y+=metaLH;});
+
+  return canvas.toDataURL('image/jpeg',0.92);
+}
+
+function _photoExportFilename(item){
+  const base=(item&&item.title?item.title:'사진').replace(/[/\\:*?"<>|]/g,'_');
+  return base+'_'+((item&&item.date)||today())+'.jpg';
+}
+
 // 상세보기
+let _detailCurItem=null,_detailImgs=[],_detailImgIds=[],_detailCurIdx=0;
 async function openDetail(pid){
   const p=photos.find(x=>x.id===pid);if(!p)return;
+  _detailCurItem=p;_detailImgs=[];_detailImgIds=[];_detailCurIdx=0;
+  const _expMode=document.querySelector('input[name="detailExportMode"][value="withDesc"]');
+  if(_expMode)_expMode.checked=true;   /* 사진마다 기본값은 항상 '설명 포함' */
   $('detailTitle').textContent=p.title||'(제목 없음)';
-  $('detailT').textContent=p.title||'(제목 없음)';
-  $('detailCat').textContent=p.cat||'기타';
-  $('detailDate').textContent=[p.date,p.time].filter(Boolean).join(' · ');
-  $('detailMemoBox').textContent=[p.memo,p.scopeLabel,p.status,p.location,(p.tags||[]).join(' · '),...Object.values(p.imageNotes||{}).map(n=>[n.role,n.caption].filter(Boolean).join(': '))].filter(Boolean).join('\n')||'(메모 없음)';
-  /* 여러 장이면 전부 불러온다 — 예전엔 imgIds[0] 만 봐서 첫 장밖에 안 보였다 */
+  _renderDetailMemo(p,null);
+  /* 여러 장이면 전부 불러온다 — id와 사진 데이터를 짝지어서 유지해야
+     로드에 실패한 장이 있어도 "그 사진의 설명"이 다른 사진과 안 섞인다 */
   const strip=$('detailStrip'), cnt=$('detailCount');
   $('detailImg').src=''; strip.innerHTML=''; strip.style.display='none'; cnt.style.display='none';
+  if($('detailExportRow')) $('detailExportRow').style.display='none';
   const ids=p.imgIds||[];
   if(ids.length){
-    const datas=(await Promise.all(ids.map(async id=>{
-      try{ return await loadPhotoSmart(id,(p.imgUrls||{})[id]); }catch(e){ return null; }
+    const pairs=(await Promise.all(ids.map(async id=>{
+      try{ const data=await loadPhotoSmart(id,(p.imgUrls||{})[id]); return data?{id,data}:null; }catch(e){ return null; }
     }))).filter(Boolean);
+    const datas=pairs.map(x=>x.data), noteIds=pairs.map(x=>x.id);
 
     if(datas.length){
+      _detailImgs=datas;_detailImgIds=noteIds;
       const show=i=>{
+        _detailCurIdx=i;
         $('detailImg').src=datas[i];
-        $('detailImg').onclick=()=>showImg(datas[i],p.title,datas,i);
+        $('detailImg').onclick=()=>showImg(datas[i],p.title,datas,i,{item:p,imgIds:noteIds});
         cnt.textContent=`${i+1}/${datas.length}`;
         strip.querySelectorAll('img').forEach((t,j)=>t.classList.toggle('on',j===i));
+        _renderDetailMemo(p,noteIds[i]);
       };
       if(datas.length>1){
         cnt.style.display='';
@@ -2932,6 +3137,8 @@ async function openDetail(pid){
         strip.querySelectorAll('img').forEach(t=>t.onclick=()=>show(parseInt(t.dataset.i)));
       }
       show(0);
+      /* 📥 저장 / 📤 공유 — 보안(비공개) 사진은 제외, 사진을 못 불러왔으면 숨김 */
+      if($('detailExportRow')) $('detailExportRow').style.display=p.secure?'none':'';
     }
   }
   $('detailEdit').onclick=()=>{$('detailOverlay').classList.remove('show');openAddModal(p);};
@@ -2944,6 +3151,48 @@ async function openDetail(pid){
 }
 $('detailClose').onclick=()=>$('detailOverlay').classList.remove('show');
 $('detailCloseBtn').onclick=()=>$('detailOverlay').classList.remove('show');
+
+async function _detailBuildExport(){
+  const src=_detailImgs&&_detailImgs[_detailCurIdx];
+  if(!src||!_detailCurItem){toast('사진 데이터가 없습니다');return null;}
+  const mode=(document.querySelector('input[name="detailExportMode"]:checked')||{}).value;
+  try{
+    return await _photoComposeExport(src,_detailCurItem,_detailImgIds[_detailCurIdx]||null,mode!=='photoOnly');
+  }catch(e){
+    toast('⚠️ 설명 합성 실패: '+(e.message||e)+' — 다시 시도해주세요');
+    return null;
+  }
+}
+if($('detailDownload'))$('detailDownload').onclick=async function(){
+  const data=await _detailBuildExport();
+  if(!data)return;
+  try{
+    const a=document.createElement('a');
+    a.href=data;a.download=_photoExportFilename(_detailCurItem);a.click();
+    toast('📥 사진 저장 완료');
+  }catch(e){toast('저장 실패: '+e.message);}
+};
+if($('detailShare'))$('detailShare').onclick=async function(){
+  const data=await _detailBuildExport();
+  if(!data)return;
+  const item=_detailCurItem,fname=_photoExportFilename(item);
+  try{
+    if(navigator.share&&navigator.canShare){
+      const blob=await(await fetch(data)).blob();
+      const file=new File([blob],fname,{type:'image/jpeg'});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:(item&&item.title)||'사진'});
+        return;
+      }
+    }
+    /* 공유 API 미지원 환경 → 공유 대신 파일로 저장(취소가 아니라 "안 되는" 경우에만) */
+    toast('📥 공유 대신 파일로 저장합니다');
+    const a=document.createElement('a');
+    a.href=data;a.download=fname;a.click();
+  }catch(e){
+    if(e.name!=='AbortError') toast('공유 실패: '+e.message);
+  }
+};
 
 // CHUNK_5 - 풀형 편집기 (fabric.js)
 let _fab=null,_fabCallback=null,_fabTool='select',_fabHistory=[],_fabCropRect=null;
