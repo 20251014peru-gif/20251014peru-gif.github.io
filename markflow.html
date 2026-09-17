@@ -2567,6 +2567,9 @@ table.ProseMirror-selectednode {
         <button class="tb" data-x="html">HTML (.html)</button>
         <button class="tb" data-x="print">PDF (인쇄)</button>
         <button class="tb" data-x="open">파일 열기…</button>
+        <div class="ai-menu-sep"></div>
+        <button class="tb" data-x="backup">전체 백업 (ZIP)</button>
+        <button class="tb" data-x="restore">백업 복원 (ZIP)…</button>
       </div>
     </div>
   </div>
@@ -2589,7 +2592,7 @@ table.ProseMirror-selectednode {
     <div class="editor-wrap"><div id="editor"></div></div>
   </div>
   <div class="status">
-    <span class="sf"><span class="sd" id="save-dot"></span><span id="save-text">자동 저장됨</span></span>
+    <span class="sf"><span class="sd" id="save-dot"></span><span id="save-text">불러옴</span></span>
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
@@ -2643,13 +2646,13 @@ table.ProseMirror-selectednode {
   <div class="modal">
     <div class="modal-h">GitHub 동기화<button class="modal-x" id="sync-close">✕</button></div>
     <div class="modal-b">
-      <p class="modal-desc">GitHub 토큰을 넣으면 문서가 내 GitHub 계정(비공개 Gist)에 저장돼, <b>어느 기기·브라우저에서든 같은 내용</b>을 볼 수 있어요. 다른 기기에서도 같은 토큰만 넣으면 자동으로 이어집니다.</p>
+      <p class="modal-desc">GitHub 토큰을 넣으면 문서가 내 GitHub 계정(비공개 Gist)에 저장돼, <b>어느 기기·브라우저에서든 같은 내용</b>을 볼 수 있어요. 다른 기기에서도 같은 토큰만 넣으면 자동으로 이어집니다. 두 곳에서 같은 문서를 고쳤다면 한쪽으로 덮어쓰지 않고 <b>충돌 사본</b>으로 둘 다 남겨요.</p>
       <div class="sync-status" id="sync-status">연결 안 됨</div>
       <label class="modal-label">GitHub 개인 액세스 토큰 <span>(gist 권한)</span></label>
       <input type="password" id="sync-token" class="modal-input" placeholder="ghp_… 또는 github_pat_…" autocomplete="off" />
       <div class="modal-actions">
         <button class="mbtn primary" id="sync-connect">연결 / 동기화</button>
-        <button class="mbtn" id="sync-pull">지금 내려받기</button>
+        <button class="mbtn" id="sync-pull">지금 동기화</button>
         <button class="mbtn danger" id="sync-disconnect">연결 해제</button>
       </div>
       <details class="modal-help"><summary>토큰 만드는 법</summary>
@@ -38635,13 +38638,35 @@ table.ProseMirror-selectednode {
   (*! @license DOMPurify 2.3.3 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/2.3.3/LICENSE *)
 */
 </script>
+<script>
+/* 필수 파일을 못 불러오면 저장된 데이터를 건드리지 않고 안내만 한다. */
+window.__mfFailedFiles=[];
+window.addEventListener("error",function(e){ var t=e&&e.target; if(t&&(t.tagName==="SCRIPT"||t.tagName==="LINK")){ window.__mfFailedFiles.push((t.getAttribute("src")||t.getAttribute("href")||"").split("?")[0]); } },true);
+window.markflowBootError=function(items,detail){
+  if(document.getElementById("mf-boot-error")) return;
+  var box=document.createElement("div"); box.id="mf-boot-error"; box.setAttribute("role","alert");
+  box.style.cssText="position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;max-width:min(520px,92vw);background:#fff;color:#1f2328;border:1px solid #e5484d;border-left:5px solid #e5484d;border-radius:12px;padding:14px 16px;font:14px/1.6 -apple-system,'Segoe UI','Noto Sans KR',sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.18)";
+  var h=document.createElement("b"); h.textContent="MarkFlow를 시작하지 못했어요"; box.appendChild(h);
+  var p=document.createElement("div"); p.textContent="저장된 문서·사진·영상은 지우거나 초기화하지 않았어요. 자동 저장도 멈춰 두었어요. 인터넷 연결을 확인한 뒤 새로고침해 주세요."; box.appendChild(p);
+  var ul=document.createElement("ul"); ul.style.cssText="margin:6px 0;padding-left:18px;color:#59636e;font-size:13px"; (items||[]).forEach(function(x){ var li=document.createElement("li"); li.textContent=x; ul.appendChild(li); }); if(detail){ var li2=document.createElement("li"); li2.textContent=detail; ul.appendChild(li2); } box.appendChild(ul);
+  var b=document.createElement("button"); b.type="button"; b.textContent="새로고침"; b.style.cssText="border:0;background:#e5484d;color:#fff;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer"; b.onclick=function(){ location.reload(); }; box.appendChild(b);
+  (document.body||document.documentElement).appendChild(box);
+};
+</script>
 <link rel="stylesheet" href="markflow/usability.css?v=3.9.2">
+<script src="markflow/zip.js?v=3.10.0"></script>
+<script src="markflow/sync-merge.js?v=3.10.0"></script>
+<script src="markflow/backup.js?v=3.10.0"></script>
 <script src="markflow/usability.js?v=3.9.2"></script>
 <script src="markflow/ai-costs.js?v=3.9.1"></script>
 <script src="markflow/photo-recovery.js?v=3.9.2"></script>
 <script src="markflow/restore-v38.js?v=3.8-restored-1"></script>
 <script>
 (async function(){
+  var bootMissing=[];
+  if(!window.toastui||!window.toastui.Editor) bootMissing.push("편집기 본체");
+  [["markflowRestoreV38","markflow/restore-v38.js"],["markflowPhotos","markflow/photo-recovery.js"],["installMarkflowUsability","markflow/usability.js"],["markflowZip","markflow/zip.js"],["markflowSyncMerge","markflow/sync-merge.js"],["markflowBackup","markflow/backup.js"]].forEach(function(x){ if(!window[x[0]]) bootMissing.push("필수 파일을 불러오지 못함: "+x[1]); });
+  if(bootMissing.length){ window.__mfBootFailed=true; window.markflowBootError(bootMissing); return; }
   try { await window.markflowRestoreV38; } catch(e) { console.error('MarkFlow recovery:',e); }
   var photoRecovery=await window.markflowPhotos.prepare();
   "use strict";
@@ -38711,56 +38736,79 @@ table.ProseMirror-selectednode {
       state.folders=state.folders.filter(function(f){ if(defs.indexOf(f)>=0){ return state.docs.some(function(d){return d.folder===f;}); } return true; });
     }
   }
+  // 저장 보류: 저장된 데이터를 읽지 못해 기본 문서로 시작했거나 부팅이 실패하면 기존 데이터를 덮어쓰지 않는다.
+  var saveHold=false, bootDefault=false;
   (function load(){
     var raw=photoRecovery.state?JSON.stringify(photoRecovery.state):sget(SKEY);
     if(raw){ try{ var d=JSON.parse(raw); if(d&&Array.isArray(d.docs)&&d.docs.length){ state.docs=d.docs; state.currentId=d.currentId||d.docs[0].id; state.theme=d.theme||"light"; state.folders=d.folders||null; state.collapsed=d.collapsed||[]; state.savedAt=d.savedAt||0; } }catch(e){} }
-    if(!state.docs){ var id=uid(); state.docs=[{id:id,content:DEFAULT,updated:Date.now(),folder:""}]; state.currentId=id; }
+    if(!state.docs){ bootDefault=true; var id=uid(); state.docs=[{id:id,content:DEFAULT,updated:Date.now(),folder:""}]; state.currentId=id; }
     migrate();
     if(!state.docs.some(function(x){return x.id===state.currentId;})) state.currentId=state.docs[0].id;
   })();
   function current(){ return state.docs.find(function(d){return d.id===state.currentId;})||state.docs[0]; }
 
-  var saveTimer=null, loading=false, saveErrShown=false;
+  var saveTimer=null, loading=false, saveErrShown=null, saveSeq=0, changeGen=0, saveRetry=null;
+  // 쓰기 후 다시 읽어 같은지 확인한 경우에만 저장 성공으로 본다.
+  function lsWriteVerified(k,v){ try{ localStorage.setItem(k,v); return localStorage.getItem(k)===v; }catch(e){ return false; } }
+  function idbSetVerified(full){ return idbSet(full).then(function(){ return idbGet(); }).then(function(back){ if(back!==full) throw new Error("저장 확인 실패"); return true; }); }
+  function hasInlinePhotos(){ return state.docs.some(function(d){ return stripImages(d.content||"")!==(d.content||""); }); }
+  // 결과: "saved"(전체 저장 확인) · "partial"(글자만 저장, 사진 실패) · "failed"(저장 안 됨) · "held"(보호 모드로 저장 중지)
   function persistNow(){
-    if(photoRecovery.blocked)return;
+    if(photoRecovery.blocked||saveHold||window.__mfBootFailed){ setSaveState("held"); return Promise.resolve("held"); }
+    var seq=++saveSeq, gen=changeGen;
+    if(saveRetry){ clearTimeout(saveRetry); saveRetry=null; }
     state.savedAt=Date.now();
-    // 1) 가벼운 사본(사진 제외)을 localStorage에 → 목록·본문은 항상 안전
-    sset(SKEY, JSON.stringify(slimState()));
-    // 2) 사진 포함 전체를 IndexedDB에 (대용량)
     var full=JSON.stringify(state);
-    if(idbAvailable){
-      idbSet(full).then(function(){ setSaveState(true); saveErrShown=false; if(window.__mfSyncPush) window.__mfSyncPush(); })
-        .catch(function(){ var ok=sset(SKEY, full); if(ok){ setSaveState(true); if(window.__mfSyncPush) window.__mfSyncPush(); } else { setSaveState(true,true); showSaveError(); } });
-    } else {
-      var ok=sset(SKEY, full);
-      if(ok){ setSaveState(true); saveErrShown=false; if(window.__mfSyncPush) window.__mfSyncPush(); }
-      else { setSaveState(true,true); showSaveError(); }
-    }
+    // 1) 가벼운 사본(사진 제외)을 localStorage에
+    var slimOk=lsWriteVerified(SKEY, JSON.stringify(slimState()));
+    // 2) 사진 포함 전체를 IndexedDB에(대용량). 실패하면 localStorage에 전체 저장을 시도
+    var fullP=idbAvailable
+      ? idbSetVerified(full).then(function(){ return true; }, function(){ return lsWriteVerified(SKEY, full); })
+      : Promise.resolve(lsWriteVerified(SKEY, full));
+    return fullP.then(function(fullOk){
+      var result = fullOk ? "saved" : (slimOk ? (hasInlinePhotos() ? "partial" : "saved") : "failed");
+      if(seq===saveSeq){
+        if(result==="saved"){ if(gen===changeGen) setSaveState("saved"); saveErrShown=null; var old=document.querySelector(".mf-savetoast"); if(old) old.remove(); if(window.__mfSyncPush) window.__mfSyncPush(); }
+        else { setSaveState(result); showSaveError(result); saveRetry=setTimeout(function(){ saveRetry=null; if(seq===saveSeq) persistNow(); }, 15000); }
+      }
+      return result;
+    });
   }
   function scheduleSave(){
-    setSaveState(false);
+    changeGen++;
+    setSaveState("saving");
     if(saveTimer) clearTimeout(saveTimer);
     saveTimer=setTimeout(persistNow, 450);
   }
-  function setSaveState(saved, failed){
+  function setSaveState(kind){
     var dot=document.getElementById("save-dot"), tx=document.getElementById("save-text");
-    dot.classList.toggle("saving",!saved && !failed);
-    dot.classList.toggle("failed",!!failed);
-    tx.textContent = failed?"저장 실패(용량 초과)" : (saved?"자동 저장됨":"저장 중…");
+    dot.classList.toggle("saving",kind==="saving");
+    dot.classList.toggle("failed",kind==="failed"||kind==="partial"||kind==="held");
+    var now=new Date(), hm=("0"+now.getHours()).slice(-2)+":"+("0"+now.getMinutes()).slice(-2);
+    tx.textContent = {saving:"저장 중…", saved:"저장됨 "+hm, partial:"사진 저장 실패 · 글자만 저장됨", failed:"저장 실패 · 이 기기에 저장 안 됨", held:"자동 저장 멈춤(보호 모드)"}[kind]||"저장 중…";
   }
-  function showSaveError(){
-    if(saveErrShown) return; saveErrShown=true;
-    var t=document.createElement("div"); t.className="mf-savetoast";
-    t.innerHTML='<b>사진 저장 공간이 부족해요.</b><br>문서 목록과 글자는 안전하게 저장됐지만, 이 기기 저장 공간이 부족해 최근 사진 일부가 저장되지 않았을 수 있어요. 기기 저장 공간을 확보하거나, 오른쪽 위 <b>동기화</b>로 GitHub에 백업하세요.';
+  function showSaveError(kind){
+    if(saveErrShown===kind) return; saveErrShown=kind;
+    var old=document.querySelector(".mf-savetoast"); if(old) old.remove();
+    var t=document.createElement("div"); t.className="mf-savetoast"; t.setAttribute("role","alert");
+    t.innerHTML = kind==="partial"
+      ? '<b>사진이 저장되지 않았어요.</b><br>글자와 문서 목록은 이 기기에 저장됐지만, 저장 공간이 부족해 사진이 들어간 전체 내용은 저장하지 못했어요. 이대로 창을 닫으면 최근 사진이 사라질 수 있어요. 저장 공간을 확보하거나 <b>내보내기 → 전체 백업(ZIP)</b>을 받아 두세요. 15초 뒤 다시 저장을 시도합니다.'
+      : '<b>저장에 실패했어요.</b><br>최근 변경 내용(글자 포함)이 이 기기에 저장되지 않았어요. 창을 닫지 말고 저장 공간을 확보하거나 <b>내보내기 → 전체 백업(ZIP)</b>으로 먼저 내려받으세요. 15초 뒤 다시 저장을 시도합니다.';
     var x=document.createElement("button"); x.type="button"; x.className="mf-toast-x"; x.textContent="확인"; x.addEventListener("click",function(){ t.remove(); });
     t.appendChild(x); document.body.appendChild(t);
-    setTimeout(function(){ if(t.parentNode) t.remove(); }, 12000);
   }
   // 화면을 숨기거나 새로고침/앱전환 직전에 즉시 저장(디바운스 무시) → 최신 내용·목록이 사라지지 않게
   function flushSave(){ try{ if(!loading){ var d=current(); if(d){ d.content=editor.getMarkdown(); d.updated=Date.now(); } } }catch(e){} if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; } try{ persistNow(); }catch(e){} }
   document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="hidden") flushSave(); });
   window.addEventListener("pagehide", flushSave);
   window.addEventListener("beforeunload", flushSave);
+  // 기본 문서로 시작했는데 IndexedDB에 기존 문서가 남아 있으면(읽기 실패) 덮어쓰지 않도록 저장을 멈추고 안내
+  if(bootDefault&&idbAvailable){ saveHold=true;
+    idbGet().then(function(full){ var d=null, broken=false; try{ d=full?JSON.parse(full):null; }catch(e){ broken=true; }
+      if(broken||(d&&Array.isArray(d.docs)&&d.docs.length)){ setSaveState("held"); window.markflowBootError(["저장된 문서를 읽지 못해 기본 화면으로 열렸어요."],"기존 데이터를 덮어쓰지 않도록 자동 저장을 멈췄어요."); }
+      else { saveHold=false; if(changeGen) scheduleSave(); }
+    }).catch(function(){ setSaveState("held"); window.markflowBootError(["저장소(IndexedDB)를 읽지 못했어요."],"기존 데이터를 덮어쓰지 않도록 자동 저장을 멈췄어요."); });
+  }
   // 부팅: localStorage(가벼운 사본)로 즉시 표시 후, IndexedDB(사진 포함 전체)가 있으면 교체 하이드레이션
   var idbHydrated=false;
   function hydrateFromIdb(){
@@ -38877,7 +38925,7 @@ table.ProseMirror-selectednode {
     row.innerHTML='<span class="di">'+icoHtml+'</span><div class="dm"><div class="dt"></div><div class="ds"></div></div><button class="dd" title="문서 메뉴">'+DOTS+'</button>';
     row.querySelector(".dt").textContent=docTitle(d.content);
     var photos=((d.content||'').match(/!\[[^\]]*\]\(/g)||[]).length;var date=d.updated?new Date(d.updated).toLocaleDateString('ko-KR',{month:'short',day:'numeric'}):'';
-    row.querySelector('.ds').textContent=date+(photos?' · 사진 '+photos+'장':'');row.title=docTitle(d.content);
+    row.querySelector('.ds').textContent=date+(photos?' · 사진 '+photos+'장':'')+(d.conflictOf?' · 동기화 충돌 사본':'')+(d.restoredCopyOf?' · 백업 복원 사본':'');row.title=docTitle(d.content);
     row.addEventListener("click",function(){ if(d.id!==state.currentId) loadDoc(d.id); else if(window.innerWidth<=760) toggleSidebar(false); });
     row.addEventListener("dblclick",function(){ startRename(row,d); });
     row.querySelector(".dd").addEventListener("click",function(e){ e.stopPropagation(); openDocMenu(e.currentTarget,d); });
@@ -39132,7 +39180,7 @@ table.ProseMirror-selectednode {
   document.getElementById("btn-export").addEventListener("click",function(e){ e.stopPropagation(); expMenu.style.display=expMenu.style.display==="none"?"block":"none"; });
   document.addEventListener("click",function(){ expMenu.style.display="none"; });
   function applyNumHeadings(){ document.body.classList.toggle("num-headings", !!state.numHeadings); var mi=document.getElementById("mi-numhead"); if(mi) mi.textContent="＃ 제목 자동 번호: "+(state.numHeadings?"켬":"끔"); }
-  expMenu.addEventListener("click",function(e){ var x=e.target.closest("button"); if(!x) return; var a=x.getAttribute("data-x"); if(a==="numhead"){ state.numHeadings=!state.numHeadings; applyNumHeadings(); scheduleSave(); return; } expMenu.style.display="none"; if(a==="md")exportMd(); else if(a==="html")exportHtml(); else if(a==="print")window.print(); else if(a==="open")openFile(); });
+  expMenu.addEventListener("click",function(e){ var x=e.target.closest("button"); if(!x) return; var a=x.getAttribute("data-x"); if(a==="numhead"){ state.numHeadings=!state.numHeadings; applyNumHeadings(); scheduleSave(); return; } expMenu.style.display="none"; if(a==="md")exportMd(); else if(a==="html")exportHtml(); else if(a==="print")window.print(); else if(a==="open")openFile(); else if(a==="backup")runBackup(); else if(a==="restore")pickRestore(); });
   document.addEventListener("keydown",function(e){ if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="s"){ e.preventDefault(); exportMd(); } });
 
   // ---- slash command menu ----
@@ -39340,7 +39388,7 @@ table.ProseMirror-selectednode {
   // 열 나누기: 헤더가 비어있는 표를 컬럼 레이아웃으로 스타일 (위치기반)
   var colStyleEl=null;
   function ensureColStyle(){ if(colStyleEl&&document.head.contains(colStyleEl)) return colStyleEl; colStyleEl=document.createElement("style"); colStyleEl.id="mf-col-style"; document.head.appendChild(colStyleEl); return colStyleEl; }
-  function isColumnTable(tbl){ var ths=tbl.querySelectorAll("thead th"); if(!ths.length) return false; for(var i=0;i<ths.length;i++){ if(ths[i].textContent.replace(/\s/g,"")!=="") return false; } return true; }
+  function isColumnTable(tbl){ var ths=tbl.querySelectorAll("thead th"); if(!ths.length) return false; for(var i=0;i<ths.length;i++){ if(ths[i].textContent.replace(/[\s​]/g,"")!=="") return false; } return true; }
   function styleColumns(){
     var p=pmEl(); if(!p) return; var kids=Array.prototype.slice.call(p.children); var sel=[];
     var S=".toastui-editor-ww-container .ProseMirror>:nth-child(";
@@ -40153,7 +40201,7 @@ table.ProseMirror-selectednode {
   function acquireWake(){ wakeWanted=true; try{ if(navigator.wakeLock && navigator.wakeLock.request && document.visibilityState==="visible"){ navigator.wakeLock.request("screen").then(function(w){ wakeLock=w; try{ w.addEventListener("release",function(){ wakeLock=null; }); }catch(e){} }).catch(function(){}); } }catch(e){} }
   function releaseWake(){ wakeWanted=false; try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
   document.addEventListener("visibilitychange",function(){ if(wakeWanted && document.visibilityState==="visible" && !wakeLock){ acquireWake(); } });
-  function uploadVideoToDrive(file, insertMarker){
+  function uploadVideoToDrive(file, insertMarker, shareLink){
     if(!videoFileOK(file)) return;
     var originalDoc=current(), localId=newVidId(), localSaved=false, inserted=false;
     function putMarker(marker){if(inserted)return;inserted=true;if(current().id===originalDoc.id)insertMarker(marker);else{originalDoc.content=(originalDoc.content||'')+'\n\n'+marker;originalDoc.updated=Date.now();persistNow();renderDocs();}}
@@ -40164,14 +40212,17 @@ table.ProseMirror-selectednode {
         return (localSaved?linkDriveOriginal(item.id,localId):idbPutMedia(driveLocalKey(item.id),file)).then(function(){return true;},function(){return false;}).then(function(saved){
           putMarker(makeVidMarker('https://drive.google.com/file/d/'+item.id+'/view'));
 
-          return gdShare(item.id).then(function(){mfToast(saved?'업로드 완료 · 이 기기는 원본 재생, 다른 기기는 Drive 처리 후 재생':'업로드 완료 · Drive 재생 준비에는 시간이 걸릴 수 있습니다.');},function(){mfToast('업로드 완료 · 공유 설정에 실패했습니다. Drive에서 접근 권한을 확인하세요.');});
+          var privNote='비공개로 업로드 완료 · 내 Google 계정으로 로그인한 곳에서만 재생됩니다.';
+          if(!shareLink){ mfToast(saved?privNote+' 이 기기는 저장된 원본으로 재생합니다.':privNote); return; }
+          // 사용자가 '링크 공유'를 직접 선택했을 때만 권한을 추가한다(기존 영상 권한은 건드리지 않음).
+          return gdShare(item.id).then(function(){mfToast('업로드 완료 · 링크가 있는 사람은 볼 수 있게 공유했습니다.');},function(){mfToast('업로드는 비공개로 완료 · 링크 공유 설정에 실패했습니다. Drive에서 직접 설정해 주세요.');});
         });
       }).catch(function(e){if(localSaved){putMarker('⟦vidfile:'+localId+'⟧');mfToast('Drive 업로드 실패 · 영상은 이 기기에 저장했습니다. '+e.message);}else mfToast('영상 저장·업로드 실패: '+e.message);})
       .then(releaseWake,releaseWake);
   }
-  function pickAndUploadDrive(insertMarker){
+  function pickAndUploadDrive(insertMarker, shareLink){
     var inp=document.createElement("input"); inp.type="file"; inp.accept="video/*"; inp.style.display="none"; document.body.appendChild(inp);
-    inp.addEventListener("change",function(){ var f=(inp.files&&inp.files[0])||null; inp.remove(); if(f) uploadVideoToDrive(f, insertMarker); });
+    inp.addEventListener("change",function(){ var f=(inp.files&&inp.files[0])||null; inp.remove(); if(f) uploadVideoToDrive(f, insertMarker, !!shareLink); });
     inp.click();
   }
   var vidInputBox=null;
@@ -40185,10 +40236,14 @@ table.ProseMirror-selectednode {
     if(mobile){ var g=document.createElement("div"); g.className="cap-grip"; vidInputBox.appendChild(g); }
     // 1) 구글 드라이브 자동 업로드(주 용도) — 모든 기기 재생
     if(gdConnected()){
-      var cap0=document.createElement("div"); cap0.className="vid-cap"; cap0.textContent="휴대폰 영상 올리기 → 내 구글 드라이브에 자동 업로드 (모든 기기 재생)"; vidInputBox.appendChild(cap0);
+      var cap0=document.createElement("div"); cap0.className="vid-cap"; cap0.textContent="휴대폰 영상 올리기 → 내 구글 드라이브에 업로드 (기본 비공개)"; vidInputBox.appendChild(cap0);
       var gdBtn=document.createElement("button"); gdBtn.type="button"; gdBtn.className="vid-pick od"; gdBtn.textContent="📱 영상 선택 → 구글 드라이브 업로드";
-      gdBtn.addEventListener("mousedown",function(e){ e.preventDefault(); closeVidInput(); pickAndUploadDrive(insertMarker); });
-      vidInputBox.appendChild(gdBtn);
+      var shareRow=document.createElement("label"); shareRow.className="vid-share"; shareRow.style.cssText="display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.45;padding:8px 4px 2px;cursor:pointer";
+      var shareChk=document.createElement("input"); shareChk.type="checkbox"; shareChk.id="mf-gd-share"; shareChk.checked=false;
+      var shareTx=document.createElement("span"); shareTx.textContent="링크가 있는 누구나 볼 수 있게 공유 (선택 안 하면 비공개 — 내 Google 계정으로 로그인한 곳에서만 재생)";
+      shareRow.appendChild(shareChk); shareRow.appendChild(shareTx);
+      gdBtn.addEventListener("mousedown",function(e){ e.preventDefault(); var share=!!shareChk.checked; closeVidInput(); pickAndUploadDrive(insertMarker, share); });
+      vidInputBox.appendChild(gdBtn); vidInputBox.appendChild(shareRow);
     } else {
       var cap0b=document.createElement("div"); cap0b.className="vid-cap"; cap0b.textContent="휴대폰 영상을 모든 기기에서 보려면 구글 드라이브 연결(최초 1회 설정)"; vidInputBox.appendChild(cap0b);
       var gdConnBtn=document.createElement("button"); gdConnBtn.type="button"; gdConnBtn.className="vid-pick od"; gdConnBtn.textContent="☁️ 구글 드라이브 연결하기";
@@ -40239,15 +40294,24 @@ table.ProseMirror-selectednode {
       }catch(e){ res(dataUrl); }
     });
   }
+  // ---- 사진 원본 보관: 원본 파일은 IndexedDB media에 따로, 본문에는 화면용 축소본만 (연결 키: photo-original:<축소본 해시>) ----
+  function idbKvPut(k,v){ return idbDB().then(function(db){ return new Promise(function(res,rej){ try{ var tx=db.transaction("kv","readwrite"); tx.objectStore("kv").put(v,k); tx.oncomplete=function(){ res(true); }; tx.onerror=tx.onabort=function(){ rej(tx.error); }; }catch(e){ rej(e); } }); }); }
+  function storePhotoOriginal(file, displayUrl){
+    if(!idbAvailable||!file) return Promise.resolve(false);
+    var key="img"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+    return idbPutMedia(key,file).then(function(){ return idbKvPut(window.markflowBackup.displayKey(displayUrl),{key:key,name:file.name||"",type:file.type||"",size:file.size,addedAt:Date.now()}); })
+      .then(function(){ return true; },function(){ return false; });
+  }
   // ---- 사진 여러 장 넣기 ----
   function pickMultiplePhotos(){
     var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.multiple=true; inp.style.display="none";
     document.body.appendChild(inp);
     inp.addEventListener("change",function(){ var files=Array.prototype.slice.call(inp.files||[]); inp.remove(); if(!files.length) return;
       var reads=files.map(function(f){ return new Promise(function(res){ var r=new FileReader(); r.onload=function(){
-        shrinkDataUrl(String(r.result), 1400, 0.82).then(function(u){ res({name:(f.name||"사진").replace(/\.[^.]+$/,""), url:u}); });
+        shrinkDataUrl(String(r.result), 1400, 0.82).then(function(u){ return storePhotoOriginal(f,u).then(function(ok){ res({name:(f.name||"사진").replace(/\.[^.]+$/,""), url:u, original:ok}); }); });
       }; r.onerror=function(){ res(null); }; r.readAsDataURL(f); }); });
-      Promise.all(reads).then(function(imgs){ imgs=imgs.filter(Boolean); if(imgs.length) insertPhotosAtCursor(imgs); });
+      Promise.all(reads).then(function(imgs){ imgs=imgs.filter(Boolean); if(!imgs.length) return; insertPhotosAtCursor(imgs);
+        var lost=imgs.filter(function(x){ return !x.original; }).length; if(lost) mfToast("사진 "+lost+"장은 원본을 저장하지 못해 화면용 축소본만 넣었어요 (저장 공간 확인)"); });
     });
     inp.click();
   }
@@ -40451,56 +40515,83 @@ table.ProseMirror-selectednode {
       for(var i=0;i<arr.length;i++){ if(arr[i].files&&arr[i].files["markflow-data.json"]) return arr[i].id; } return "";
     });
   }
-  function syncPush(){
-    if(photoRecovery.blocked)return Promise.resolve();
-    if(!GH.token) return Promise.resolve();
-    if(syncing){ syncQueued=true; return Promise.resolve(); }
-    syncing=true; setSyncState("syncing");
-    var p;
-    if(GH.gist){ p=fetch("https://api.github.com/gists/"+GH.gist,{method:"PATCH",headers:ghHeaders(),body:gistBody()}).then(function(r){ if(r.status===404){ GH.gist=""; sset("markflow_gist_id",""); return fetch("https://api.github.com/gists",{method:"POST",headers:ghHeaders(),body:gistBody()}); } return r; }); }
-    else { p=fetch("https://api.github.com/gists",{method:"POST",headers:ghHeaders(),body:gistBody()}); }
-    return p.then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }).then(function(j){ if(j&&j.id){ GH.gist=j.id; sset("markflow_gist_id",GH.gist); } setSyncState("ok"); })
-      .catch(function(e){ setSyncState("err",e&&e.message); })
-      .then(function(){ syncing=false; if(syncQueued){ syncQueued=false; syncPush(); } });
+  // 동기화는 항상 "원격 읽기 → 문서별 병합 → 병합 결과 올리기" 순서로만 한다.
+  // 원격으로 통째 덮어쓰거나, 원격을 읽지 못한 채 로컬로 덮어쓰지 않는다.
+  var SYNC_BASE_KEY="markflow_sync_base_v1";
+  function loadSyncBase(){ try{ var b=JSON.parse(sget(SYNC_BASE_KEY)||"null"); return (b&&b.gist===GH.gist&&b.docs)?b.docs:null; }catch(e){ return null; } }
+  function saveSyncBase(base){ sset(SYNC_BASE_KEY, JSON.stringify({gist:GH.gist, docs:base})); }
+  function fetchRemote(){
+    return fetch("https://api.github.com/gists/"+GH.gist,{headers:ghHeaders()}).then(function(r){ if(!r.ok) throw new Error(String(r.status)); return r.json(); }).then(function(j){
+      var f=j.files&&j.files["markflow-data.json"]; if(!f) return null;
+      var getC = f.truncated&&f.raw_url ? fetch(f.raw_url).then(function(x){ if(!x.ok) throw new Error("raw "+x.status); return x.text(); }) : Promise.resolve(f.content);
+      return getC.then(function(txt){ var remote=JSON.parse(txt); if(!remote||!Array.isArray(remote.docs)) throw new Error("원격 데이터 형식 오류"); return remote; });
+    });
   }
-  function applyRemote(remote){
-    if(!remote||!Array.isArray(remote.docs)||!remote.docs.length) return false;
-    if(photoRecovery.blocked)return false;
+  function docsDiffer(a,b){
+    if(!b||a.length!==b.length) return true; var H=window.markflowSyncMerge.hash, m={};
+    b.forEach(function(d){ m[d.id]=H(JSON.stringify(d)); });
+    return a.some(function(d){ return m[d.id]!==H(JSON.stringify(d)); });
+  }
+  function applyMerged(remote){
     remote=window.markflowPhotos.repair(remote).state;
-    state.docs=remote.docs; state.folders=remote.folders||state.folders; state.collapsed=remote.collapsed||[]; state.theme=remote.theme||state.theme; state.currentId=remote.currentId||state.currentId; state.savedAt=remote.savedAt||Date.now();
-    migrate(); if(!state.docs.some(function(x){return x.id===state.currentId;})) state.currentId=state.docs[0].id;
-    sset(SKEY, JSON.stringify(slimState())); if(idbAvailable){ idbSet(JSON.stringify(state)).catch(function(){}); }
-    loading=true; editor.setMarkdown(current().content,false); loading=false;
-    applyTheme(); renderDocs(); updateCounts(current().content); if(window.__mfResetFold) window.__mfResetFold();
-    return true;
+    var cur=current();
+    var m=window.markflowSyncMerge.merge({docs:state.docs,folders:state.folders},{docs:remote.docs,folders:remote.folders},loadSyncBase());
+    var changed=m.docs.length!==state.docs.length||m.docs.some(function(d,i){ return d!==state.docs[i]; })||m.folders.join("\n")!==state.folders.join("\n");
+    if(changed){
+      state.docs=m.docs; state.folders=m.folders; migrate();
+      if(!state.docs.some(function(x){return x.id===state.currentId;})) state.currentId=state.docs[0].id;
+      var nc=current();
+      if(nc!==cur||(nc.content||"")!==editor.getMarkdown()){ loading=true; editor.setMarkdown(nc.content||"",false); loading=false; clearUndoHistory(); if(window.__mfResetFold) window.__mfResetFold(); }
+      renderDocs(); updateCounts(current().content||""); scheduleSave();
+    }
+    if(m.report.conflicts.length) mfToast("동기화 충돌 "+m.report.conflicts.length+"건 · 양쪽 내용을 모두 남겼어요 (‘동기화 충돌 사본’)");
+    return remote;
   }
-  function syncPull(force){
-    if(!GH.token||!GH.gist) return Promise.resolve(false);
-    setSyncState("syncing");
-    return fetch("https://api.github.com/gists/"+GH.gist,{headers:ghHeaders()}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }).then(function(j){
-      var f=j.files&&j.files["markflow-data.json"]; if(!f){ setSyncState("ok"); return false; }
-      var getC = f.truncated&&f.raw_url ? fetch(f.raw_url).then(function(x){return x.text();}) : Promise.resolve(f.content);
-      return getC.then(function(txt){ var remote=JSON.parse(txt); var ok=false; if(force||(remote.savedAt||0)>=(state.savedAt||0)) ok=applyRemote(remote); setSyncState("ok"); return ok; });
-    }).catch(function(e){ setSyncState("err",e&&e.message); return false; });
+  function pushGist(create){
+    var base=window.markflowSyncMerge.baseFrom(state.docs), body=gistBody();
+    var req=create? fetch("https://api.github.com/gists",{method:"POST",headers:ghHeaders(),body:body})
+                  : fetch("https://api.github.com/gists/"+GH.gist,{method:"PATCH",headers:ghHeaders(),body:body});
+    return req.then(function(r){ if(!r.ok) throw new Error(String(r.status)); return r.json(); }).then(function(j){ if(j&&j.id){ GH.gist=j.id; sset("markflow_gist_id",GH.gist); } saveSyncBase(base); });
+  }
+  function syncCycle(){
+    if(photoRecovery.blocked||saveHold||window.__mfBootFailed) return Promise.resolve(false);
+    if(!GH.token) return Promise.resolve(false);
+    if(syncing){ syncQueued=true; return Promise.resolve(false); }
+    syncing=true; setSyncState("syncing");
+    return (GH.gist?Promise.resolve(GH.gist):findGist()).then(function(gid){
+      if(!gid){ GH.gist=""; sset("markflow_gist_id",""); return pushGist(true); }
+      if(gid!==GH.gist){ GH.gist=gid; sset("markflow_gist_id",gid); }
+      return fetchRemote().then(function(remote){
+        if(!remote) return pushGist(false);
+        remote=applyMerged(remote);
+        if(!docsDiffer(state.docs,remote.docs)&&(remote.folders||[]).join("\n")===state.folders.join("\n")){ saveSyncBase(window.markflowSyncMerge.baseFrom(state.docs)); return; }
+        return pushGist(false);
+      }, function(e){
+        // 원격 Gist가 삭제된 경우에만 새로 만든다. 그 밖의 읽기 실패는 올리지 않는다(원격 덮어쓰기 방지).
+        if(e&&e.message==="404"){ GH.gist=""; sset("markflow_gist_id",""); return pushGist(true); }
+        throw e;
+      });
+    }).then(function(){ setSyncState("ok"); return true; }, function(e){ setSyncState("err",e&&e.message); return false; })
+      .then(function(ok){ syncing=false; if(syncQueued){ syncQueued=false; syncCycle(); } return ok; });
   }
   function connectSync(token){
     token=(token||"").trim(); if(!token){ setSyncState("err","토큰 없음"); return; }
-    GH.token=token; sset("markflow_gh_token",token); setSyncState("syncing");
-    findGist().then(function(gid){ if(gid){ GH.gist=gid; sset("markflow_gist_id",gid); return syncPull(true); } else { GH.gist=""; sset("markflow_gist_id",""); return syncPush(); } })
-      .catch(function(e){ setSyncState("err",e&&e.message); });
+    if(token!==GH.token){ GH.gist=""; sset("markflow_gist_id",""); }
+    GH.token=token; sset("markflow_gh_token",token);
+    syncCycle();
   }
   function disconnectSync(){ GH.token=""; GH.gist=""; sset("markflow_gh_token",""); sset("markflow_gist_id",""); setSyncState("off"); var t=document.getElementById("sync-token"); if(t) t.value=""; }
-  window.__mfSyncPush=function(){ if(GH.token){ if(syncDebounce) clearTimeout(syncDebounce); syncDebounce=setTimeout(syncPush,1600); } };
+  window.__mfSyncPush=function(){ if(GH.token){ if(syncDebounce) clearTimeout(syncDebounce); syncDebounce=setTimeout(syncCycle,1600); } };
   // modal wiring
   var modal=document.getElementById("sync-modal");
   document.getElementById("btn-sync").addEventListener("click",function(){ document.getElementById("sync-token").value=GH.token?"••••••••••••":""; setSyncState(GH.token?(GH.gist?"ok":"off"):"off"); modal.style.display="flex"; });
   document.getElementById("sync-close").addEventListener("click",function(){ modal.style.display="none"; });
   modal.addEventListener("mousedown",function(e){ if(e.target===modal) modal.style.display="none"; });
   document.getElementById("sync-connect").addEventListener("click",function(){ var v=document.getElementById("sync-token").value; if(v.indexOf("•")>=0) v=GH.token; connectSync(v); });
-  document.getElementById("sync-pull").addEventListener("click",function(){ syncPull(true); });
+  document.getElementById("sync-pull").addEventListener("click",function(){ syncCycle(); });
   document.getElementById("sync-disconnect").addEventListener("click",disconnectSync);
   // 시작 시 자동 동기화
-  if(GH.token){ setSyncState("syncing"); (GH.gist?Promise.resolve(GH.gist):findGist()).then(function(gid){ if(gid){ GH.gist=gid; sset("markflow_gist_id",gid); return syncPull(false); } setSyncState("ok"); }).catch(function(e){ setSyncState("err",e&&e.message); }); } else { setSyncState("off"); }
+  if(GH.token){ syncCycle(); } else { setSyncState("off"); }
 
   // ---- AI 보정 (Anthropic Claude) ----
   var AIK={ key: sget("markflow_ai_key")||"", model: sget("markflow_ai_model")||"claude-haiku-4-5" };
@@ -40631,6 +40722,71 @@ table.ProseMirror-selectednode {
   document.getElementById("ai-clear").addEventListener("click",function(){ AIK.key=""; sset("markflow_ai_key",""); document.getElementById("ai-key").value=""; setAiState("off"); });
   setAiState(AIK.key?"ok":"off");
 
+  // ---- 전체 백업(ZIP) · 복원 ----
+  function fmtSize(n){ return n>=1048576?(n/1048576).toFixed(1)+"MB":Math.max(1,Math.round(n/1024))+"KB"; }
+  function mfModal(title, lines){
+    var back=document.createElement("div"); back.className="modal-back mf-report"; back.style.display="flex";
+    var box=document.createElement("div"); box.className="modal";
+    var h=document.createElement("div"); h.className="modal-h"; h.textContent=title;
+    var x=document.createElement("button"); x.type="button"; x.className="modal-x"; x.textContent="✕"; h.appendChild(x);
+    var b=document.createElement("div"); b.className="modal-b";
+    var ul=document.createElement("ul"); ul.style.cssText="margin:0;padding-left:18px;line-height:1.7";
+    lines.filter(Boolean).forEach(function(t){ var li=document.createElement("li"); li.textContent=t; ul.appendChild(li); });
+    b.appendChild(ul);
+    var ok=document.createElement("button"); ok.type="button"; ok.className="mbtn primary"; ok.textContent="확인"; ok.style.marginTop="14px"; b.appendChild(ok);
+    box.appendChild(h); box.appendChild(b); back.appendChild(box); document.body.appendChild(back);
+    function close(){ back.remove(); } x.onclick=close; ok.onclick=close; back.addEventListener("mousedown",function(e){ if(e.target===back) close(); });
+    return back;
+  }
+  function syncEditorIntoState(){ try{ if(!loading){ var d=current(); var md=editor.getMarkdown(); if(d&&md!==d.content){ d.content=md; d.updated=Date.now(); } } }catch(e){} }
+  var backupBusy=false;
+  function runBackup(){
+    if(backupBusy) return; backupBusy=true; syncEditorIntoState(); showPill("백업 만드는 중…");
+    persistNow().then(function(saveResult){
+      return window.markflowBackup.create({state:state, appVersion:"3.10.0", onProgress:function(p){ showPill("백업 만드는 중… "+Math.round(p*100)+"%"); }}).then(function(r){
+        hidePill();
+        var u=URL.createObjectURL(r.blob), a=document.createElement("a"); a.href=u; a.download=r.filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(u); },120000);
+        var m=r.manifest, dv=m.driveVideos, dIn=dv.filter(function(v){ return v.original==="included"; }).length;
+        mfModal("전체 백업을 만들었어요",[
+          "파일: "+r.filename+" ("+fmtSize(r.blob.size)+")",
+          "문서 "+m.documents+"개 · 폴더 "+m.folders+"개",
+          "사진 "+m.photos.total+"장 — 원본 포함 "+m.photos.withOriginal+"장 / 원본 없음(화면용 축소본만) "+m.photos.displayOnly+"장"+(m.photos.placeholders?" / 비어 있는 사진 자리 "+m.photos.placeholders+"개":""),
+          "이 기기에 저장한 영상 "+m.localVideos.total+"개 — 원본 포함 "+m.localVideos.included+"개"+(m.localVideos.missing.length?" / 이 기기에 파일 없음 "+m.localVideos.missing.length+"개":""),
+          "Drive 영상 "+dv.length+"개 — 원본 포함 "+dIn+"개 / 링크만 "+(dv.length-dIn)+"개"+(dv.length-dIn?" (링크만 있는 영상은 Drive에서 따로 받아야 해요)":""),
+          "백업에 넣지 않은 정보: "+m.excluded.join(", "),
+          saveResult==="saved"?null:"주의: 최근 변경을 이 기기에 저장하지는 못했지만, 화면에 있는 내용 그대로 백업했어요."
+        ]);
+      });
+    }).catch(function(e){ hidePill(); mfModal("백업을 만들지 못했어요",[e&&e.message?e.message:String(e),"기존 데이터는 바뀌지 않았어요."]); })
+      .then(function(){ backupBusy=false; });
+  }
+  function pickRestore(){
+    if(photoRecovery.blocked||saveHold||window.__mfBootFailed){ mfModal("지금은 복원할 수 없어요",["보호 모드라 자동 저장이 멈춘 상태예요. 새로고침한 뒤 다시 시도해 주세요."]); return; }
+    var inp=document.createElement("input"); inp.type="file"; inp.accept=".zip,application/zip"; inp.style.display="none"; document.body.appendChild(inp);
+    inp.addEventListener("change",function(){ var f=(inp.files&&inp.files[0])||null; inp.remove(); if(f) runRestore(f); });
+    inp.click();
+  }
+  function runRestore(file){
+    if(backupBusy) return; backupBusy=true; syncEditorIntoState(); showPill("백업 확인 중…");
+    window.markflowBackup.restore(file,{state:state, onProgress:function(p){ showPill("복원 중… "+Math.round(p*100)+"%"); }}).then(function(r){
+      var have={}; state.docs.forEach(function(d){ have[d.id]=1; });
+      r.docs.forEach(function(d){ if(have[d.id]) return; if(typeof d.folder!=="string") d.folder=""; state.docs.push(d); have[d.id]=1; });
+      r.folders.forEach(function(f){ if(state.folders.indexOf(f)<0) state.folders.push(f); });
+      renderDocs(); changeGen++; setSaveState("saving");
+      return persistNow().then(function(res){
+        hidePill(); var rp=r.report, dv=(r.manifest.driveVideos||[]);
+        mfModal(res==="saved"?"백업을 복원했어요":"복원했지만 저장을 확인하지 못했어요",[
+          "새로 추가한 문서 "+rp.docsAdded+"개 · 이미 같은 문서 "+rp.docsSame+"개 · 내용이 달라 사본으로 추가 "+rp.docsCopied+"개",
+          "원본 파일 추가 "+rp.mediaAdded+"개 · 이미 있던 같은 파일 "+rp.mediaSame+"개"+(rp.mediaRenamed?" · 이름이 겹친 다른 파일이라 새 이름으로 보관 "+rp.mediaRenamed+"개":""),
+          "기존 문서·사진·영상은 지우거나 덮어쓰지 않았어요.",
+          dv.some(function(v){ return v.original!=="included"; })?"Drive 영상 일부는 백업에 원본이 없어 링크로만 복원됐어요.":null,
+          res==="saved"?null:"저장 상태: "+res+" — 저장 공간을 확인한 뒤 다시 저장해 주세요."
+        ]);
+      });
+    }).catch(function(e){ hidePill(); mfModal("복원하지 못했어요",[e&&e.message?e.message:String(e),"기존 문서는 바뀌지 않았어요."]); })
+      .then(function(){ backupBusy=false; });
+  }
+
   // init
   applyTheme(); applyNumHeadings(); renderDocs(); updateCounts(current().content);
   if(window.innerWidth<=760) toggleSidebar(false);
@@ -40638,8 +40794,8 @@ table.ProseMirror-selectednode {
   if(photoRecovery.blocked)setViewMode(true);
   // Keep original video blobs: automatic pruning races uploads and breaks undo/recovered documents.
   var search=document.createElement('input');search.type='search';search.className='mf-doc-search';search.placeholder='문서 제목 검색';search.setAttribute('aria-label','문서 제목 검색');document.querySelector('.side-actions').after(search);search.oninput=function(){docQuery=search.value.trim().toLowerCase();renderDocs();};
-  var recovery=document.createElement('details');recovery.className='mf-photo-report';var summary=document.createElement('summary');summary.textContent=photoRecovery.blocked?'사진 보호 · 저장 일시 중지':('사진 확인 · '+photoRecovery.restored+'장 복구'+(photoRecovery.missing?' / '+photoRecovery.missing+'장 원본 확인 필요':''));recovery.appendChild(summary);
-  var explanation=document.createElement('p');explanation.textContent=photoRecovery.blocked?'원본 복구 사본을 만들지 못해 자동저장을 멈췄습니다. 다른 MarkFlow 창을 닫거나 저장공간을 확보한 뒤 다시 열어 주세요.':'현재 데이터의 복구 사본을 이 기기에 보관했습니다. 사진이 확실하게 일치하는 경우에만 원본으로 복구합니다.';recovery.appendChild(explanation);
+  var recovery=document.createElement('details');recovery.className='mf-photo-report';var summary=document.createElement('summary');summary.textContent=photoRecovery.blocked?'사진 보호 · 저장 일시 중지':('사진 확인 · '+photoRecovery.restored+'장 다시 연결(저장 당시 화면용 사본)'+(photoRecovery.missing?' / '+photoRecovery.missing+'장 원본 확인 필요':''));recovery.appendChild(summary);
+  var explanation=document.createElement('p');explanation.textContent=photoRecovery.blocked?'원본 복구 사본을 만들지 못해 자동저장을 멈췄습니다. 다른 MarkFlow 창을 닫거나 저장공간을 확보한 뒤 다시 열어 주세요.':'현재 데이터의 복구 사본을 이 기기에 보관했습니다. 이전 사본에서 확실하게 일치하는 사진만 다시 연결하며, 다시 연결한 사진은 원본 해상도가 아니라 저장 당시의 화면용 축소본입니다.';recovery.appendChild(explanation);
   window.markflowPhotos.alternatives(state).forEach(function(old){var btn=document.createElement('button');btn.textContent=docTitle(old.content)+' · 사진 있는 이전 글 복사';btn.onclick=function(){if(photoRecovery.blocked)return;var d=JSON.parse(JSON.stringify(old));d.id=uid();d.folder='사진 복구본';d.updated=Date.now();state.docs.unshift(d);if(state.folders.indexOf(d.folder)<0)state.folders.push(d.folder);loadDoc(d.id);persistNow();btn.disabled=true;btn.textContent='사진 복구본 폴더에 복사됨';};recovery.appendChild(btn);});document.querySelector('#side-docs').appendChild(recovery);
   window.installMarkflowUsability({
     closeMenus:function(){closeTbMore();closeVidInput();closeEmojiPop();closeHlPop();closeAiMenu();},
@@ -40650,7 +40806,13 @@ table.ProseMirror-selectednode {
     highlight:openHlPicker,bullet:function(){bulletBtn.click();},outdent:function(){outdentBtn.click();},indent:function(){indentBtn.click();},fold:function(){foldAllBtn.click();},photos:pickMultiplePhotos,video:openVideoInput,more:openTbMore,
     onCaret:function(fn){editor.on('caretChange',fn);},blockType:function(){var v=wwView();if(!v)return 'p';var n=v.state.selection.$from.parent;return n.type.name==='heading'?'h'+n.attrs.level:'p';}
   });
-})();
+  window.__mfBooted=true;
+})().catch(function(e){
+  // 시작 도중 오류: 자동 저장을 멈추고(초기화·덮어쓰기 방지) 읽기 전용으로 두고 안내한다.
+  window.__mfBootFailed=true; console.error("MarkFlow boot:",e);
+  try{ var pm=document.querySelector(".toastui-editor-ww-container .ProseMirror"); if(pm) pm.setAttribute("contenteditable","false"); }catch(_){}
+  window.markflowBootError(window.__mfFailedFiles.map(function(f){ return "불러오지 못한 파일: "+f; }), "오류 내용: "+(e&&e.message?e.message:String(e)));
+});
 </script>
 </body>
 </html>
