@@ -283,17 +283,24 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
 .add-btn-row label.primary{background:var(--accent);color:#fff}
 #burstLabel{background:var(--green-lt);color:var(--green)}
 
-.preview-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-.preview-item{position:relative;width:90px;height:90px;border-radius:10px;
-  overflow:hidden;border:.5px solid var(--blue-bd)}
-.preview-item img{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer}
-.preview-crop{position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;
-  background:rgba(0,0,0,.55);color:#fff;border:none;cursor:pointer;font-size:10px;
+.preview-list{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+.preview-item{position:relative;width:100%;border-radius:14px;
+  overflow:hidden;border:.5px solid var(--blue-bd);background:var(--surface-2);line-height:0}
+.preview-item img{width:100%;height:auto;display:block;cursor:pointer}
+.preview-crop{position:absolute;top:8px;left:8px;width:30px;height:30px;border-radius:50%;
+  background:rgba(0,0,0,.55);color:#fff;border:none;cursor:pointer;font-size:13px;
   -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
   display:inline-flex;align-items:center;justify-content:center}
-.preview-del{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;
-  background:rgba(0,0,0,.55);color:#fff;border:none;cursor:pointer;font-size:10px;font-weight:700;
-  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.preview-del{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;
+  background:rgba(0,0,0,.55);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:700;
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+  display:inline-flex;align-items:center;justify-content:center}
+.preview-edit{position:absolute;bottom:8px;right:8px;width:36px;height:36px;border-radius:50%;
+  background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:15px;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.af-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-bottom:12px}
+.af-row .field{margin:0;min-width:0}
 
 .tool-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tool-btn{padding:7px 14px;border:none;border-radius:100px;
@@ -927,12 +934,11 @@ main{max-width:1600px;margin:0 auto;padding:0 20px 100px}
         <div id="burstHint" style="display:none;font-size:11px;color:var(--green);font-weight:600;margin-top:8px"></div>
       </div>
       <div id="previewList" class="preview-list"></div>
-      <div class="field"><label>제목 *</label><input type="text" id="fTitle"></div>
-      <div class="field"><label>메모</label><textarea id="fMemo" rows="3"></textarea></div>
-      <div style="display:flex;gap:8px">
-        <div class="field" style="flex:1"><label>카테고리</label><select id="fCat"></select></div>
-        <div class="field" style="flex:0 0 140px"><label>날짜</label><input type="date" id="fDate"></div>
+      <div class="af-row" id="afTitleMemoRow">
+        <div class="field"><label>제목 *</label><input type="text" id="fTitle"></div>
+        <div class="field"><label>메모</label><textarea id="fMemo" rows="3"></textarea></div>
       </div>
+      <div class="field" id="fDateField"><label>날짜</label><input type="date" id="fDate"></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost btn-flex" id="addCancel">취소</button>
@@ -2699,7 +2705,6 @@ function refreshCatSelects(){
     + '<option disabled>──────────</option>'
     + '<option value="__manage">⚙️ 카테고리 추가·수정·삭제…</option>';
   f.value=cats.includes(catFilter)?catFilter:'all';
-  $('fCat').innerHTML=cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
 }
 
 async function renderGallery(){
@@ -2791,7 +2796,6 @@ function openAddModal(photo){
   $('fMemo').value=photo?(photo.memo||''):'';
   $('fDate').value=photo?(photo.date||today()):today();
   refreshCatSelects();
-  $('fCat').value=photo?(photo.cat||cats[0]):cats[0];
   $('addDelete').style.display=photo?'':'none';
   if(photo&&photo.imgIds&&photo.imgIds.length){
     (async()=>{
@@ -2822,6 +2826,7 @@ function renderPreviews(){
       <img src="${m.data}" alt="" data-idx="${i}">
       <button class="preview-crop" data-crop="${i}" title="자르기">✂</button>
       <button class="preview-del" data-del="${i}">✕</button>
+      <button class="preview-edit" data-edit="${i}" title="표시 편집">✏️</button>
     </div>`).join('');
   /* 영수증과 같은 4점 크롭 — 열리면 문서를 자동으로 잡아준다 */
   /* 영수증과 같은 크롭 창. 창 안에서 자동 감지를 시도하고,
@@ -2838,9 +2843,17 @@ function renderPreviews(){
       }, '✂️ 사진 자르기');
     };
   });
-  wrap.querySelectorAll('img').forEach((img,i)=>img.onclick=()=>showImg(img.src,'',mImgs.map(m=>m.data),i));
+  /* 사진 또는 모서리의 연필 아이콘 → 표시 편집(동그라미·텍스트 등 마킹) 모드.
+     취소하면 콜백이 안 불리니 m.data는 그대로 남는다 — 기존 상태 유지. */
+  const openMark=i=>openEditModal(mImgs[i].data, edited=>{
+    mImgs[i].data=edited;mImgs[i].dirty=true;renderPreviews();
+  });
+  wrap.querySelectorAll('.preview-item').forEach((item,i)=>{
+    item.querySelector('img').onclick=e=>{e.stopPropagation();openMark(i);};
+    item.querySelector('[data-edit]').onclick=e=>{e.stopPropagation();openMark(i);};
+  });
   wrap.querySelectorAll('.preview-del').forEach(b=>{
-    b.onclick=()=>{mImgs.splice(parseInt(b.dataset.del),1);renderPreviews();};
+    b.onclick=e=>{e.stopPropagation();mImgs.splice(parseInt(b.dataset.del),1);renderPreviews();};
   });
   $('addZone').classList.toggle('compact', mImgs.length>0);
   $('addZone').style.padding='';   /* 예전에 인라인으로 박아둔 값 제거 */
@@ -2935,7 +2948,7 @@ $('addSave').onclick=async()=>{
     const data={
       id:editingId||uid(),
       ...window.ScannerFields.values(),
-      title,cat:$('fCat').value,memo:$('fMemo').value.trim(),
+      title,memo:$('fMemo').value.trim(),
       date:$('fDate').value||today(),
       secure:curSection==='secure',
       imgIds:ids,imgUrls,imageNotes:Object.fromEntries(mImgs.map((m,i)=>[ids[i],{role:m.role||'일반',caption:m.caption||''}])),updated:Date.now(),
