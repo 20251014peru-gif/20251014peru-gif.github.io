@@ -44,8 +44,18 @@ const defaults={scope:[mk('업무'),mk('개인')],status:['발견','점검 필�
 let lists=JSON.parse(JSON.stringify(defaults)),pending={},listRef=null,kind='scope',draft=[];
 try{const c=JSON.parse(localStorage.getItem(LIST_KEY)||'null');if(c?.lists)Object.keys(NAMES).forEach(k=>{if(Array.isArray(c.lists[k]))lists[k]=c.lists[k]});pending=c?.pending||{}}catch(e){}
 const cache=()=>localStorage.setItem(LIST_KEY,JSON.stringify({lists,pending}));const valueFor=(k,x)=>x.label;
-/* 예전에 위치 기본값이 빈 배열이던 기기 — 한 번만 기본 순서로 채운다(사용자가 직접 비웠을 수도 있는 경우는 드묾) */
-if(!lists.location.length){ lists.location=JSON.parse(JSON.stringify(defaults.location)); cache(); }
+/* 위치 목록을 옥탑→20층…1층→지하1층…지하6층 순서로 맞춘다 — 딱 한 번만.
+   이미 몇 개만(예: 3층/4층/5층) 저장해 둔 기기도 그 값이 사라지지 않도록 기본 순서 뒤에 그대로 이어 붙인다. */
+const LOCATION_MERGE_FLAG='scanapp_location_default_merge_v1';
+if(!localStorage.getItem(LOCATION_MERGE_FLAG)){
+  try{
+    const defaultLabels=new Set(defaults.location.map(x=>x.label));
+    const extra=lists.location.filter(x=>!defaultLabels.has(x.label));
+    lists.location=[...JSON.parse(JSON.stringify(defaults.location)),...extra];
+    cache();
+  }catch(e){}
+  try{localStorage.setItem(LOCATION_MERGE_FLAG,'1');}catch(e){}
+}
 /* 카테고리 → 구분 통합 — 딱 한 번만. 현재 cats(실제 카테고리 목록)를 구분 목록에 합치고 중복은 라벨 기준으로 제거.
    이후로는 구분 목록 편집(saveDraft)이 cats 쪽도 함께 갱신해 필터·검색과 어긋나지 않게 한다. */
 const MERGE_FLAG='scanapp_scope_cat_merge_v1';
