@@ -2989,8 +2989,9 @@ $('addDelete').onclick=async()=>{
    _photoDescParts / _photoComposeExport 를 공유해서 표시·저장·공유가 항상 일치한다.
    ═══════════════════════════════════════════════════════════ */
 
-/* 제목 / 본문(메모+그 사진의 설명) / 보조정보(날짜시간·상태) 3줄로 정리.
-   위치·구분·분류·태그는 표시하지 않는다(요청에 따름) — 빈 항목은 자연히 빠진다.
+/* 제목 / 본문(메모+그 사진의 설명) / 보조정보(위치·날짜시간·상태) 3줄로 정리.
+   구분·태그는 표시하지 않는다(요청에 따름) — 빈 항목은 자연히 빠진다.
+   위치는 제목에 이미 같은 문구가 들어있으면(예: 제목 "3층 ...") 중복 표시하지 않는다.
    imgId 를 주면 "그 사진"의 설명만 쓴다(여러 장 있어도 다른 사진 설명이 섞이지 않는다). */
 function _photoDescParts(item,imgId){
   if(!item)return{title:'',body:'',meta:''};
@@ -3001,9 +3002,10 @@ function _photoDescParts(item,imgId){
   const capText=role?(rawCap?`${role}: ${rawCap}`:role):rawCap;
   const memo=item.memo?String(item.memo).trim():'';
   const body=[memo,capText].filter(Boolean).join(' · ');
+  const loc=(item.location&&!title.includes(item.location))?String(item.location).trim():'';
   const dt=[item.date,item.time].filter(Boolean).join(' ');
   const statusText=item.status?(item.status==='완료'?'완료':'진행 중'):'';
-  const meta=[dt,statusText].filter(Boolean).join(' · ');
+  const meta=[loc,dt,statusText].filter(Boolean).join(' · ');
   return{title,body,meta};
 }
 
