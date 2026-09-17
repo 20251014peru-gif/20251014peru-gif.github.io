@@ -45,25 +45,28 @@ let lists=JSON.parse(JSON.stringify(defaults)),pending={},listRef=null,kind='sco
 try{const c=JSON.parse(localStorage.getItem(LIST_KEY)||'null');if(c?.lists)Object.keys(NAMES).forEach(k=>{if(Array.isArray(c.lists[k]))lists[k]=c.lists[k]});pending=c?.pending||{}}catch(e){}
 const cache=()=>localStorage.setItem(LIST_KEY,JSON.stringify({lists,pending}));const valueFor=(k,x)=>x.label;
 /* 위치 목록을 옥탑→20층…1층→지하1층…지하6층 순서로 맞춘다 — 딱 한 번만.
-   이미 몇 개만(예: 3층/4층/5층) 저장해 둔 기기도 그 값이 사라지지 않도록 기본 순서 뒤에 그대로 이어 붙인다. */
+   이미 몇 개만(예: 3층/4층/5층) 저장해 둔 기기도 그 값이 사라지지 않도록 기본 순서 뒤에 그대로 이어 붙인다.
+   pending으로 표시해야 이어지는 loadCloud() 가 옛 클라우드 값으로 도로 덮어쓰지 않고, sync() 로 클라우드에도 반영된다. */
 const LOCATION_MERGE_FLAG='scanapp_location_default_merge_v1';
 if(!localStorage.getItem(LOCATION_MERGE_FLAG)){
   try{
     const defaultLabels=new Set(defaults.location.map(x=>x.label));
     const extra=lists.location.filter(x=>!defaultLabels.has(x.label));
     lists.location=[...JSON.parse(JSON.stringify(defaults.location)),...extra];
+    pending.location=Date.now();
     cache();
   }catch(e){}
   try{localStorage.setItem(LOCATION_MERGE_FLAG,'1');}catch(e){}
 }
 /* 카테고리 → 구분 통합 — 딱 한 번만. 현재 cats(실제 카테고리 목록)를 구분 목록에 합치고 중복은 라벨 기준으로 제거.
-   이후로는 구분 목록 편집(saveDraft)이 cats 쪽도 함께 갱신해 필터·검색과 어긋나지 않게 한다. */
+   이후로는 구분 목록 편집(saveDraft)이 cats 쪽도 함께 갱신해 필터·검색과 어긋나지 않게 한다.
+   마찬가지로 pending 표시를 해야 클라우드 재동기화 때 사라지지 않는다. */
 const MERGE_FLAG='scanapp_scope_cat_merge_v1';
 if(!localStorage.getItem(MERGE_FLAG)){
   try{
     const existing=new Set(lists.scope.map(x=>x.label));
     const toAdd=(Array.isArray(cats)?cats:[]).map(c=>String(c||'').trim()).filter(c=>c&&!existing.has(c));
-    if(toAdd.length) lists.scope=[...lists.scope,...toAdd.map(v=>mk(v))];
+    if(toAdd.length){ lists.scope=[...lists.scope,...toAdd.map(v=>mk(v))]; pending.scope=Date.now(); }
     cache();
   }catch(e){}
   try{localStorage.setItem(MERGE_FLAG,'1');}catch(e){}
