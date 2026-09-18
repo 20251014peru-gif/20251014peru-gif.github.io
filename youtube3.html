@@ -103,6 +103,18 @@ input[type=text], select{width:100%; min-height:48px; font-size:16px; padding:10
 </style>
 </head>
 <body>
+<!-- 2026-09-18: 이 화면이 읽는 youtube_* 컬렉션을 본인 전용으로 잠갔다(유튜브 프로그램 인계 보고서 참고) —
+     그래서 이제 익명 로그인 대신 실제 Google 로그인이 필요하다. -->
+<div id="loginGate" style="display:none;position:fixed;inset:0;background:rgba(250,249,246,.97);z-index:9999;align-items:center;justify-content:center;">
+  <div style="max-width:320px;width:90%;background:#fff;border:1px solid #dfe3dd;border-radius:14px;padding:28px 24px;box-shadow:0 6px 24px rgba(0,0,0,.08);">
+    <h2 style="margin:0 0 6px;font-size:18px;">📺 유튜브 요약기</h2>
+    <p style="margin:0 0 18px;font-size:13px;color:#777;">본인 Google 계정으로 로그인해야 볼 수 있습니다.</p>
+    <button type="button" id="loginBtn" onclick="doLogin()" style="width:100%;padding:10px;font-size:14px;background:#2d6a4f;color:#fff;border:none;border-radius:8px;cursor:pointer;">Google로 로그인</button>
+    <button type="button" id="loginRedirectBtn" onclick="doLoginRedirect()" style="display:none;width:100%;margin-top:8px;padding:10px;font-size:13px;background:#fff;border:1px solid #dfe3dd;border-radius:8px;cursor:pointer;">이 창에서 바로 로그인(새 창 대신)</button>
+    <div id="loginMsg" style="margin-top:10px;font-size:12px;color:#c0392b;min-height:16px;"></div>
+  </div>
+</div>
+<style>body.login-locked{overflow:hidden}body.login-locked .wrap{filter:blur(2px);pointer-events:none}</style>
 <div class="wrap">
   <header>
     <h1>📺 유튜브 요약기</h1>
@@ -292,16 +304,66 @@ const firebaseConfig = {
 };
 
 /* ═══════════ 초기화 ═══════════ */
+const OWNER_UID = '9Sntwe9a9yfwH1ZjrnexE0GK0dD2';
 let db=null;
 try{
   firebase.initializeApp(firebaseConfig);
   db=firebase.firestore();
-  firebase.auth().signInAnonymously().catch(e=>logBug('익명로그인: '+e.message));
   firebase.auth().onAuthStateChanged(u=>{
-    setSync(!!u);
-    if(u){ try{refreshWatch();}catch(e){} }
+    const gate=document.getElementById('loginGate');
+    if(u && !u.isAnonymous && u.uid!==OWNER_UID){
+      const msg=document.getElementById('loginMsg');
+      if(msg) msg.textContent='이 계정('+(u.email||u.uid)+')은 사용할 수 없습니다 — 본인 계정으로 다시 로그인하세요.';
+      firebase.auth().signOut().catch(()=>{});
+      if(gate){ gate.style.display='flex'; document.body.classList.add('login-locked'); }
+      return;
+    }
+    const loggedIn = !!u && !u.isAnonymous;
+    setSync(loggedIn);
+    if(loggedIn){
+      if(gate){ gate.style.display='none'; document.body.classList.remove('login-locked'); }
+      try{refreshWatch();}catch(e){}
+    } else if(gate){
+      gate.style.display='flex'; document.body.classList.add('login-locked');
+    }
+  });
+  firebase.auth().getRedirectResult().catch(e=>{
+    const msg=document.getElementById('loginMsg');
+    if(msg && e && e.code!=='auth/no-auth-event') msg.textContent=loginErrorText(e);
   });
 }catch(e){ logBug('Firebase 초기화 실패: '+e.message); setSync(false); }
+
+function loginErrorText(e){
+  const code = e && e.code || '';
+  if(code==='auth/popup-closed-by-user' || code==='auth/cancelled-popup-request' || code==='auth/popup-blocked'){
+    const btn=document.getElementById('loginRedirectBtn'); if(btn) btn.style.display='block';
+    return '로그인 창이 완료되지 못했습니다 — 아래 "이 창에서 바로 로그인"을 눌러보세요.';
+  }
+  return '로그인 실패: '+(e && (e.message||e.code) || '알 수 없는 오류');
+}
+let _loginBusy=false;
+async function doLogin(){
+  if(_loginBusy) return;
+  _loginBusy=true;
+  const msg=document.getElementById('loginMsg');
+  const btn=document.getElementById('loginBtn');
+  if(btn) btn.disabled=true;
+  if(msg) msg.textContent='로그인 중…';
+  try{
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await firebase.auth().signInWithPopup(provider);
+    if(msg) msg.textContent='';
+  }catch(e){
+    if(msg) msg.textContent=loginErrorText(e);
+  } finally {
+    _loginBusy=false;
+    if(btn) btn.disabled=false;
+  }
+}
+function doLoginRedirect(){
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithRedirect(provider);
+}
 
 function setSync(ok){
   const b=document.getElementById('syncBadge');
