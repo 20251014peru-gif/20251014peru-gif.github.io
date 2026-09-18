@@ -1,12 +1,12 @@
 {
- "updated_at": "2026-09-18T20:58:14.387183+09:00",
+ "updated_at": "2026-09-19T01:46:50.659696+09:00",
  "topics": [
   {
    "id": "금리_연준",
    "name": "금리·연준",
    "video_count": 19,
    "channel_count": 12,
-   "total_views": 1899949,
+   "total_views": 2321894,
    "latest": "2026-09-18T20:30:19+09:00",
    "video_ids": [
     "NqE57usoxbA",
@@ -82,11 +82,11 @@
    "name": "AI·엔비디아",
    "video_count": 8,
    "channel_count": 7,
-   "total_views": 483392,
-   "latest": "2026-09-18T18:00:20+09:00",
+   "total_views": 557092,
+   "latest": "2026-09-18T22:30:17+09:00",
    "video_ids": [
+    "qy0gc9WjNZE",
     "ox1U_mjXimA",
-    "3cdalBNUraE",
     "5dngLXESAIw",
     "XEPGKcTftD8",
     "1eV18vbBzZE",
@@ -104,16 +104,6 @@
     "티타임즈TV"
    ],
    "subtopics": [
-    {
-     "word": "9월",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "수요",
-     "videos": 2,
-     "channels": 2
-    },
     {
      "word": "대표",
      "videos": 2,
@@ -135,11 +125,12 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 7,
+   "video_count": 8,
    "channel_count": 6,
-   "total_views": 434498,
-   "latest": "2026-09-18T20:00:58+09:00",
+   "total_views": 765519,
+   "latest": "2026-09-18T21:30:22+09:00",
    "video_ids": [
+    "eyKaARHmvgc",
     "EPClypzYDiI",
     "AlGZn4UPeOs",
     "E9QKryBfMzQ",
@@ -157,6 +148,11 @@
     "증시각도기TV"
    ],
    "subtopics": [
+    {
+     "word": "다시",
+     "videos": 3,
+     "channels": 3
+    },
     {
      "word": "AI",
      "videos": 3,
@@ -178,11 +174,6 @@
      "channels": 2
     },
     {
-     "word": "다시",
-     "videos": 2,
-     "channels": 2
-    },
-    {
      "word": "수요",
      "videos": 2,
      "channels": 2
@@ -191,25 +182,36 @@
    "active": true
   },
   {
-   "id": "유가_에너지",
-   "name": "유가·에너지",
+   "id": "일본_엔화",
+   "name": "일본·엔화",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 322057,
-   "latest": "2026-09-18T16:35:22+09:00",
+   "total_views": 599011,
+   "latest": "2026-09-18T21:26:14+09:00",
    "video_ids": [
-    "eaAxs2Zgc2g",
+    "x65FxA3UZ6o",
+    "V2XdIXRo3eM",
     "xNTL61HcTAI",
-    "QnWU3_Gh1lo",
-    "smDRmdQ19SY"
+    "s039e9JGpnQ"
    ],
    "channels": [
     "815머니톡",
-    "언더스탠딩",
-    "이효석아카데미",
-    "체슬리TV (박세익)"
+    "경제 읽어주는 남자 (김광석)",
+    "슈카월드",
+    "증시각도기TV"
    ],
-   "subtopics": [],
+   "subtopics": [
+    {
+     "word": "31년",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "만에",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
    "active": true
   },
   {
@@ -217,7 +219,7 @@
    "name": "환율·달러",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 218230,
+   "total_views": 297732,
    "latest": "2026-09-18T16:35:22+09:00",
    "video_ids": [
     "eaAxs2Zgc2g",
@@ -244,7 +246,7 @@
    "name": "실적시즌",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 35219,
+   "total_views": 74614,
    "latest": "2026-09-18T19:00:12+09:00",
    "video_ids": [
     "9MCXHBMFg3A",
@@ -266,34 +268,23 @@
    "active": true
   },
   {
-   "id": "일본_엔화",
-   "name": "일본·엔화",
+   "id": "유가_에너지",
+   "name": "유가·에너지",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 188343,
-   "latest": "2026-09-18T18:24:32+09:00",
+   "total_views": 177070,
+   "latest": "2026-09-18T16:35:22+09:00",
    "video_ids": [
-    "V2XdIXRo3eM",
+    "eaAxs2Zgc2g",
     "xNTL61HcTAI",
-    "s039e9JGpnQ"
+    "QnWU3_Gh1lo"
    ],
    "channels": [
     "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "증시각도기TV"
+    "이효석아카데미",
+    "체슬리TV (박세익)"
    ],
-   "subtopics": [
-    {
-     "word": "31년",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "만에",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
+   "subtopics": [],
    "active": true
   },
   {
@@ -301,7 +292,7 @@
    "name": "배당·ETF",
    "video_count": 5,
    "channel_count": 2,
-   "total_views": 156878,
+   "total_views": 240912,
    "latest": "2026-09-18T20:30:19+09:00",
    "video_ids": [
     "NqE57usoxbA",
@@ -347,6 +338,25 @@
     }
    ],
    "active": true
+  },
+  {
+   "id": "고용_경기",
+   "name": "고용·경기",
+   "video_count": 3,
+   "channel_count": 2,
+   "total_views": 185213,
+   "latest": "2026-09-18T22:43:42+09:00",
+   "video_ids": [
+    "294kH63L_cg",
+    "89JWVosW9ng",
+    "QnWU3_Gh1lo"
+   ],
+   "channels": [
+    "경제사냥꾼",
+    "이효석아카데미"
+   ],
+   "subtopics": [],
+   "active": false
   }
  ]
 }
