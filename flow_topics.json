@@ -1,78 +1,12 @@
 {
- "updated_at": "2026-09-20T01:09:03.873001+09:00",
+ "updated_at": "2026-09-20T06:09:58.148545+09:00",
  "topics": [
-  {
-   "id": "금리_연준",
-   "name": "금리·연준",
-   "video_count": 12,
-   "channel_count": 9,
-   "total_views": 1781370,
-   "latest": "2026-09-19T19:00:30+09:00",
-   "video_ids": [
-    "hAplvrxL3C8",
-    "kBC2Xn6niWU",
-    "q0O09eC8Du0",
-    "JzL4ieZk7vs",
-    "8zoWzMydzUw",
-    "V2XdIXRo3eM",
-    "Z4Ks-9IuWiA",
-    "E9QKryBfMzQ",
-    "zXitwW3RCm0",
-    "s039e9JGpnQ",
-    "DQTSyWimMbw",
-    "6xAmdmLtFUw"
-   ],
-   "channels": [
-    "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "김영익의 경제스쿨",
-    "내일은 투자왕 - 김단테",
-    "달란트투자",
-    "슈퍼개미 이세무사TV",
-    "염블리와 함께 (염승환)",
-    "증시각도기TV",
-    "체슬리TV (박세익)"
-   ],
-   "subtopics": [
-    {
-     "word": "금리인상",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "18일",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "9월",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "31년",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "추석",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "일본",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
   {
    "id": "반도체",
    "name": "반도체",
    "video_count": 9,
    "channel_count": 8,
-   "total_views": 475421,
+   "total_views": 625076,
    "latest": "2026-09-19T20:55:33+09:00",
    "video_ids": [
     "5cOS2mK4l_M",
@@ -125,11 +59,74 @@
    "active": true
   },
   {
+   "id": "금리_연준",
+   "name": "금리·연준",
+   "video_count": 11,
+   "channel_count": 7,
+   "total_views": 1221703,
+   "latest": "2026-09-20T06:05:28+09:00",
+   "video_ids": [
+    "bc613R2bJAc",
+    "hAplvrxL3C8",
+    "kBC2Xn6niWU",
+    "q0O09eC8Du0",
+    "JzL4ieZk7vs",
+    "V2XdIXRo3eM",
+    "Z4Ks-9IuWiA",
+    "E9QKryBfMzQ",
+    "zXitwW3RCm0",
+    "s039e9JGpnQ",
+    "DQTSyWimMbw"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
+    "김영익의 경제스쿨",
+    "달란트투자",
+    "슈퍼개미 이세무사TV",
+    "염블리와 함께 (염승환)",
+    "증시각도기TV"
+   ],
+   "subtopics": [
+    {
+     "word": "9월",
+     "videos": 4,
+     "channels": 3
+    },
+    {
+     "word": "금리인상",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "18일",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "31년",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "다시",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "추석",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "일본_엔화",
    "name": "일본·엔화",
    "video_count": 7,
    "channel_count": 7,
-   "total_views": 1633006,
+   "total_views": 1692755,
    "latest": "2026-09-19T17:00:23+09:00",
    "video_ids": [
     "7oa1Mvo6J2U",
@@ -173,9 +170,10 @@
    "name": "AI·엔비디아",
    "video_count": 10,
    "channel_count": 6,
-   "total_views": 652156,
-   "latest": "2026-09-19T21:20:44+09:00",
+   "total_views": 596220,
+   "latest": "2026-09-20T06:00:34+09:00",
    "video_ids": [
+    "Q7YS7xCkMFo",
     "YsHdBA1cz4A",
     "ncTSI-frrVI",
     "SmqUrbRbCo4",
@@ -184,8 +182,7 @@
     "JzL4ieZk7vs",
     "iG7Mi6KYQkE",
     "qy0gc9WjNZE",
-    "ox1U_mjXimA",
-    "XEPGKcTftD8"
+    "ox1U_mjXimA"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
@@ -202,17 +199,12 @@
      "channels": 2
     },
     {
-     "word": "김광석",
-     "videos": 3,
-     "channels": 1
-    },
-    {
-     "word": "별주부전",
+     "word": "체슬리투자자문",
      "videos": 2,
      "channels": 1
     },
     {
-     "word": "21세기",
+     "word": "별주부전",
      "videos": 2,
      "channels": 1
     },
@@ -225,6 +217,11 @@
      "word": "성상현",
      "videos": 2,
      "channels": 1
+    },
+    {
+     "word": "김광석",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -234,7 +231,7 @@
    "name": "정책·정치",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 676619,
+   "total_views": 903733,
    "latest": "2026-09-19T19:22:30+09:00",
    "video_ids": [
     "93iH1jbSiPw",
