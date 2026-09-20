@@ -1,12 +1,12 @@
 {
- "updated_at": "2026-09-20T20:54:02.314102+09:00",
+ "updated_at": "2026-09-21T01:36:19.752262+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 14,
    "channel_count": 7,
-   "total_views": 709562,
+   "total_views": 848639,
    "latest": "2026-09-20T20:00:22+09:00",
    "video_ids": [
     "xm0RnQDvRKc",
@@ -70,11 +70,12 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 10,
+   "video_count": 11,
    "channel_count": 6,
-   "total_views": 528576,
-   "latest": "2026-09-20T20:00:14+09:00",
+   "total_views": 709276,
+   "latest": "2026-09-20T20:55:23+09:00",
    "video_ids": [
+    "ntxFAT7My7M",
     "XomoDrj223A",
     "Y27GKKHPf1E",
     "2OYIzMF956U",
@@ -121,7 +122,7 @@
      "channels": 1
     },
     {
-     "word": "체슬리",
+     "word": "엑시나",
      "videos": 2,
      "channels": 1
     }
@@ -133,7 +134,7 @@
    "name": "금리·연준",
    "video_count": 7,
    "channel_count": 4,
-   "total_views": 564343,
+   "total_views": 701082,
    "latest": "2026-09-20T20:00:14+09:00",
    "video_ids": [
     "XomoDrj223A",
@@ -157,11 +158,6 @@
      "channels": 2
     },
     {
-     "word": "다시",
-     "videos": 2,
-     "channels": 2
-    },
-    {
      "word": "SK하이닉스",
      "videos": 2,
      "channels": 1
@@ -175,45 +171,23 @@
    "active": true
   },
   {
-   "id": "일본_엔화",
-   "name": "일본·엔화",
-   "video_count": 4,
+   "id": "관세_무역",
+   "name": "관세·무역",
+   "video_count": 3,
    "channel_count": 3,
-   "total_views": 1110674,
-   "latest": "2026-09-20T10:55:14+09:00",
+   "total_views": 53024,
+   "latest": "2026-09-20T22:33:13+09:00",
    "video_ids": [
-    "zardCX1DCuc",
-    "m8rIgLFFH6o",
-    "ZnvsY482NJ0",
-    "x65FxA3UZ6o"
+    "52AGM7vy73s",
+    "HtpK33Gd_GA",
+    "NL0tTw4SIlQ"
    ],
    "channels": [
     "815머니톡",
-    "슈카월드",
-    "언더스탠딩"
+    "경제 읽어주는 남자 (김광석)",
+    "이효석아카데미"
    ],
-   "subtopics": [
-    {
-     "word": "비웰코리아",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "가스가",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "모에",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "대표",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
+   "subtopics": [],
    "active": true
   }
  ]
