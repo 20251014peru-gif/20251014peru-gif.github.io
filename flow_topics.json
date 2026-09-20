@@ -1,14 +1,16 @@
 {
- "updated_at": "2026-09-21T06:07:29.316633+09:00",
+ "updated_at": "2026-09-21T08:41:28.539296+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 14,
    "channel_count": 7,
-   "total_views": 941875,
-   "latest": "2026-09-20T20:00:22+09:00",
+   "total_views": 872269,
+   "latest": "2026-09-21T08:22:26+09:00",
    "video_ids": [
+    "NNfex-Rf6AA",
+    "5XtQTAd9qQg",
     "xm0RnQDvRKc",
     "mArf1wO_gLY",
     "sOp7-2ep8UI",
@@ -20,9 +22,7 @@
     "YsHdBA1cz4A",
     "ncTSI-frrVI",
     "SmqUrbRbCo4",
-    "xG6588IXZJI",
-    "JzL4ieZk7vs",
-    "iG7Mi6KYQkE"
+    "xG6588IXZJI"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
@@ -36,7 +36,7 @@
    "subtopics": [
     {
      "word": "대표",
-     "videos": 5,
+     "videos": 4,
      "channels": 3
     },
     {
@@ -50,17 +50,17 @@
      "channels": 2
     },
     {
+     "word": "박세익",
+     "videos": 2,
+     "channels": 1
+    },
+    {
      "word": "김서준",
-     "videos": 3,
+     "videos": 2,
      "channels": 1
     },
     {
      "word": "해시드",
-     "videos": 3,
-     "channels": 1
-    },
-    {
-     "word": "에이전트",
      "videos": 2,
      "channels": 1
     }
@@ -70,11 +70,14 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 11,
-   "channel_count": 6,
-   "total_views": 814986,
-   "latest": "2026-09-20T20:55:23+09:00",
+   "video_count": 14,
+   "channel_count": 7,
+   "total_views": 889174,
+   "latest": "2026-09-21T08:20:38+09:00",
    "video_ids": [
+    "ekBPqbzhJy0",
+    "5XtQTAd9qQg",
+    "Zy9s5cLNt-I",
     "ntxFAT7My7M",
     "XomoDrj223A",
     "Y27GKKHPf1E",
@@ -91,6 +94,7 @@
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
     "달란트투자",
+    "삼프로TV 3PROTV",
     "언더스탠딩",
     "증시각도기TV",
     "체슬리TV (박세익)"
@@ -102,12 +106,17 @@
      "channels": 3
     },
     {
+     "word": "메모리",
+     "videos": 3,
+     "channels": 3
+    },
+    {
      "word": "이렇게",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "메모리",
+     "word": "AI",
      "videos": 2,
      "channels": 2
     },
@@ -120,11 +129,6 @@
      "word": "SK하이닉스",
      "videos": 3,
      "channels": 1
-    },
-    {
-     "word": "엑시나",
-     "videos": 2,
-     "channels": 1
     }
    ],
    "active": true
@@ -132,30 +136,34 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 8,
+   "video_count": 7,
    "channel_count": 5,
-   "total_views": 791691,
-   "latest": "2026-09-21T04:00:34+09:00",
+   "total_views": 492073,
+   "latest": "2026-09-21T08:20:38+09:00",
    "video_ids": [
+    "ekBPqbzhJy0",
     "T7AWuOQqK48",
     "XomoDrj223A",
     "HtpK33Gd_GA",
     "cnKcRO9iE9k",
-    "-rdWdJl-REE",
     "bc613R2bJAc",
-    "kBC2Xn6niWU",
-    "JzL4ieZk7vs"
+    "kBC2Xn6niWU"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
     "김영익의 경제스쿨",
     "내일은 투자왕 - 김단테",
-    "삼프로TV 3PROTV"
+    "증시각도기TV"
    ],
    "subtopics": [
     {
      "word": "살아남",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "9월",
      "videos": 2,
      "channels": 2
     },
@@ -173,22 +181,46 @@
    "active": true
   },
   {
+   "id": "정책_정치",
+   "name": "정책·정치",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 789157,
+   "latest": "2026-09-21T08:22:26+09:00",
+   "video_ids": [
+    "NNfex-Rf6AA",
+    "GiXpSfrjG18",
+    "93iH1jbSiPw"
+   ],
+   "channels": [
+    "삼프로TV 3PROTV",
+    "슈카월드",
+    "한문도TV 부동산채널"
+   ],
+   "subtopics": [
+    {
+     "word": "미국",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "부동산",
    "name": "부동산",
-   "video_count": 4,
-   "channel_count": 4,
-   "total_views": 294773,
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 85074,
    "latest": "2026-09-21T06:05:39+09:00",
    "video_ids": [
     "koDFSiq3ZEE",
     "GiXpSfrjG18",
-    "tnIZ_xZrQOk",
-    "oaLTzqbqKiQ"
+    "tnIZ_xZrQOk"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
     "달란트투자",
-    "최준영 박사의 지구본 연구소",
     "한문도TV 부동산채널"
    ],
    "subtopics": [
@@ -210,7 +242,7 @@
    "name": "관세·무역",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 88107,
+   "total_views": 100382,
    "latest": "2026-09-20T22:33:13+09:00",
    "video_ids": [
     "52AGM7vy73s",
