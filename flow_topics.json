@@ -1,12 +1,12 @@
 {
- "updated_at": "2026-09-20T08:45:57.191789+09:00",
+ "updated_at": "2026-09-20T14:31:18.524355+09:00",
  "topics": [
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 11,
+   "video_count": 10,
    "channel_count": 8,
-   "total_views": 990194,
+   "total_views": 1036011,
    "latest": "2026-09-20T08:30:11+09:00",
    "video_ids": [
     "cnKcRO9iE9k",
@@ -18,8 +18,7 @@
     "V2XdIXRo3eM",
     "Z4Ks-9IuWiA",
     "E9QKryBfMzQ",
-    "zXitwW3RCm0",
-    "s039e9JGpnQ"
+    "zXitwW3RCm0"
    ],
    "channels": [
     "815머니톡",
@@ -43,127 +42,12 @@
      "channels": 2
     },
     {
-     "word": "31년",
-     "videos": 2,
-     "channels": 2
-    },
-    {
      "word": "섹터",
      "videos": 2,
      "channels": 2
     },
     {
      "word": "다시",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "일본",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "반도체",
-   "name": "반도체",
-   "video_count": 10,
-   "channel_count": 8,
-   "total_views": 664311,
-   "latest": "2026-09-20T08:30:11+09:00",
-   "video_ids": [
-    "cnKcRO9iE9k",
-    "5cOS2mK4l_M",
-    "H6-OAvaZ-Pc",
-    "SmqUrbRbCo4",
-    "Q4ZTBU7Dmeg",
-    "xG6588IXZJI",
-    "_bYazcPTPyE",
-    "AlGZn4UPeOs",
-    "E9QKryBfMzQ",
-    "GhVECglctrQ"
-   ],
-   "channels": [
-    "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "달란트투자",
-    "미주은 (미국주식으로 은퇴하기)",
-    "슈퍼개미 이세무사TV",
-    "언더스탠딩",
-    "염블리와 함께 (염승환)",
-    "증시각도기TV"
-   ],
-   "subtopics": [
-    {
-     "word": "삼성전자",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "대표",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "AI",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "9월",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "다시",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "SK하이닉스",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "일본_엔화",
-   "name": "일본·엔화",
-   "video_count": 6,
-   "channel_count": 6,
-   "total_views": 1668110,
-   "latest": "2026-09-19T17:00:23+09:00",
-   "video_ids": [
-    "7oa1Mvo6J2U",
-    "lUWtcxcoYBc",
-    "ZnvsY482NJ0",
-    "x65FxA3UZ6o",
-    "V2XdIXRo3eM",
-    "s039e9JGpnQ"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "달란트투자",
-    "삼프로TV 3PROTV",
-    "슈카월드",
-    "언더스탠딩",
-    "증시각도기TV"
-   ],
-   "subtopics": [
-    {
-     "word": "31년",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "한국",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "만에",
      "videos": 2,
      "channels": 2
     }
@@ -173,11 +57,16 @@
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 10,
-   "channel_count": 5,
-   "total_views": 543076,
-   "latest": "2026-09-20T07:00:21+09:00",
+   "video_count": 15,
+   "channel_count": 7,
+   "total_views": 673381,
+   "latest": "2026-09-20T13:00:24+09:00",
    "video_ids": [
+    "sOp7-2ep8UI",
+    "-0F4xvMIhRM",
+    "t0vHY503Lws",
+    "pkMGVeatSBA",
+    "-PqbfIsrMGA",
     "ejtSOizIcjQ",
     "Q7YS7xCkMFo",
     "YsHdBA1cz4A",
@@ -192,6 +81,8 @@
    "channels": [
     "경제 읽어주는 남자 (김광석)",
     "경제사냥꾼",
+    "삼프로TV 3PROTV",
+    "이효석아카데미",
     "증시각도기TV",
     "체슬리TV (박세익)",
     "티타임즈TV"
@@ -199,31 +90,31 @@
    "subtopics": [
     {
      "word": "대표",
+     "videos": 4,
+     "channels": 2
+    },
+    {
+     "word": "성상현",
      "videos": 3,
      "channels": 2
     },
     {
-     "word": "체슬리투자자문",
+     "word": "사람들",
      "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "에이전트",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "별주부전",
-     "videos": 2,
-     "channels": 1
+     "channels": 2
     },
     {
      "word": "김서준",
-     "videos": 2,
+     "videos": 3,
      "channels": 1
     },
     {
      "word": "해시드",
+     "videos": 3,
+     "channels": 1
+    },
+    {
+     "word": "체슬리투자자문",
      "videos": 2,
      "channels": 1
     }
@@ -231,23 +122,118 @@
    "active": true
   },
   {
-   "id": "정책_정치",
-   "name": "정책·정치",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 946209,
-   "latest": "2026-09-19T19:22:30+09:00",
+   "id": "반도체",
+   "name": "반도체",
+   "video_count": 10,
+   "channel_count": 7,
+   "total_views": 751267,
+   "latest": "2026-09-20T10:15:29+09:00",
    "video_ids": [
-    "93iH1jbSiPw",
-    "CGuOqtk20Hw",
-    "s039e9JGpnQ"
+    "m8rIgLFFH6o",
+    "cnKcRO9iE9k",
+    "5cOS2mK4l_M",
+    "H6-OAvaZ-Pc",
+    "SmqUrbRbCo4",
+    "Q4ZTBU7Dmeg",
+    "xG6588IXZJI",
+    "AlGZn4UPeOs",
+    "E9QKryBfMzQ",
+    "GhVECglctrQ"
    ],
    "channels": [
+    "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "슈카월드",
-    "이효석아카데미"
+    "미주은 (미국주식으로 은퇴하기)",
+    "슈퍼개미 이세무사TV",
+    "언더스탠딩",
+    "염블리와 함께 (염승환)",
+    "증시각도기TV"
    ],
-   "subtopics": [],
+   "subtopics": [
+    {
+     "word": "다시",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "대표",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "삼성전자",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "AI",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "9월",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "SK하이닉스",
+     "videos": 2,
+     "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "일본_엔화",
+   "name": "일본·엔화",
+   "video_count": 7,
+   "channel_count": 6,
+   "total_views": 1544898,
+   "latest": "2026-09-20T10:55:14+09:00",
+   "video_ids": [
+    "zardCX1DCuc",
+    "m8rIgLFFH6o",
+    "7oa1Mvo6J2U",
+    "lUWtcxcoYBc",
+    "ZnvsY482NJ0",
+    "x65FxA3UZ6o",
+    "V2XdIXRo3eM"
+   ],
+   "channels": [
+    "815머니톡",
+    "달란트투자",
+    "삼프로TV 3PROTV",
+    "슈카월드",
+    "언더스탠딩",
+    "증시각도기TV"
+   ],
+   "subtopics": [
+    {
+     "word": "한국",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "비웰코리아",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "가스가",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "모에",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "대표",
+     "videos": 2,
+     "channels": 1
+    }
+   ],
    "active": true
   }
  ]
