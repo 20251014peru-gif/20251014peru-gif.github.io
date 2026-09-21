@@ -1,0 +1,1 @@
+export default {id:'family',label:'가족 일정',description:'함께할 약속과 준비할 내용을 기록합니다. 실제 가족 공유는 클라우드 연결 후 가능합니다.',icon:'people',color:'#d38b38',fields:[{key:'with',label:'함께하는 사람',placeholder:'가족 이름'},{key:'prepare',label:'준비할 것',placeholder:'출발 전 챙길 내용'}]};
