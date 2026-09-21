@@ -1,5 +1,5 @@
-const CACHE='dalnim-shell-v1';
-const SHELL=['./','./index.html','./styles.css','./icon.svg','./manifest.webmanifest','./vendor/fullcalendar.min.js','./src/app.js','./src/config.js','./src/ui.js','./src/demo.js','./src/core/model.js','./src/core/store.js','./src/core/registry.js','./src/modules/worklog.js','./src/modules/investment.js','./src/modules/family.js','./src/adapters/worklog.js'];
+const CACHE='dalnim-shell-v2';
+const SHELL=['./','./index.html','./styles.css','./theme.css','./icon.svg','./manifest.webmanifest','./vendor/fullcalendar.min.js','./src/app.js','./src/config.js','./src/ui.js','./src/demo.js','./src/core/model.js','./src/core/store.js','./src/core/registry.js','./src/modules/worklog.js','./src/modules/investment.js','./src/modules/family.js','./src/adapters/worklog.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.allSettled(SHELL.map(p=>c.add(p)))));});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('dalnim-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{

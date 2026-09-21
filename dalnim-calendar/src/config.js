@@ -1,6 +1,6 @@
 // Live mode is opt-in. Never write into an existing worklog collection implicitly.
 export const config = {
-  version: '0.1.0',
+  version: '0.1.1',
   firebase: null, // { apiKey, projectId, authDomain, appId, messagingSenderId }
   apiBase: '', // e.g. https://REGION-PROJECT.cloudfunctions.net/calendarApi
   vapidPublicKey: '',
