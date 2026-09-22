@@ -4228,6 +4228,27 @@ function renderMScanRefs(){
 /* 업무 모달 scan-app picker 버튼 — 종류를 고르고 연다.
    예전엔 'receipt' 로 박혀 있어 서류·사진은 고를 방법이 아예 없었다. */
 function _onScanPicked(type,id,data){
+  /* v278 — 노션식 카드의 📎 스캔앱은 window._wlScanTargetId 로 「어느 기록에
+        붙일지」를 미리 적어 둔다(personal.js #pgScan). 그런데 여기서는 그걸
+        한 번도 읽지 않고 옛 입력창의 임시 목록(_mScanRefs)에만 쌓았다 —
+        그 목록은 옛 입력창의 저장 버튼을 눌러야 기록에 들어가는데, 카드
+        화면에는 그 버튼이 없으니 「첨부했는데 저장이 안 된다」로 보였다. */
+  var targetId = window._wlScanTargetId;
+  if(targetId){
+    window._wlScanTargetId = null;
+    try{
+      var rec = (typeof entries !== 'undefined' ? entries : []).filter(function(e){ return e && e.id === targetId; })[0];
+      if(rec){
+        var refs = Array.isArray(rec.scanRefs) ? rec.scanRefs.slice() : [];
+        refs.push({type:type, id:id, data:data||{}});
+        updateRecord(targetId, { scanRefs: refs });
+        toast(scanKindOf(type).icon+' '+scanRefTitle(type,data)+' 첨부됨');
+        try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(targetId); }catch(e){}
+        return;
+      }
+      console.warn('[스캔앱] 붙일 기록을 못 찾았어요 — 옛 방식으로 대신 담습니다:', targetId);
+    }catch(e){ console.error('[스캔앱] 카드에 붙이기 실패 — 옛 방식으로 대신 담습니다', e); }
+  }
   _mScanRefs.push({type,id,data:data||{}});
   renderMScanRefs();
   toast(scanKindOf(type).icon+' '+scanRefTitle(type,data)+' 첨부됨');
@@ -4260,6 +4281,7 @@ function _closeScanPickerJs(){
   if(ov) ov.style.display = 'none';
   if(frame) frame.src = 'about:blank';
   _scanPickCb = null;
+  window._wlScanTargetId = null;   /* v278 — 고르지 않고 닫아도 다음 스캔이 엉뚱한 기록에 안 붙게 */
 }
 
 /* 자체 수신기 — 2순위로 열었을 때만 동작한다.
@@ -4308,6 +4330,7 @@ if(mScanPickBtn){
         ev.stopPropagation();
         const t=b.dataset.kind;
         closeScanKindMenu();
+        window._wlScanTargetId = null;   /* v278 — 옛 입력창에서 열 때는 카드용 표시를 남기지 않는다 */
         openScanPickerOfType(t);
       });
     });
@@ -18351,6 +18374,22 @@ async function githubUpload(token){
     var box = document.createElement('div');
     box.className = 'qp-wrap';
 
+    /* v278 — 달님 : 「검색칸을 맨 위로」— 자주 쓰는 버튼판보다 검색창이 먼저 보이게 */
+    /* ── 검색창 + 목록 ── */
+    var q = null, list = null, ime = false;
+    if(useSearch){
+      var sw = document.createElement('div');
+      sw.className = 'ss-wrap';
+      sw.innerHTML =
+          '<input type="text" class="ss-q" autocomplete="off" '
+        + 'placeholder="' + (useChips ? '다른 것 찾기' : '검색')
+        + ' (초성 가능 · 예: ㅈㄱ → 전기)">'
+        + '<div class="ss-list"></div>';
+      box.appendChild(sw);
+      q    = sw.querySelector('.ss-q');
+      list = sw.querySelector('.ss-list');
+    }
+
     /* ── 단추판 ── */
     var chipVals = [];
     if(useChips){
@@ -18366,21 +18405,6 @@ async function githubUpload(token){
       }).join('')
       + '<button type="button" class="qp-it qp-clr" data-qpv="">비우기</button>';
       box.appendChild(grid);
-    }
-
-    /* ── 검색창 + 목록 ── */
-    var q = null, list = null, ime = false;
-    if(useSearch){
-      var sw = document.createElement('div');
-      sw.className = 'ss-wrap';
-      sw.innerHTML =
-          '<input type="text" class="ss-q" autocomplete="off" '
-        + 'placeholder="' + (useChips ? '다른 것 찾기' : '검색')
-        + ' (초성 가능 · 예: ㅈㄱ → 전기)">'
-        + '<div class="ss-list"></div>';
-      box.appendChild(sw);
-      q    = sw.querySelector('.ss-q');
-      list = sw.querySelector('.ss-list');
     }
 
     if(sel.parentNode) sel.parentNode.insertBefore(box, sel);
@@ -23425,7 +23449,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v277-0922-1825';
+  var JS_BUILD = 'v278-0922-1843';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
