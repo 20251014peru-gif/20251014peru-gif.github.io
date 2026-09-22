@@ -10236,7 +10236,9 @@ function v43CopyWorkExcel(){
     const costPart = (expType==='개인비용'||expType==='후불청구') && Number(e.cost)>0
       ? `${Math.round(Number(e.cost)).toLocaleString('ko-KR')}원`
       : '';
-    return [floor, title, detail, material, costPart].filter(Boolean).join(' ');
+    // v276: 제목_내용은 밑줄로 이어 붙인다 (나머지는 그대로 공백 구분)
+    const titleDetail = [title, detail].filter(Boolean).join('_');
+    return [floor, titleDetail, material, costPart].filter(Boolean).join(' ');
   });
   const text = rows.join('\n');
   if(navigator.clipboard && navigator.clipboard.writeText){
@@ -18021,6 +18023,14 @@ async function githubUpload(token){
     [].forEach.call(props.querySelectorAll('[data-prow]'), function(row){
       var key = row.getAttribute('data-prow');
       if(!key || key === '_date') return;                 /* 날짜는 못 숨긴다 */
+      /* v276 — 합계(_amount)를 숨기면 공급가액·부가세 자동분리와 지출 자동등록이
+            통째로 멈춘다(칸 자체가 안 보이니 입력을 못 한다). 그래서 못 숨긴다.
+            예전에 실수로 숨긴 적이 있으면 여기서 되살린다. */
+      if(key === '_amount'){
+        if(u.get('fld', key) === 0) u.set('fld', key, null);
+        if(row._userHid){ row.style.display = ''; row._userHid = 0; }
+        return;
+      }
 
       /* 사람이 숨긴 칸이면 감춘다 — 자동 규칙보다 세다 */
       if(u.get('fld', key) === 0){
@@ -23385,7 +23395,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v273-0907-1149';
+  var JS_BUILD = 'v274-0922-1702';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -24178,6 +24188,9 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
   var LS      = 'wl_exp_items';        /* 아예 끄기 */
   var LS_EDIT = 'wl_exp_items_edit';   /* 고치기 허용 (기본 켬) */
   var LS_AUTO = 'wl_exp_items_auto';   /* 금액 저절로 반영 (기본 끔) */
+  /* v276 — 업무 기록도 지출종류가 이거면 같은 상자를 붙인다 (별도 지출 화면을 열지 않아도
+        자재·중식·폐기물처럼 지출 항목을 여러 줄 담을 수 있게). wlExpSync 의 MAP 과 같은 종류. */
+  var WORK_EXP_TYPES = { '개인비용':1, '전표':1, '후불청구':1 };
 
   function on(){     try{ return localStorage.getItem(LS)      !== '0'; }catch(e){ return true;  } }
   function canEdit(){try{ return localStorage.getItem(LS_EDIT) !== '0'; }catch(e){ return true;  } }
@@ -24317,7 +24330,8 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
          + '</div>';
   }
 
-  function html(r, s, edit){
+  function html(r, s, edit, field){
+    field = field || 'amount';
     var h = '<div class="ei-cols">';
     if(s.mats.length || edit)
       h += sec('matItems', s.mats, edit,
@@ -24337,8 +24351,8 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
 
     h += '</div>';                       /* v241 — 가로 상자 닫기 */
     /* 🔴 지금 저장된 금액과 견준다 */
-    var want = wantAmount(r, s), now = n(r.amount);
-    h += '<div id="eiSum" style="margin-top:9px">' + sumHTML(want, now, edit) + '</div>';
+    var want = wantAmount(r, s), now = n(r[field]);
+    h += '<div id="eiSum" style="margin-top:9px">' + sumHTML(want, now, edit, field) + '</div>';
     h += '<div style="margin-top:6px;font-size:11.5px;color:#a8b8c8">'
        + (edit ? '고친 값은 칸에서 빠져나올 때 저장됩니다' : '보기 전용입니다')
        + ' · 끄기 wlExpItems.off()'
@@ -24347,20 +24361,21 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     return h;
   }
 
-  function sumHTML(want, now, edit){
+  function sumHTML(want, now, edit, field){
     if(want == null) return '';
+    var label = (field === 'cost') ? '합계' : '금액';           /* v276 — 업무는 「합계」 칸이 짝이다 */
     var gap = Math.abs(want - now);
     if(gap <= 1)
       return '<div style="font-size:12.5px;font-weight:800;color:#0f7a4a">'
-           + '✅ 내역 합계와 「금액」이 같습니다 (' + won(now) + '원)</div>';
+           + '✅ 내역 합계와 「' + label + '」이 같습니다 (' + won(now) + '원)</div>';
     return '<div style="font-size:12.5px;font-weight:800;color:#b52929;background:#fdecec;'
          + 'border-radius:8px;padding:8px 10px;line-height:1.7">'
-         + '🔴 내역 합계 <b>' + won(want) + '원</b> ≠ 저장된 금액 <b>' + won(now) + '원</b>'
+         + '🔴 내역 합계 <b>' + won(want) + '원</b> ≠ 저장된 ' + label + ' <b>' + won(now) + '원</b>'
          + ' <span style="color:#8a5a5a">(' + won(gap) + '원 차이)</span>'
          + (edit
             ? '<br><button type="button" id="eiApply" style="margin-top:6px;height:34px;padding:0 14px;'
               + 'border:none;border-radius:9px;background:#b52929;color:#fff;font-size:13px;font-weight:800;'
-              + 'cursor:pointer;font-family:inherit">🧮 금액에 반영 (' + won(want) + '원)</button>'
+              + 'cursor:pointer;font-family:inherit">🧮 ' + label + '에 반영 (' + won(want) + '원)</button>'
               + ' <span style="font-weight:700;color:#7a4a4a">눌러야 바뀝니다 — 저절로 덮어쓰지 않습니다</span>'
             : '<br><span style="font-weight:700;color:#7a4a4a">고치려면 [✏️ 전체 서식] 에서</span>')
          + '</div>';
@@ -24402,13 +24417,28 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
       if(!r2) return;
       var s2 = sums(r2);
       var el = box.querySelector('#eiSum');
-      if(el) el.innerHTML = sumHTML(wantAmount(r2, s2), n(r2.amount), canEdit());
+      if(el) el.innerHTML = sumHTML(wantAmount(r2, s2), n(r2.amount), canEdit(), 'amount');
       bindApply(box, rid);
       if(autoOn()){                                  /* 저절로 반영을 켜 둔 경우 */
         var w = wantAmount(r2, s2);
         if(w != null && Math.abs(w - n(r2.amount)) > 1) applyAmount(box, rid, true);
       }
     }catch(e){ console.warn('[지출 내역] 합계 갱신 실패', e); }
+  }
+  /* v276 — 업무 기록용 짝 (같은 항목을 「합계」 칸에 반영한다) */
+  function reSumWorkExp(box, rid){
+    try{
+      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0];
+      if(!r2) return;
+      var s2 = sums(r2);
+      var el = box.querySelector('#eiSum');
+      if(el) el.innerHTML = sumHTML(wantAmount(r2, s2), n(r2.cost), canEdit(), 'cost');
+      bindApplyWorkExp(box, rid);
+      if(autoOn()){
+        var w = wantAmount(r2, s2);
+        if(w != null && Math.abs(w - n(r2.cost)) > 1) applyAmountWorkExp(box, rid, true);
+      }
+    }catch(e){ console.warn('[업무 지출 내역] 합계 갱신 실패', e); }
   }
   function applyAmount(box, rid, quiet){
     try{
@@ -24429,14 +24459,45 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     var b = box.querySelector('#eiApply');
     if(b && !b._eiB){ b._eiB = 1; b.addEventListener('click', function(){ applyAmount(box, rid, false); }); }
   }
+  /* v276 — 업무 기록용 짝 (「합계」 칸에 반영 — 그러면 공급가액·부가세 자동분리·
+        지출 자동등록이 그대로 이어받는다, wlExpSync 참고) */
+  function applyAmountWorkExp(box, rid, quiet){
+    try{
+      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0];
+      if(!r2) return;
+      var s2 = sums(r2), w = wantAmount(r2, s2);
+      if(w == null) return;
+      var patch = { cost: Math.round(w) };
+      if(s2.mats.length){ patch.supplyAmt = Math.round(s2.matSupply); patch.taxAmt = Math.round(s2.matTax); }
+      if(typeof updateRecord === 'function') updateRecord(rid, patch);
+      if(typeof toast === 'function') toast('🧮 합계를 ' + won(w) + '원으로 맞췄어요' + (quiet ? ' (저절로)' : ''));
+      reSumWorkExp(box, rid);
+      try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e){}
+    }catch(e){ console.error('[업무 지출 내역] 합계 반영 실패', e);
+      if(typeof toast === 'function') toast('합계를 못 바꿨어요: ' + (e.message || e)); }
+  }
+  function bindApplyWorkExp(box, rid){
+    var b = box.querySelector('#eiApply');
+    if(b && !b._eiB){ b._eiB = 1; b.addEventListener('click', function(){ applyAmountWorkExp(box, rid, false); }); }
+  }
+  function redrawWorkExp(box, rid){
+    try{
+      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
+      box.innerHTML = html(r2, sums(r2), canEdit(), 'cost');
+      bind(box, rid, 'workexp');
+    }catch(e){ console.warn('[업무 지출 내역] 다시 그리기 실패', e); }
+  }
 
-  /* v204·v205 — 어느 상자인지에 따라 「다시 그리기 · 합계 갱신」을 갈아 끼운다
-        exp   = 지출 (금액 반영 단추)
-        work  = 업무·사고 자재 (자재 합계 칸)
-        clean = 청소 목록 (합계 띠 없음) */
+  /* v204·v205·v276 — 어느 상자인지에 따라 「다시 그리기 · 합계 갱신」을 갈아 끼운다
+        exp     = 지출 (금액 반영 단추)
+        workexp = 업무 기록의 지출 항목 (합계 칸에 반영 — v276)
+        work    = 업무·사고 자재 (자재 합계 칸)
+        clean   = 청소 목록 (합계 띠 없음) */
   function bind(box, rid, mode){
-    var RD = (mode === 'work') ? redrawWork : (mode === 'clean') ? redrawClean : redraw;
-    var RS = (mode === 'work') ? reSumWork  : (mode === 'clean') ? reSumClean  : reSum;
+    var RD = (mode === 'work') ? redrawWork : (mode === 'clean') ? redrawClean
+           : (mode === 'workexp') ? redrawWorkExp : redraw;
+    var RS = (mode === 'work') ? reSumWork  : (mode === 'clean') ? reSumClean
+           : (mode === 'workexp') ? reSumWorkExp : reSum;
     /* 값 고치기 — ⌨️ 글자를 치는 동안에는 건드리지 않는다. 칸에서 빠져나올 때만 저장한다 */
     box.querySelectorAll('[data-eik]').forEach(function(inp){
       if(inp._eiB) return; inp._eiB = 1;
@@ -24500,13 +24561,14 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     });
     if(mode === 'work')      bindApplyWork(box, rid);
     else if(mode === 'clean') bindClean(box, rid);
+    else if(mode === 'workexp') bindApplyWorkExp(box, rid);
     else                      bindApply(box, rid);
   }
 
   function redraw(box, rid){
     try{
       var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
-      box.innerHTML = html(r2, sums(r2), canEdit());
+      box.innerHTML = html(r2, sums(r2), canEdit(), 'amount');
       bind(box, rid, 'exp');
     }catch(e){ console.warn('[지출 내역] 다시 그리기 실패', e); }
   }
@@ -24956,7 +25018,12 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     var page = document.querySelector('.lf-page');
     if(!page){ off(); return; }
     var r = recNow();
-    if(!r || r.kind !== 'expense'){ off(); return; }
+    /* v276 — 업무 기록도 지출종류가 개인비용·전표·후불청구면 같은 상자를 붙인다.
+          그러면 업무 입력 화면에서 벗어나지 않고도 지출 항목을 여러 줄 담을 수 있다
+          (달님 : 「지출도 추가 추가 할 수 있게 해줘」). */
+    var isExp     = !!(r && r.kind === 'expense');
+    var isWorkExp = !!(r && r.kind === 'work' && WORK_EXP_TYPES[String(r.expType||'').trim()]);
+    if(!r || (!isExp && !isWorkExp)){ off(); return; }
     var s = sums(r);
     var edit = canEdit();
     if(!s.any && !edit){ off(); return; }
@@ -24975,8 +25042,13 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
         function(d){
           /* ⌨️ 글자를 치는 동안에는 다시 그리지 않는다 (한글 자모가 깨진다) */
           try{ if(d.contains(document.activeElement)) return; }catch(e){}
-          d.innerHTML = html(r, s, edit);
-          bind(d, r.id, 'exp');
+          if(isWorkExp){
+            d.innerHTML = html(r, s, edit, 'cost');
+            bind(d, r.id, 'workexp');
+          }else{
+            d.innerHTML = html(r, s, edit, 'amount');
+            bind(d, r.id, 'exp');
+          }
         });
     }catch(e){ console.warn('[지출 내역] 붙이기 실패', e); }
   }
