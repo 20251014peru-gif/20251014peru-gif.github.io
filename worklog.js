@@ -15693,11 +15693,25 @@ async function githubUpload(token){
             밴드 안에서 조용히 감춰 둔다 → 덩어리 밖에 덩그러니 뜨지 않는다. */
       var prev = hRow;
       rows.forEach(function(r){
-        var wasHidden = false;
-        try{ wasHidden = !!(r.el.closest && r.el.closest('#pgHidden')); }catch(e){}
+        /* v279 — 「빈 항목 N개 접기」 상자 안에 있던 칸을 묶음 자리로 옮길 때,
+              그 상자가 지금 펼쳐진 상태(display:contents)인데도 무조건 다시
+              숨겨 버렸다. 그러면 상자를 펼쳐도(빈 항목 보기) 묶음에 속한 칸은
+              하나도 안 나타났다 — 사람이 「접기도 한 개만 된다」로 겪은 것.
+              지금 펼쳐져 있으면 숨기지 않는다. */
+        var wasHidden = false, hiddenOpen = false;
+        try{
+          var ph = r.el.closest && r.el.closest('#pgHidden');
+          wasHidden = !!ph;
+          if(ph) hiddenOpen = (ph.style.display === 'contents');
+        }catch(e){}
         if(r.el.previousElementSibling !== prev) putAfter(r.el, prev);
         prev = r.el;
-        if(wasHidden){ r.el.style.display = 'none'; r.el._gEmpty = 1; }
+        /* v279 — 「합계」(_amount) 는 이 길로도 숨을 수 있었다. wlEye(칸 숨기기)
+              쪽만 못 숨기게 막아 뒀지, 여기(빈 칸이라 묶음 안에 조용히 숨기는 길)는
+              그대로였다 — 「빈 항목」을 한 번도 편 적 없는 기기·계정에서는
+              공급가액·부가세·자동등록이 처음부터 막혀 있었다는 뜻. */
+        if(wasHidden && !hiddenOpen && r.k !== '_amount'){ r.el.style.display = 'none'; r.el._gEmpty = 1; }
+        else if(r.el._gEmpty){ r.el.style.display = ''; r.el._gEmpty = 0; }
       });
 
       hRow.classList.add('pg-gm', 'pg-gm-first');
@@ -22434,7 +22448,18 @@ async function githubUpload(token){
 
   function on(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
   function narrow(){ try{ return window.innerWidth <= WIDE; }catch(e){ return false; } }
-  var opened = false;                 /* 이번에 펼쳐 뒀나 */
+  var opened = false;                 /* 이번에 펼쳐 뒀나 (아래 pgMore 가 없을 때만 쓰는 대비책) */
+  /* v279 — 「빈 항목 N개 접기」(personal.js #pgHidden·pgMore) 와 이 모듈이
+        서로 모른 채 각자 빈 칸을 숨겼다 폰에서는 pgMore 로 펼쳐도 이 모듈이
+        곧바로 다시 숨겨서 「접기가 안 먹는다」로 보였다. 같은 기록을 가리킬
+        때는 pgMore 쪽 상태를 그대로 따른다. */
+  function isMasterOpen(){
+    try{
+      var ph = document.getElementById('pgHidden');
+      if(ph) return ph.style.display === 'contents';
+    }catch(e){}
+    return opened;
+  }
 
   function emptyRow(row){
     var v = row.querySelector('.pg-val');
@@ -22459,18 +22484,22 @@ async function githubUpload(token){
       return;
     }
 
+    var masterOpen = isMasterOpen();
     var hid = 0;
     rows.forEach(function(r){
       var pid = r.getAttribute('data-prow') || '';
       if(KEEP.test(pid)){ if(r._phFold){ r.style.display=''; r._phFold=0; } return; }
       if(r.contains(document.activeElement)){ if(r._phFold){ r.style.display=''; r._phFold=0; } return; }
       var empty = emptyRow(r);
-      if(empty && !opened){ r.style.display = 'none'; r._phFold = 1; hid++; }
+      if(empty && !masterOpen){ r.style.display = 'none'; r._phFold = 1; hid++; }
       else if(r._phFold){ r.style.display = ''; r._phFold = 0; }
-      else if(empty && opened) hid++;
+      else if(empty && masterOpen) hid++;
     });
 
     if(!hid){ if(bar) bar.remove(); return; }
+    /* v279 — pgMore(「빈 항목 N개 접기」)가 이미 같은 일을 하는 기록이면
+          여기서 또 단추를 만들지 않는다 — 두 단추가 같은 걸 가리키면 헷갈린다. */
+    if(document.getElementById('pgMore')){ if(bar) bar.remove(); return; }
 
     if(!bar){
       bar = document.createElement('button');
@@ -22486,7 +22515,7 @@ async function githubUpload(token){
       var host2 = bar.parentNode;
       if(host2) host2.appendChild(bar);      /* 늘 맨 아래로 */
     }
-    bar.textContent = opened ? ('▲ 빈 칸 ' + hid + '개 접기') : ('＋ 빈 칸 ' + hid + '개 보기');
+    bar.textContent = masterOpen ? ('▲ 빈 칸 ' + hid + '개 접기') : ('＋ 빈 칸 ' + hid + '개 보기');
   }
 
   /* 창이 새로 열리면 다시 접는다 */
@@ -23449,7 +23478,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v278-0922-1843';
+  var JS_BUILD = 'v279-0922-1911';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -24210,6 +24239,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
   console.log('[모드 칸] 고른 값이 필요로 하는 칸을 바로 밑으로 데려옵니다 (v189)');
 })();
 
+
 /* ══════════════════════════════════════════════════════════════
    v201·v202 — 💰 지출 페이지의 「자재 · 중식 · 폐기물 내역」
 
@@ -24242,9 +24272,6 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
   var LS      = 'wl_exp_items';        /* 아예 끄기 */
   var LS_EDIT = 'wl_exp_items_edit';   /* 고치기 허용 (기본 켬) */
   var LS_AUTO = 'wl_exp_items_auto';   /* 금액 저절로 반영 (기본 끔) */
-  /* v276 — 업무 기록도 지출종류가 이거면 같은 상자를 붙인다 (별도 지출 화면을 열지 않아도
-        자재·중식·폐기물처럼 지출 항목을 여러 줄 담을 수 있게). wlExpSync 의 MAP 과 같은 종류. */
-  var WORK_EXP_TYPES = { '개인비용':1, '전표':1, '후불청구':1 };
 
   function on(){     try{ return localStorage.getItem(LS)      !== '0'; }catch(e){ return true;  } }
   function canEdit(){try{ return localStorage.getItem(LS_EDIT) !== '0'; }catch(e){ return true;  } }
@@ -24291,10 +24318,6 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     }catch(e){ console.warn('[지출 내역] 기록 읽기 실패', e); return null; }
   }
   function off(){ try{ window.wlAddOn(['#__none'], 'expitems', function(){ return null; }); }catch(e){} }
-  /* v277 — 업무 화면에서 항목 상자를 열기 전 「＋ 항목 추가」 작은 단추만 보일 때 쓰는 자리표시자 */
-  function offBtn(){ try{ window.wlAddOn(['#__none'], 'expitemsbtn', function(){ return null; }); }catch(e){} }
-  /* 업무 기록마다 "이번에 펼쳤나" — 새로고침하면 다시 접힌다 (담은 항목이 있으면 어차피 펼쳐진다) */
-  var openIds = {};
 
   /* ── 표 한 줄 ── */
   var COLS = {
@@ -24388,8 +24411,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
          + '</div>';
   }
 
-  function html(r, s, edit, field){
-    field = field || 'amount';
+  function html(r, s, edit){
     var h = '<div class="ei-cols">';
     if(s.mats.length || edit)
       h += sec('matItems', s.mats, edit,
@@ -24409,8 +24431,8 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
 
     h += '</div>';                       /* v241 — 가로 상자 닫기 */
     /* 🔴 지금 저장된 금액과 견준다 */
-    var want = wantAmount(r, s), now = n(r[field]);
-    h += '<div id="eiSum" style="margin-top:9px">' + sumHTML(want, now, edit, field) + '</div>';
+    var want = wantAmount(r, s), now = n(r.amount);
+    h += '<div id="eiSum" style="margin-top:9px">' + sumHTML(want, now, edit) + '</div>';
     h += '<div style="margin-top:6px;font-size:11.5px;color:#a8b8c8">'
        + (edit ? '고친 값은 칸에서 빠져나올 때 저장됩니다' : '보기 전용입니다')
        + ' · 끄기 wlExpItems.off()'
@@ -24419,21 +24441,20 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     return h;
   }
 
-  function sumHTML(want, now, edit, field){
+  function sumHTML(want, now, edit){
     if(want == null) return '';
-    var label = (field === 'cost') ? '합계' : '금액';           /* v276 — 업무는 「합계」 칸이 짝이다 */
     var gap = Math.abs(want - now);
     if(gap <= 1)
       return '<div style="font-size:12.5px;font-weight:800;color:#0f7a4a">'
-           + '✅ 내역 합계와 「' + label + '」이 같습니다 (' + won(now) + '원)</div>';
+           + '✅ 내역 합계와 「금액」이 같습니다 (' + won(now) + '원)</div>';
     return '<div style="font-size:12.5px;font-weight:800;color:#b52929;background:#fdecec;'
          + 'border-radius:8px;padding:8px 10px;line-height:1.7">'
-         + '🔴 내역 합계 <b>' + won(want) + '원</b> ≠ 저장된 ' + label + ' <b>' + won(now) + '원</b>'
+         + '🔴 내역 합계 <b>' + won(want) + '원</b> ≠ 저장된 금액 <b>' + won(now) + '원</b>'
          + ' <span style="color:#8a5a5a">(' + won(gap) + '원 차이)</span>'
          + (edit
             ? '<br><button type="button" id="eiApply" style="margin-top:6px;height:34px;padding:0 14px;'
               + 'border:none;border-radius:9px;background:#b52929;color:#fff;font-size:13px;font-weight:800;'
-              + 'cursor:pointer;font-family:inherit">🧮 ' + label + '에 반영 (' + won(want) + '원)</button>'
+              + 'cursor:pointer;font-family:inherit">🧮 금액에 반영 (' + won(want) + '원)</button>'
               + ' <span style="font-weight:700;color:#7a4a4a">눌러야 바뀝니다 — 저절로 덮어쓰지 않습니다</span>'
             : '<br><span style="font-weight:700;color:#7a4a4a">고치려면 [✏️ 전체 서식] 에서</span>')
          + '</div>';
@@ -24475,28 +24496,13 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
       if(!r2) return;
       var s2 = sums(r2);
       var el = box.querySelector('#eiSum');
-      if(el) el.innerHTML = sumHTML(wantAmount(r2, s2), n(r2.amount), canEdit(), 'amount');
+      if(el) el.innerHTML = sumHTML(wantAmount(r2, s2), n(r2.amount), canEdit());
       bindApply(box, rid);
       if(autoOn()){                                  /* 저절로 반영을 켜 둔 경우 */
         var w = wantAmount(r2, s2);
         if(w != null && Math.abs(w - n(r2.amount)) > 1) applyAmount(box, rid, true);
       }
     }catch(e){ console.warn('[지출 내역] 합계 갱신 실패', e); }
-  }
-  /* v276 — 업무 기록용 짝 (같은 항목을 「합계」 칸에 반영한다) */
-  function reSumWorkExp(box, rid){
-    try{
-      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0];
-      if(!r2) return;
-      var s2 = sums(r2);
-      var el = box.querySelector('#eiSum');
-      if(el) el.innerHTML = sumHTML(wantAmount(r2, s2), n(r2.cost), canEdit(), 'cost');
-      bindApplyWorkExp(box, rid);
-      if(autoOn()){
-        var w = wantAmount(r2, s2);
-        if(w != null && Math.abs(w - n(r2.cost)) > 1) applyAmountWorkExp(box, rid, true);
-      }
-    }catch(e){ console.warn('[업무 지출 내역] 합계 갱신 실패', e); }
   }
   function applyAmount(box, rid, quiet){
     try{
@@ -24517,45 +24523,14 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     var b = box.querySelector('#eiApply');
     if(b && !b._eiB){ b._eiB = 1; b.addEventListener('click', function(){ applyAmount(box, rid, false); }); }
   }
-  /* v276 — 업무 기록용 짝 (「합계」 칸에 반영 — 그러면 공급가액·부가세 자동분리·
-        지출 자동등록이 그대로 이어받는다, wlExpSync 참고) */
-  function applyAmountWorkExp(box, rid, quiet){
-    try{
-      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0];
-      if(!r2) return;
-      var s2 = sums(r2), w = wantAmount(r2, s2);
-      if(w == null) return;
-      var patch = { cost: Math.round(w) };
-      if(s2.mats.length){ patch.supplyAmt = Math.round(s2.matSupply); patch.taxAmt = Math.round(s2.matTax); }
-      if(typeof updateRecord === 'function') updateRecord(rid, patch);
-      if(typeof toast === 'function') toast('🧮 합계를 ' + won(w) + '원으로 맞췄어요' + (quiet ? ' (저절로)' : ''));
-      reSumWorkExp(box, rid);
-      try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e){}
-    }catch(e){ console.error('[업무 지출 내역] 합계 반영 실패', e);
-      if(typeof toast === 'function') toast('합계를 못 바꿨어요: ' + (e.message || e)); }
-  }
-  function bindApplyWorkExp(box, rid){
-    var b = box.querySelector('#eiApply');
-    if(b && !b._eiB){ b._eiB = 1; b.addEventListener('click', function(){ applyAmountWorkExp(box, rid, false); }); }
-  }
-  function redrawWorkExp(box, rid){
-    try{
-      var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
-      box.innerHTML = html(r2, sums(r2), canEdit(), 'cost');
-      bind(box, rid, 'workexp');
-    }catch(e){ console.warn('[업무 지출 내역] 다시 그리기 실패', e); }
-  }
 
-  /* v204·v205·v276 — 어느 상자인지에 따라 「다시 그리기 · 합계 갱신」을 갈아 끼운다
-        exp     = 지출 (금액 반영 단추)
-        workexp = 업무 기록의 지출 항목 (합계 칸에 반영 — v276)
-        work    = 업무·사고 자재 (자재 합계 칸)
-        clean   = 청소 목록 (합계 띠 없음) */
+  /* v204·v205 — 어느 상자인지에 따라 「다시 그리기 · 합계 갱신」을 갈아 끼운다
+        exp   = 지출 (금액 반영 단추)
+        work  = 업무·사고 자재 (자재 합계 칸)
+        clean = 청소 목록 (합계 띠 없음) */
   function bind(box, rid, mode){
-    var RD = (mode === 'work') ? redrawWork : (mode === 'clean') ? redrawClean
-           : (mode === 'workexp') ? redrawWorkExp : redraw;
-    var RS = (mode === 'work') ? reSumWork  : (mode === 'clean') ? reSumClean
-           : (mode === 'workexp') ? reSumWorkExp : reSum;
+    var RD = (mode === 'work') ? redrawWork : (mode === 'clean') ? redrawClean : redraw;
+    var RS = (mode === 'work') ? reSumWork  : (mode === 'clean') ? reSumClean  : reSum;
     /* 값 고치기 — ⌨️ 글자를 치는 동안에는 건드리지 않는다. 칸에서 빠져나올 때만 저장한다 */
     box.querySelectorAll('[data-eik]').forEach(function(inp){
       if(inp._eiB) return; inp._eiB = 1;
@@ -24619,14 +24594,13 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     });
     if(mode === 'work')      bindApplyWork(box, rid);
     else if(mode === 'clean') bindClean(box, rid);
-    else if(mode === 'workexp') bindApplyWorkExp(box, rid);
     else                      bindApply(box, rid);
   }
 
   function redraw(box, rid){
     try{
       var r2 = (entries || []).filter(function(x){ return x && x.id === rid; })[0]; if(!r2) return;
-      box.innerHTML = html(r2, sums(r2), canEdit(), 'amount');
+      box.innerHTML = html(r2, sums(r2), canEdit());
       bind(box, rid, 'exp');
     }catch(e){ console.warn('[지출 내역] 다시 그리기 실패', e); }
   }
@@ -25076,59 +25050,16 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     var page = document.querySelector('.lf-page');
     if(!page){ off(); return; }
     var r = recNow();
-    /* v276 — 업무 기록도 지출종류가 개인비용·전표·후불청구면 같은 상자를 붙인다.
-          그러면 업무 입력 화면에서 벗어나지 않고도 지출 항목을 여러 줄 담을 수 있다
-          (달님 : 「지출도 추가 추가 할 수 있게 해줘」). */
-    var isExp     = !!(r && r.kind === 'expense');
-    var isWorkExp = !!(r && r.kind === 'work' && WORK_EXP_TYPES[String(r.expType||'').trim()]);
-    if(!r || (!isExp && !isWorkExp)){ off(); offBtn(); return; }
+    if(!r || r.kind !== 'expense'){ off(); return; }
     var s = sums(r);
     var edit = canEdit();
-    if(!s.any && !edit){ off(); offBtn(); return; }
-
-    /* v277 — 업무 화면은 항목을 이미 담았을 때만 상자가 보이고, 그 전엔 작은
-          「＋ 항목 추가」 단추만 있다 — 공급가액·부가세·합계만 쓰는 사람에게는
-          평소에 화면을 안 차지하게. (지출 kind:expense 화면은 예전 그대로 둔다) */
-    /* v278 — 달님 : 「업체부터 항목까지, 폐기물 있는 곳이 애매하다」
-          업무 화면은 v241 의 「전체 폭」 자리(.pg-props 맨 끝)에 붙다 보니
-          업체·시각 같은 딴 구역 뒤로 밀려나 비용 칸과 뚝 떨어져 보였다.
-          업무에서는 비용 묶음 발치(지출 잇기 칩과 같은 자리)에 붙여 비용 칸 바로 곁에 둔다. */
-    var WORK_HOSTS = ['[data-gfoot="gc"]', '[data-prow="_amount"] .pg-pv', '[data-prow="f:expType"] .pg-pv'];
-    var EXP_HOSTS  = ['.lf-page .pg-props', '[data-prow="_amount"] .pg-pv'];
-
-    if(isWorkExp && edit && !s.any && !openIds[r.id]){
-      off();
-      try{
-        window.wlAddOn(WORK_HOSTS, 'expitemsbtn',
-          function(){
-            var b = document.createElement('button');
-            b.type = 'button';
-            b.style.cssText = 'margin-top:8px;height:32px;padding:0 12px;border:1.5px dashed #cfe0f3;'
-                             + 'border-radius:9px;background:#f8fbff;color:#3f7cb8;font-size:12.5px;'
-                             + 'font-weight:800;cursor:pointer;font-family:inherit';
-            return b;
-          },
-          function(b){
-            b.textContent = '＋ 항목 추가 (자재·중식·폐기물로 나눠 담기)';
-            if(!b._eiOpenB){
-              b._eiOpenB = 1;
-              b.addEventListener('click', function(){
-                openIds[r.id] = 1;
-                try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e){}
-              });
-            }
-          });
-      }catch(e){ console.warn('[지출 내역] 열기 단추 실패', e); }
-      return;
-    }
-    offBtn();
-
+    if(!s.any && !edit){ off(); return; }
     try{
       /* v241 — 달님 : 「자재·중식·폐기물이 세로로 쌓여 칸이 길어진다」
          예전에는 「합계」 값 칸(좁은 오른쪽 칸) 안에 붙어 폭이 253px 뿐이었다.
          속성 목록 전체 폭에 붙여 세 덩이가 가로로 늘어서게 한다.
          (합계 칸 안으로 되돌리려면 두 주소의 앞뒤를 바꾸면 된다) */
-      window.wlAddOn(isWorkExp ? WORK_HOSTS : EXP_HOSTS, 'expitems',
+      window.wlAddOn(['.lf-page .pg-props', '[data-prow="_amount"] .pg-pv'], 'expitems',
         function(){
           var d = document.createElement('div');
           d.style.cssText = 'margin-top:8px;border:1.5px solid #dbe6f4;border-radius:10px;'
@@ -25138,13 +25069,8 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
         function(d){
           /* ⌨️ 글자를 치는 동안에는 다시 그리지 않는다 (한글 자모가 깨진다) */
           try{ if(d.contains(document.activeElement)) return; }catch(e){}
-          if(isWorkExp){
-            d.innerHTML = html(r, s, edit, 'cost');
-            bind(d, r.id, 'workexp');
-          }else{
-            d.innerHTML = html(r, s, edit, 'amount');
-            bind(d, r.id, 'exp');
-          }
+          d.innerHTML = html(r, s, edit);
+          bind(d, r.id, 'exp');
         });
     }catch(e){ console.warn('[지출 내역] 붙이기 실패', e); }
   }
@@ -25194,6 +25120,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
             + ' · 업무 ' + (wOn()?(wEdit()?'고치기':'보기'):'꺼짐')
             + ' · 청소 ' + (cOn()?(cEdit()?'고치기':'보기'):'꺼짐'));
 })();
+
 
 
 /* ============================================================

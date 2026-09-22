@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v278-0922-1843';
+window.PERSONAL_BUILD = 'v279-0922-1911';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -5862,12 +5862,14 @@ window.PERSONAL_BUILD = 'v278-0922-1843';
     if(more) more.addEventListener('click', function(){
       var box=document.getElementById('pgHidden');
       var nowOpen = box.style.display!=='none';
-      box.style.display = nowOpen ? 'none' : 'contents';
       var mo=lsGet('wl_life_pgopen2',null); if(!mo || typeof mo!=='object') mo={};
       if(nowOpen) delete mo[pgKey]; else mo[pgKey]=1;
       lsSet('wl_life_pgopen2', mo);
-      more.textContent = nowOpen ? ('▸ 빈 항목 '+hidden.length+'개 더 보기')
-                                 : ('▾ 빈 항목 '+hidden.length+'개 접기');
+      /* v279 — 여기서 칸만 켜고 끄면, 묶음(비용·업체·시각 등)에 속한 빈 칸은
+            worklog.js 의 묶어보기가 이미 따로 옮겨 숨겨 둔 채라 하나도 안
+            나타났다 — 「접기가 한 개만 된다」. 다시 그려서 묶어보기도
+            새 펼침 상태를 보고 다시 정하게 한다. */
+      openPage(id);
     });
 
     /* 하위 항목 */
