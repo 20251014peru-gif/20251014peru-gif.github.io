@@ -1,3 +1,4 @@
+import {attachWorklog} from './worklog-contract.js';
 import {validateEvent} from './model.js';
 export class LocalStore {
   async init(name='dalnim-preview-v1') {
@@ -11,14 +12,15 @@ export class LocalStore {
   async meta(key,fallback){const v=await this.read('meta',s=>s.get(key));return v===undefined?fallback:v;}
   read(name,fn){return new Promise((resolve,reject)=>{const r=fn(this.db.transaction(name).objectStore(name));r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
   setMeta(key,value){return new Promise((resolve,reject)=>{const t=this.db.transaction('meta','readwrite');t.objectStore('meta').put(value,key);t.oncomplete=()=>resolve();t.onerror=()=>reject(t.error);});}
-  async save(input,expectedRevision=0){
+  async save(input,expectedRevision=0,options={}){
     const e=validateEvent(input);
     return new Promise((resolve,reject)=>{
       const t=this.db.transaction('events','readwrite'), s=t.objectStore('events');let result, failure;
       const r=s.get(e.id);r.onsuccess=()=>{
         const old=r.result;
         if((old?.revision||0)!==expectedRevision){failure=Error('다른 화면에서 이 일정을 수정했습니다. 창을 닫고 최신 내용을 다시 열어 주세요.');t.abort();return;}
-        result={...e,revision:(old?.revision||0)+1,updatedAt:Date.now(),createdAt:old?.createdAt||Date.now()};s.put(result);
+        let linked;try{linked=attachWorklog(e,old,options.worklogRecord);}catch(err){failure=err;t.abort();return;}
+        result={...linked,revision:(old?.revision||0)+1,updatedAt:Date.now(),createdAt:old?.createdAt||Date.now()};s.put(result);
       };
       t.oncomplete=()=>{this.channel?.postMessage('change');this.emit();resolve(result);};t.onabort=()=>reject(failure||t.error);t.onerror=()=>reject(t.error);
     });

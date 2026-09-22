@@ -1,6 +1,23 @@
 # 클라우드 활성화
 
-현재 배포되지 않았습니다. 기존 Firebase 프로젝트는 저장소 문서상 my-system-25497(Blaze)이지만, 이 환경의 관리자 로그인과 현재 프로젝트 설정은 확인되지 않았습니다. 기존 데이터나 보안 규칙을 임의로 교체하지 않습니다.
+현재 배포되지 않았습니다. 2026-09-22 브라우저에서 my-system-25497의 Blaze 요금제와 asia-northeast3 Firestore 및 기존 계정 로그인을 확인했습니다. Cloud Shell은 Google Cloud API 호출 권한 승인 화면에서 대기 중입니다. 기존 데이터와 규칙은 아직 변경하지 않았습니다.
+
+## 0. 배포 준비 도구
+
+`tools/prepare-cloud.mjs`는 인증된 gcloud 터미널에서 실행합니다. 계정 UID를 인자로 받아 활성·이메일 검증 계정인지 확인합니다. 현재 규칙, 웹 앱 설정, 기존 공간을 읽고 기본 모드에서는 변경 제안 파일만 만듭니다.
+
+    node tools/prepare-cloud.mjs --project my-system-25497 --owner-uid OWNER_UID
+
+검토한 규칙의 catch-all에서 dalnimSpaces와 dalnimReminderJobs만 제외합니다. 기존 다른 컬렉션의 접근 조건은 유지합니다. 예상한 규칙 모양과 다르면 중단합니다. `.cloud-setup/firestore.before.rules`와 `firestore.after.rules`의 차이를 검토한 후 `--apply`로 적용합니다. 작업 중 다른 관리자가 규칙을 변경하면 다시 검토해야 합니다.
+
+`--apply`는 캘린더 공간을 보호한 다음 새 family 공간을 만들고, Secret Manager에 VAPID 개인 키를 준비합니다. 기존 키는 회전하지 않습니다. `.env.PROJECT`와 `.cloud-setup/config.production.js`가 생성됩니다. 비밀·계정 정보 파일은 Git과 배포 ZIP에 포함하지 않습니다.
+
+    node tools/prepare-cloud.mjs --project my-system-25497 --owner-uid OWNER_UID --apply
+    firebase deploy --only functions:dalnim-calendar --project my-system-25497
+
+배포 API 인증/권한 검증 후 생성된 공개 설정 파일을 src/config.js로 게시합니다. 실제 함수 URL도 배포 결과와 대조합니다. Google 로그인은 Firebase Authentication에서 제공자가 켜져 있어야 하며 앱 호스팅 도메인이 승인되어 있어야 합니다. 로컬 체험에는 운영 설정을 자동 적용하지 않습니다.
+
+아래는 수동 설정 참고입니다.
 
 ## 1. 별도 테스트 공간
 
@@ -47,7 +64,7 @@ src/config.js의 firebase에 공개 웹 앱 설정을 넣습니다. apiBase에 �
 
 웹 파일을 HTTPS로 호스팅합니다. 기존 GitHub Pages의 새 /dalnim-calendar/ 폴더로 배포할 수 있습니다. 처음에는 config.apiBase를 비워 체험 버전으로 검증할 수 있습니다.
 
-앱 설정 → 클라우드 연결 → 이메일/비밀번호 로그인.
+앱 설정 → 클라우드 연결 → Google 계정 또는 이메일/비밀번호 로그인.
 체험 일정은 자동으로 업로드되지 않습니다.
 알림함 → 이 기기에 알림 연결.
 아이폰은 지원되는 iOS에서 홈 화면 설치 후 권한을 허용합니다.
@@ -65,10 +82,18 @@ src/config.js의 firebase에 공개 웹 앱 설정을 넣습니다. apiBase에 �
 - PC 앱을 닫은 상태에서 예약 함수가 실행되는지 확인.
 - 발송 서비스 접수와 사용자 수신·확인을 구분해 기록.
 
-0.1 알림은 분 단위 처리이며 통신·OS 설정에 따라 지연될 수 있습니다. 읽음 확인이나 미확인 재알림은 후속 구현입니다. 실제 휴대폰에서 수신 검증하기 전 ‘알림 완료’라고 표시하지 않습니다.
+예약 알림은 분 단위 처리이며 통신·OS 설정에 따라 지연될 수 있습니다. 0.2는 테스트 발송·서비스 접수·알림 링크 열기 확인을 구분합니다. 미확인 재알림과 문자 대체는 후속 구현입니다. 실제 휴대폰에서 수신 검증하기 전 ‘알림 완료’라고 표시하지 않습니다.
 
 ## 6. 기존 워크로그의 실시간 연결
 
 현재 가져오기 어댑터는 복사만 수행합니다. 기존 워크로그의 저장/수정/삭제 함수와 공통 API를 연결하는 별도 어댑터를 추가해야 합니다. 기존 원본 ID를 유지하고, 누가 날짜를 소유하는지 정한 뒤 데이터 복사본으로 검증합니다. 이 작업 전에 기존 구글 연동을 끄거나 데이터를 이관하지 않습니다.
 
 
+
+
+## 7. 확인한 공식 자료
+
+- [Firebase Google 로그인](https://firebase.google.com/docs/auth/web/google-signin)
+- [SDK CDN 구성](https://firebase.google.com/docs/web/alt-setup)
+- [보안 규칙 Release 갱신](https://firebase.google.com/docs/reference/rules/rest/v1/projects.releases/patch)
+- [Firestore 트랜잭션](https://firebase.google.com/docs/firestore/manage-data/transactions)
