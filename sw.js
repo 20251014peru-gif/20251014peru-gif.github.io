@@ -3,7 +3,7 @@
    ⚠️ 배포할 때마다 아래 SW_VERSION 문자열만 새 버전으로 바꾸면
       브라우저가 새 SW를 설치하고 옛 캐시를 전부 지운 뒤 1회 자동 새로고침한다.
    ⚠️ 같은 출처(github.io)만 처리하고 Firebase·구글 등 외부 요청은 건드리지 않는다. */
-const SW_VERSION = 'v47-20260922-174542';
+const SW_VERSION = 'v48-20260922-175731';
 const CACHE_NAME = 'worklog-' + SW_VERSION;
 
 /* 설치: 즉시 대기 해제 (waiting 단계 건너뜀) */
@@ -36,7 +36,10 @@ self.addEventListener('fetch', function(e){
   if(url.origin !== self.location.origin){ return; }  /* 외부(Firebase/구글/CDN) 는 브라우저 기본 처리 */
 
   e.respondWith(
-    fetch(req).then(function(res){
+    /* v48 — "네트워크 우선"이라면서 이 fetch() 가 브라우저의 평범한 HTTP 캐시는
+       그대로 탔다. GitHub Pages 가 몇 분간 캐시해 둔 옛 파일을 그대로 받아온
+       것 — no-store 로 강제해야 정말 매번 네트워크로 간다. */
+    fetch(req, { cache: 'no-store' }).then(function(res){
       /* 정상 응답만 캐시에 저장 (opaque/에러 제외) */
       if(res && res.status === 200 && res.type === 'basic'){
         var copy = res.clone();
