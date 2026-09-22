@@ -5,7 +5,7 @@ import {LocalStore} from './core/store.js';
 import {ModuleRegistry} from './core/registry.js';
 import {dayKey,atDay,shiftDay,newId,expandEvents,safeURL,ZONE} from './core/model.js';
 import {demoEvents} from './demo.js';
-import {esc,icon,button,toast,ask,download} from './ui.js';
+import {esc,icon,button,toast,ask,chooseScope,download} from './ui.js';
 
 const $=s=>document.querySelector(s);
 const registry=new ModuleRegistry();
@@ -16,7 +16,8 @@ const catName=e=>categories.find(c=>c.id===e.category)?.label||'보관된 일정
 const timeLabel=e=>e.allDay?'종일':new Date(e.start).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false})+' – '+new Date(e.end).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
 const enabled=id=>id==='personal'||!disabled.includes(id);
 const visible=()=>events.filter(e=>!e.deletedAt&&!hidden.has(e.category)&&(!query||[e.title,e.notes,e.location,...Object.values(e.details||{})].join(' ').toLowerCase().includes(query.toLowerCase())));
-const stateLabel=()=>store?.isCloud?(store.lastError?'연결 확인 필요':'클라우드 연결됨'):'이 기기에 저장';
+const stateLabel=()=>store?.isCloud?(store.pendingCount?'오프라인 저장 대기 · '+store.pendingCount+'건':store.lastError?'연결 확인 필요':'클라우드 연결됨'):'이 기기에 저장';
+const occurrenceAnchor=id=>id&&id.includes('@')?id.slice(id.indexOf('@')+1):null;
 function shell(){
  $('#app').innerHTML='<div class="shell"><aside class="sidebar"><div class="brand"><img src="./icon.svg" alt=""><div><strong>달님</strong><small>MY CONNECTED DAYS</small></div></div><button class="space-btn" data-action="settings"><span class="avatar">나</span><span>나의 공간</span>'+icon('chevron')+'</button><nav class="navigation">'+nav('calendar','캘린더','calendar')+nav('agenda','일정 모아보기','list')+nav('inbox','알림함','bell')+nav('blocks','연결 블록','blocks')+'</nav><div id="mini"></div><div><div class="side-heading"><span>내 캘린더</span><button data-action="categories" aria-label="캘린더 관리">'+icon('plus')+'</button></div><div id="categories"></div></div><div class="sidebar-footer">'+button('settings','설정','settings','nav')+button('export','백업 내보내기','download','nav')+'<a class="backlink" href="../index.html" id="home-link">'+icon('home')+'시스템 홈</a><span>달님 캘린더 · '+config.version+'</span></div></aside><main class="main"><header class="topbar"><button class="mobile-menu" data-action="menu" aria-label="메뉴 열기">'+icon('menu')+'</button><div class="breadcrumb">나의 공간 '+icon('chevron')+' <strong id="crumb">캘린더</strong></div><div class="top-actions"><label class="search">'+icon('search')+'<input type="search" id="search" placeholder="일정 검색" aria-label="일정 검색"><span class="kbd">/</span></label><span class="mode-badge" id="store-state">'+icon('check')+stateLabel()+'</span><button data-action="inbox" aria-label="알림함">'+icon('bell')+'</button><span class="avatar">나</span></div></header><section class="page-head"><div><div class="eyebrow" id="eyebrow">YOUR DAYS, CONNECTED</div><h1 id="page-title"></h1><p class="head-description" id="page-description"></p></div><div class="page-actions"><a class="worklog-link soft" href="../worklog.html">'+icon('building')+'<span>업무일지</span></a><button class="primary" data-action="add">'+icon('plus')+'<span>새 일정</span></button></div></section><div id="content"></div><div class="banner"><span id="banner-label">체험 공간 · 예시 데이터가 포함되어 있습니다. 실제 워크로그와 연결되지 않습니다.</span><button data-action="clear-demo">예시 지우기</button></div></main></div><nav class="mobile-bottom">'+nav('calendar','캘린더','calendar')+nav('agenda','모아보기','list')+nav('inbox','알림함','bell')+nav('blocks','블록','blocks')+'</nav><input type="file" id="import-file" accept=".json,application/json" hidden>';
  $('#search').value=query;
@@ -59,7 +60,7 @@ function renderCalendar(){
   eventContent:arg=>{const e=arg.event.extendedProps.record;if(arg.view.type==='listMonth')return {html:esc(e.title)};return {html:'<div class="'+(e.status==='done'?'event-done':'')+'">'+(!e.allDay&&arg.view.type.startsWith('timeGrid')?'<div class="event-time">'+esc(timeLabel(e))+'</div>':'')+'<div class="event-title">'+esc(e.title)+'</div>'+((e.location&&arg.view.type.startsWith('timeGrid'))?'<div class="event-place">'+esc(e.location)+'</div>':'')+'</div>'};},
   eventDidMount:arg=>{arg.el.style.setProperty('--event-color',color(arg.event.extendedProps.record));arg.el.title=arg.event.title;},
   select:arg=>{openEditor(null,{start:arg.allDay?dayKey(arg.start):arg.start.toISOString(),end:arg.allDay?dayKey(arg.end):arg.end.toISOString(),allDay:arg.allDay});calendar.unselect();},
-  eventClick:arg=>openEditor(arg.event.extendedProps.record.id),
+  eventClick:arg=>openEditor(arg.event.extendedProps.record.id,{},occurrenceAnchor(arg.event.extendedProps.record.occurrenceId)),
   eventDrop:moveEvent,eventResize:moveEvent,
   datesSet:()=>{selectedDate=calendar?.getDate()||selectedDate;setHeading();paintMini();paintRail();},
  });
@@ -71,24 +72,25 @@ function renderCalendar(){
 async function moveEvent(arg){
  const old=events.find(e=>e.id===arg.event.extendedProps.record.id);
  try{await store.save({...old,start:old.allDay?dayKey(arg.event.start):arg.event.start.toISOString(),end:old.allDay?dayKey(arg.event.end):arg.event.end.toISOString()},old.revision);toast('일정 시간이 변경되었습니다.');}
- catch(e){arg.revert();toast(e.message);}
+ catch(err){if(err.queued)toast(err.message);else{arg.revert();toast(err.message);}}
 }
 function refreshCalendar(){calendar?.refetchEvents();paintRail();}
 function paintRail(){
  if(!$('#rail'))return;
  const daily=expandEvents(visible(),atDay(dayKey(selectedDate),0),atDay(dayKey(shiftDay(selectedDate,1)),0)).sort((a,b)=>a.start.localeCompare(b.start)),next=daily.find(e=>e.status!=='done'),done=daily.filter(e=>e.status==='done').length;
- $('#rail').innerHTML='<div class="rail-date">'+selectedDate.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'long'})+'</div><div class="rail-title"><h2>하루의 흐름</h2><span class="pill">'+daily.length+'개의 일정</span></div>'+(next?'<div class="focus-card"><div class="label">NEXT ON YOUR DAY</div><h3>'+esc(next.title)+'</h3><p>'+esc(timeLabel(next))+'</p><button data-open="'+esc(next.id)+'">일정 살펴보기 '+icon('arrow')+'</button></div>':'<div class="focus-card"><div class="label">A LITTLE SPACE</div><h3>여유가 있는 하루</h3><p>나를 위한 시간을 남겨 두세요.</p></div>')+'<div class="side-heading"><span>오늘의 일정</span><span>'+done+' / '+daily.length+' 완료</span></div>'+daily.map(e=>'<button class="agenda-row '+(e.status==='done'?'done':'')+'" data-open="'+esc(e.id)+'" style="--cat:'+color(e)+'"><span class="agenda-dot"></span><span><strong>'+esc(e.title)+'</strong><small>'+esc(timeLabel(e))+' · '+esc(catName(e))+'</small></span><span class="check-circle">'+(e.status==='done'?icon('check'):'')+'</span></button>').join('')+(!daily.length?'<p class="quiet small">아직 등록된 일정이 없어요.</p>':'')+'<div class="rail-section"><div class="side-heading"><span>연결 상태</span>'+icon('link')+'</div><div class="notice">'+(store.isCloud?'클라우드에 연결되어 있습니다. 휴대폰 알림은 기기별로 허용해 주세요.':'지금은 내 기기에서 체험 중이에요.<br>가족 공유와 휴대폰 푸시는 클라우드 연결 후 사용할 수 있어요.')+'<br><button data-rail-settings>연결 설정 보기 →</button></div></div>';
- $('#rail').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEditor(b.dataset.open));
+ $('#rail').innerHTML='<div class="rail-date">'+selectedDate.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'long'})+'</div><div class="rail-title"><h2>하루의 흐름</h2><span class="pill">'+daily.length+'개의 일정</span></div>'+(next?'<div class="focus-card"><div class="label">NEXT ON YOUR DAY</div><h3>'+esc(next.title)+'</h3><p>'+esc(timeLabel(next))+'</p><button data-open="'+esc(next.id)+'" data-anchor="'+esc(occurrenceAnchor(next.occurrenceId)||'')+'">일정 살펴보기 '+icon('arrow')+'</button></div>':'<div class="focus-card"><div class="label">A LITTLE SPACE</div><h3>여유가 있는 하루</h3><p>나를 위한 시간을 남겨 두세요.</p></div>')+'<div class="side-heading"><span>오늘의 일정</span><span>'+done+' / '+daily.length+' 완료</span></div>'+daily.map(e=>'<button class="agenda-row '+(e.status==='done'?'done':'')+'" data-open="'+esc(e.id)+'" data-anchor="'+esc(occurrenceAnchor(e.occurrenceId)||'')+'" style="--cat:'+color(e)+'"><span class="agenda-dot"></span><span><strong>'+esc(e.title)+'</strong><small>'+esc(timeLabel(e))+' · '+esc(catName(e))+'</small></span><span class="check-circle">'+(e.status==='done'?icon('check'):'')+'</span></button>').join('')+(!daily.length?'<p class="quiet small">아직 등록된 일정이 없어요.</p>':'')+'<div class="rail-section"><div class="side-heading"><span>연결 상태</span>'+icon('link')+'</div><div class="notice">'+(store.isCloud?'클라우드에 연결되어 있습니다. 휴대폰 알림은 기기별로 허용해 주세요.':'지금은 내 기기에서 체험 중이에요.<br>가족 공유와 휴대폰 푸시는 클라우드 연결 후 사용할 수 있어요.')+'<br><button data-rail-settings>연결 설정 보기 →</button></div></div>';
+ $('#rail').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEditor(b.dataset.open,{},b.dataset.anchor||null));
  $('[data-rail-settings]').onclick=()=>openSettings();
 }
 const dateInput=s=>{const d=new Date(s);return dayKey(d)+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
-function openEditor(id,patch={}){
+function openEditor(id,patch={},anchor=null){
  const old=id?events.find(e=>e.id===id):null;if(id&&!old)return;
  selectedId=id;
+ const perOccurrence=Boolean(old&&old.repeat!=='none'&&anchor);
  const start=atDay(dayKey(selectedDate),9);
  const e=old||{id:newId(),title:'',start:start.toISOString(),end:new Date(+start+3600000).toISOString(),allDay:false,category:'personal',module:'personal',status:'done',visibility:'personal',reminder:10,repeat:'none',notes:'',location:'',details:{},...patch};
  const d=$('#editor'),field=(label,body,full=false)=>'<label class="field'+(full?' full':'')+'"><span>'+label+'</span>'+body+'</label>';
- d.innerHTML='<form id="event-form"><div class="dialog-head"><h2 id="editor-title">'+(old?'일정 살펴보기':'새로운 일정')+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><input class="editor-name" name="title" placeholder="어떤 하루를 계획하나요?" aria-label="일정 이름" maxlength="160" required value="'+esc(e.title)+'"><div class="form-grid">'+field('캘린더','<select name="category">'+(categories.some(c=>c.id===e.category)?categories:[...categories,{id:e.category,label:'보관된 분류'}]).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===e.category?'selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select>')+field('진행 상태','<select name="status">'+[['planned','예정'],['progress','진행 중'],['done','완료']].map(([v,l])=>'<option value="'+v+'" '+(e.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+'</div><label class="form-check"><input type="checkbox" name="allDay" '+(e.allDay?'checked':'')+'>종일 일정</label><div class="form-grid">'+dateTimeField('start','시작',e.allDay?e.start:dateInput(e.start),e.allDay)+dateTimeField('end',e.allDay?'마지막 날짜':'종료',e.allDay?dayKey(shiftDay(atDay(e.end),-1)):dateInput(e.end),e.allDay)+field('반복','<select name="repeat">'+[['none','반복 안 함'],['daily','매일'],['weekly','매주'],['monthly','매월 같은 날짜'],['yearly','매년 같은 날짜']].map(([v,l])=>'<option value="'+v+'" '+(e.repeat===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+field('미리 알림','<select name="reminder">'+[[-1,'알림 없음'],[0,'시작할 때'],[10,'10분 전'],[30,'30분 전'],[60,'1시간 전'],[1440,'하루 전']].map(([v,l])=>'<option value="'+v+'" '+(e.reminder===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+field('장소','<input name="location" placeholder="장소를 입력하세요" value="'+esc(e.location)+'">',true)+field('<span id="notes-label">메모</span>','<textarea name="notes" placeholder="기억할 내용이나 준비할 것을 남겨 주세요.">'+esc(e.notes)+'</textarea>',true)+(store.isCloud?field('공개 범위','<select name="visibility"><option value="personal" '+(e.visibility==='personal'?'selected':'')+'>나만 보기</option><option value="family" '+(e.visibility==='family'?'selected':'')+'>가족과 공유</option></select>',true):'')+'</div><p class="form-note status-note" id="status-note"></p><div id="extra-fields"></div><p class="form-note">'+(e.repeat!=='none'?'반복 일정의 수정·삭제는 전체 반복에 적용됩니다. ':'')+(store.isCloud?'':'체험 공간의 알림은 설정만 저장됩니다. 휴대폰으로 발송되지 않습니다.')+(e.worklogRecord?'<br>연결 기록의 기본 항목을 함께 저장합니다. 기존 업무일지와의 자동 동기화는 아직 연결 전입니다.':e.source?'<br>가져온 원본: '+esc(e.source.app)+' · 원본 수정은 아직 반영하지 않습니다.':'')+'</p><p class="form-error" role="alert"></p></div><div class="dialog-actions">'+(old?'<button type="button" class="danger" id="delete-event">'+icon('trash')+'삭제</button>':'')+'<button type="button" data-close class="soft">닫기</button><button type="submit" class="primary">'+icon('check')+'저장하기</button></div></form>';
+ d.innerHTML='<form id="event-form"><div class="dialog-head"><h2 id="editor-title">'+(old?'일정 살펴보기':'새로운 일정')+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><input class="editor-name" name="title" placeholder="어떤 하루를 계획하나요?" aria-label="일정 이름" maxlength="160" required value="'+esc(e.title)+'"><div class="form-grid">'+field('캘린더','<select name="category">'+(categories.some(c=>c.id===e.category)?categories:[...categories,{id:e.category,label:'보관된 분류'}]).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===e.category?'selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select>')+field('진행 상태','<select name="status">'+[['planned','예정'],['progress','진행 중'],['done','완료']].map(([v,l])=>'<option value="'+v+'" '+(e.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+'</div><label class="form-check"><input type="checkbox" name="allDay" '+(e.allDay?'checked':'')+'>종일 일정</label><div class="form-grid">'+dateTimeField('start','시작',e.allDay?e.start:dateInput(e.start),e.allDay)+dateTimeField('end',e.allDay?'마지막 날짜':'종료',e.allDay?dayKey(shiftDay(atDay(e.end),-1)):dateInput(e.end),e.allDay)+field('반복','<select name="repeat">'+[['none','반복 안 함'],['daily','매일'],['weekly','매주'],['monthly','매월 같은 날짜'],['yearly','매년 같은 날짜']].map(([v,l])=>'<option value="'+v+'" '+(e.repeat===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+field('미리 알림','<select name="reminder">'+[[-1,'알림 없음'],[0,'시작할 때'],[10,'10분 전'],[30,'30분 전'],[60,'1시간 전'],[1440,'하루 전']].map(([v,l])=>'<option value="'+v+'" '+(e.reminder===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+field('장소','<input name="location" placeholder="장소를 입력하세요" value="'+esc(e.location)+'">',true)+field('<span id="notes-label">메모</span>','<textarea name="notes" placeholder="기억할 내용이나 준비할 것을 남겨 주세요.">'+esc(e.notes)+'</textarea>',true)+(store.isCloud?field('공개 범위','<select name="visibility"><option value="personal" '+(e.visibility==='personal'?'selected':'')+'>나만 보기</option><option value="family" '+(e.visibility==='family'?'selected':'')+'>가족과 공유</option></select>',true):'')+'</div><p class="form-note status-note" id="status-note"></p><div id="extra-fields"></div><p class="form-note">'+(perOccurrence?'저장하거나 삭제할 때 이 날짜만 바꿀지, 전체 반복을 바꿀지 선택할 수 있어요. ':e.repeat!=='none'?'반복 일정의 수정·삭제는 전체 반복에 적용됩니다. ':'')+(store.isCloud?'':'체험 공간의 알림은 설정만 저장됩니다. 휴대폰으로 발송되지 않습니다.')+(e.worklogRecord?'<br>연결 기록의 기본 항목을 함께 저장합니다. 기존 업무일지와의 자동 동기화는 아직 연결 전입니다.':e.source?'<br>가져온 원본: '+esc(e.source.app)+' · 원본 수정은 아직 반영하지 않습니다.':'')+'</p><p class="form-error" role="alert"></p></div><div class="dialog-actions">'+(old?'<button type="button" class="danger" id="delete-event">'+icon('trash')+'삭제</button>':'')+'<button type="button" data-close class="soft">닫기</button><button type="submit" class="primary">'+icon('check')+'저장하기</button></div></form>';
  const form=$('#event-form');let draftDetails={...(e.details||{})};
  function extras(){
   form.querySelectorAll('[data-detail]').forEach(x=>draftDetails[x.dataset.detail]=x.value);
@@ -104,8 +106,40 @@ function openEditor(id,patch={}){
  const statusNote=()=>{$('#status-note').textContent=form.status.value==='done'?'완료된 일정은 알림을 보내지 않아요. 알림을 받으려면 진행 상태를 예정 또는 진행 중으로 바꿔 주세요.':'';};
  form.status.addEventListener('change',statusNote);statusNote();
  d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close());
- if(old)$('#delete-event').onclick=async()=>{if(await ask('일정을 삭제할까요?',e.repeat!=='none'?'이 일정의 전체 반복이 삭제됩니다. 삭제 후 백업 또는 휴지통에서 복원할 수 있습니다.':'삭제된 일정은 휴지통에서 복원할 수 있습니다.','삭제')){try{await store.remove(old);d.close();toast('일정을 휴지통으로 옮겼습니다.');}catch(err){$('.form-error').textContent=err.message;}}};
- form.addEventListener('submit',async ev=>{ev.preventDefault();const submit=form.querySelector('[type=submit]');submit.disabled=true;try{form.querySelectorAll('[data-detail]').forEach(x=>draftDetails[x.dataset.detail]=x.value);const allDay=form.allDay.checked;const value={...e,title:form.elements.namedItem('title').value,category:form.category.value,module:form.category.value===e.category?e.module:(registry.get(form.category.value)?form.category.value:'personal'),status:form.status.value,repeat:form.repeat.value,reminder:Number(form.reminder.value),allDay,start:allDay?form.start.value:new Date(form.start.value).toISOString(),end:allDay?dayKey(shiftDay(atDay(form.end.value),1)):new Date(form.end.value).toISOString(),notes:form.notes.value,location:form.location.value,details:draftDetails,visibility:store.isCloud?form.visibility.value:'personal',demo:old?.demo||false};await store.save(value,old?.revision||0);d.close();toast('일정을 저장했습니다.');}catch(err){$('.form-error').textContent=err.message;}finally{submit.disabled=false;}});
+ if(old)$('#delete-event').onclick=async()=>{
+  let scope='all';
+  if(perOccurrence){
+   scope=await chooseScope('삭제 범위를 선택해 주세요.','반복 일정 중 이 날짜만 지울지, 전체 반복을 지울지 골라 주세요.',[{value:'one',label:'이 날짜만'},{value:'all',label:'전체 반복',cls:'danger'}]);
+   if(!scope)return;
+  } else if(!await ask('일정을 삭제할까요?',e.repeat!=='none'?'이 일정의 전체 반복이 삭제됩니다. 삭제 후 백업 또는 휴지통에서 복원할 수 있습니다.':'삭제된 일정은 휴지통에서 복원할 수 있습니다.','삭제')){
+   return;
+  }
+  try{
+   if(scope==='one'){await store.save({...old,exceptions:{...(old.exceptions||{}),[anchor]:{deletedAt:Date.now()}}},old.revision);}
+   else await store.remove(old);
+   d.close();toast(scope==='one'?'이 날짜만 휴지통으로 옮겼습니다. 다른 날짜의 반복은 유지됩니다.':'일정을 휴지통으로 옮겼습니다.');
+  }catch(err){if(err.queued){d.close();toast(err.message);}else $('.form-error').textContent=err.message;}
+ };
+ form.addEventListener('submit',async ev=>{
+  ev.preventDefault();const submit=form.querySelector('[type=submit]');submit.disabled=true;
+  try{
+   form.querySelectorAll('[data-detail]').forEach(x=>draftDetails[x.dataset.detail]=x.value);
+   const allDay=form.allDay.checked;
+   const fields={title:form.elements.namedItem('title').value,category:form.category.value,module:form.category.value===e.category?e.module:(registry.get(form.category.value)?form.category.value:'personal'),status:form.status.value,repeat:form.repeat.value,reminder:Number(form.reminder.value),allDay,start:allDay?form.start.value:new Date(form.start.value).toISOString(),end:allDay?dayKey(shiftDay(atDay(form.end.value),1)):new Date(form.end.value).toISOString(),notes:form.notes.value,location:form.location.value,details:draftDetails,visibility:store.isCloud?form.visibility.value:'personal'};
+   let scope='all';
+   if(perOccurrence){
+    scope=await chooseScope('저장 범위를 선택해 주세요.','반복 일정 중 이 날짜만 바꿀지, 전체 반복을 바꿀지 골라 주세요.',[{value:'one',label:'이 날짜만'},{value:'all',label:'전체 반복'}]);
+    if(!scope){submit.disabled=false;return;}
+   }
+   let saved;
+   // A single-occurrence edit only overrides content (title/notes/location/status/reminder), not
+   // the time — moving one instance of a series is a later refinement (see docs).
+   if(scope==='one'){saved=await store.save({...old,exceptions:{...(old.exceptions||{}),[anchor]:{title:fields.title,notes:fields.notes,location:fields.location,status:fields.status,reminder:fields.reminder}}},old.revision);}
+   else saved=await store.save({...e,...fields,demo:old?.demo||false},old?.revision||0);
+   d.close();toast(saved?.pendingSync?'오프라인 상태입니다. 온라인이 되면 자동으로 저장됩니다.':scope==='one'?'이 날짜만 저장했습니다.':'일정을 저장했습니다.');
+  }catch(err){if(err.queued){d.close();toast(err.message);}else $('.form-error').textContent=err.message;}
+  finally{submit.disabled=false;}
+ });
  d.showModal();setTimeout(()=>form.elements.namedItem('title').focus(),30);
 }
 function renderBlocks(){
@@ -114,15 +148,21 @@ function renderBlocks(){
 }
 function renderInbox(){
  const reminders=expandEvents(events.filter(e=>!e.deletedAt&&e.reminder>=0&&e.status!=='done'),new Date(),shiftDay(new Date(),14)).sort((a,b)=>a.start.localeCompare(b.start));
- $('#content').innerHTML='<div class="block-page"><p class="form-note" style="margin-bottom:18px">아래는 다가오는 알림 예약입니다. 실제 발송 내역은 위 상태 패널에서 확인하세요.</p><div class="side-heading"><span>앞으로 2주 · 알림이 설정된 일정</span><span>'+reminders.length+'건</span></div>'+reminders.map(e=>'<div class="inbox-item" style="--cat:'+color(e)+';--tint:'+color(e)+'12"><div class="block-icon">'+icon('bell')+'</div><div><strong>'+esc(e.title)+'</strong><p>'+new Date(e.start).toLocaleDateString('ko-KR',{month:'long',day:'numeric'})+' · '+esc(timeLabel(e))+'<br>'+(e.reminder===0?'시작할 때':e.reminder+'분 전')+' 알림 · '+(store.isCloud?'예약 설정':'연결 대기')+'</p></div><button data-open="'+esc(e.id)+'">'+icon('chevron')+'</button></div>').join('')+(!reminders.length?'<div class="empty">'+icon('bell')+'<p>다가오는 알림이 없습니다.</p></div>':'')+'</div>';
+ $('#content').innerHTML='<div class="block-page"><p class="form-note" style="margin-bottom:18px">아래는 다가오는 알림 예약입니다. 실제 발송 내역은 위 상태 패널에서 확인하세요.</p><div class="side-heading"><span>앞으로 2주 · 알림이 설정된 일정</span><span>'+reminders.length+'건</span></div>'+reminders.map(e=>'<div class="inbox-item" style="--cat:'+color(e)+';--tint:'+color(e)+'12"><div class="block-icon">'+icon('bell')+'</div><div><strong>'+esc(e.title)+'</strong><p>'+new Date(e.start).toLocaleDateString('ko-KR',{month:'long',day:'numeric'})+' · '+esc(timeLabel(e))+'<br>'+(e.reminder===0?'시작할 때':e.reminder+'분 전')+' 알림 · '+(store.isCloud?'예약 설정':'연결 대기')+'</p></div><button data-open="'+esc(e.id)+'" data-anchor="'+esc(occurrenceAnchor(e.occurrenceId)||'')+'">'+icon('chevron')+'</button></div>').join('')+(!reminders.length?'<div class="empty">'+icon('bell')+'<p>다가오는 알림이 없습니다.</p></div>':'')+'</div>';
  const panel=document.createElement('div');panel.id='push-panel';$('#content .block-page').prepend(panel);import('./notifications.js').then(m=>m.mountNotifications(panel,store,()=>store.isCloud?enablePush():openSettings())).catch(e=>{panel.textContent='알림 상태를 불러오지 못했습니다: '+e.message;});
- document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEditor(b.dataset.open));
+ document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEditor(b.dataset.open,{},b.dataset.anchor||null));
 }
 async function acknowledgePush(){if(!store.isCloud)return;try{const {confirmNotificationOpen}=await import('./notifications.js');await confirmNotificationOpen(store);}catch(e){toast('알림 열기 확인을 저장하지 못했습니다. 앱을 다시 열면 재시도합니다.');}}
+async function acceptInvite(){
+ if(!store?.isCloud)return;
+ const token=new URLSearchParams(location.search).get('invite')?.split(/:(.+)/)?.[1];if(!token)return;
+ try{await store.request('/invites/accept','POST',{token});const url=new URL(location.href);url.searchParams.delete('invite');history.replaceState(null,'',url.pathname+url.search+url.hash);await refresh();toast('가족 공간에 연결되었습니다.');}
+ catch(err){toast(err.message);}
+}
 async function enablePush(){try{const {subscribePush}=await import('./cloud.js');await subscribePush(store);toast('이 기기를 알림 수신 기기로 등록했습니다.');}catch(e){toast(e.message);}}
 function openSettings(){
  const d=$('#settings');
- d.innerHTML='<div class="dialog-head"><h2 id="settings-title">나의 캘린더 설정</h2><button data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><div class="notice"><strong>'+stateLabel()+'</strong><br>'+(store.isCloud?'로그인한 공간의 일정과 연결되어 있습니다.':'체험 데이터는 이 브라우저에만 저장됩니다. 브라우저 데이터를 지우기 전 백업해 주세요. 가족 공유·휴대폰 푸시는 아직 연결되지 않았습니다.')+'</div><div class="settings-row"><div><strong>클라우드 · 가족 공유</strong><p>'+(config.apiBase?'설정된 전용 서버에 로그인합니다.':'전용 서버 배포와 계정 연결이 필요합니다.')+'</p></div><button class="soft" id="cloud-login" '+(!config.apiBase?'disabled':'')+'>연결</button></div><div class="settings-row"><div><strong>홈 화면에 설치</strong><p>휴대폰에서는 브라우저 메뉴의 ‘홈 화면에 추가’를 사용하세요.</p></div><button class="soft" id="install" '+(!installEvent?'disabled':'')+'>설치</button></div><div class="settings-group"><h3>데이터 관리</h3><div class="settings-row"><div><strong>워크로그 · 백업 가져오기</strong><p>JSON 파일을 가져옵니다. 원본 파일은 변경하지 않습니다.</p></div><button class="soft" data-setting="import">'+icon('upload')+'가져오기</button></div><div class="settings-row"><div><strong>내 일정 백업</strong><p>삭제한 일정과 상세 항목을 포함해 내보냅니다.</p></div><button class="soft" data-setting="export">'+icon('download')+'내보내기</button></div><div class="settings-row"><div><strong>캘린더 관리</strong><p>분류를 추가하거나 이름을 바꿀 수 있습니다.</p></div><button class="soft" data-setting="categories">관리</button></div><div class="settings-row"><div><strong>휴지통</strong><p>삭제된 일정 '+events.filter(e=>e.deletedAt).length+'개</p></div><button class="soft" data-setting="trash">열기</button></div><div class="settings-row"><div><strong>인쇄</strong><p>현재 캘린더 화면을 출력합니다.</p></div><button class="soft" data-setting="print">'+icon('print')+'인쇄</button></div></div><details class="settings-group"><summary class="quiet small">앱 상태 · 버전 '+config.version+'</summary><p class="form-note">저장소: '+(store.isCloud?'클라우드':'이 기기')+'<br>전체 일정: '+events.length+'개<br>불러온 블록: '+registry.list().length+'개<br>블록 오류: '+registry.errors.length+'개<br>마지막 화면 갱신: '+new Date().toLocaleString('ko-KR')+'</p></details></div><div class="dialog-actions"><button class="primary" data-close>완료</button></div>';
+ d.innerHTML='<div class="dialog-head"><h2 id="settings-title">나의 캘린더 설정</h2><button data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><div class="notice"><strong>'+stateLabel()+'</strong><br>'+(store.isCloud?'로그인한 공간의 일정과 연결되어 있습니다.':'체험 데이터는 이 브라우저에만 저장됩니다. 브라우저 데이터를 지우기 전 백업해 주세요. 가족 공유·휴대폰 푸시는 아직 연결되지 않았습니다.')+'</div><div class="settings-row"><div><strong>클라우드 · 가족 공유</strong><p>'+(config.apiBase?'설정된 전용 서버에 로그인합니다.':'전용 서버 배포와 계정 연결이 필요합니다.')+'</p></div><button class="soft" id="cloud-login" '+(!config.apiBase?'disabled':'')+'>연결</button></div>'+(store.isCloud?'<div class="settings-row"><div><strong>가족 초대</strong><p>이 공간의 관리자만 새 구성원을 초대할 수 있어요.</p></div><button class="soft" data-setting="invites">관리</button></div>':'')+'<div class="settings-row"><div><strong>홈 화면에 설치</strong><p>휴대폰에서는 브라우저 메뉴의 ‘홈 화면에 추가’를 사용하세요.</p></div><button class="soft" id="install" '+(!installEvent?'disabled':'')+'>설치</button></div><div class="settings-group"><h3>데이터 관리</h3><div class="settings-row"><div><strong>워크로그 · 백업 가져오기</strong><p>JSON 파일을 가져옵니다. 원본 파일은 변경하지 않습니다.</p></div><button class="soft" data-setting="import">'+icon('upload')+'가져오기</button></div><div class="settings-row"><div><strong>내 일정 백업</strong><p>삭제한 일정과 상세 항목을 포함해 내보냅니다.</p></div><button class="soft" data-setting="export">'+icon('download')+'내보내기</button></div><div class="settings-row"><div><strong>캘린더 관리</strong><p>분류를 추가하거나 이름을 바꿀 수 있습니다.</p></div><button class="soft" data-setting="categories">관리</button></div><div class="settings-row"><div><strong>휴지통</strong><p>삭제된 일정 '+events.filter(e=>e.deletedAt).length+'개</p></div><button class="soft" data-setting="trash">열기</button></div><div class="settings-row"><div><strong>인쇄</strong><p>현재 캘린더 화면을 출력합니다.</p></div><button class="soft" data-setting="print">'+icon('print')+'인쇄</button></div></div><details class="settings-group"><summary class="quiet small">앱 상태 · 버전 '+config.version+'</summary><p class="form-note">저장소: '+(store.isCloud?'클라우드':'이 기기')+'<br>전체 일정: '+events.length+'개<br>불러온 블록: '+registry.list().length+'개<br>블록 오류: '+registry.errors.length+'개<br>마지막 화면 갱신: '+new Date().toLocaleString('ko-KR')+'</p></details></div><div class="dialog-actions"><button class="primary" data-close>완료</button></div>';
  d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close());
  d.querySelectorAll('[data-setting]').forEach(b=>b.onclick=()=>{d.close();action(b.dataset.setting);});
  $('#install').onclick=async()=>{await installEvent?.prompt();installEvent=null;};
@@ -137,6 +177,25 @@ function manageCategories(){
  $('#add-category').onclick=async()=>{categories.push({id:newId(),label:'새 캘린더',color:'#607cbb'});await store.setMeta('categories',categories);d.close();manageCategories();};
  $('#save-categories').onclick=async()=>{for(const c of categories){c.label=d.querySelector('[data-cat-name="'+c.id+'"]').value.trim()||c.label;c.color=d.querySelector('[data-cat-color="'+c.id+'"]').value;}await store.setMeta('categories',categories);d.close();paintCategories();refreshCalendar();toast('캘린더 구성을 저장했습니다.');};d.showModal();
 }
+function manageInvites(){
+ const d=$('#settings');d.innerHTML='<div class="dialog-head"><h2 id="settings-title">가족 초대</h2><button data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><p class="quiet small">불러오는 중...</p></div>';d.showModal();
+ d.querySelector('[data-close]').onclick=()=>d.close();
+ store.request('/invites').then(({invites})=>render(invites)).catch(err=>{
+  d.querySelector('.dialog-body').innerHTML='<p class="notice">'+esc(err.status===403?'이 공간의 관리자만 초대할 수 있습니다.':err.message)+'</p>';
+ });
+ function render(invites){
+  const statusText={pending:'대기 중',accepted:'수락됨',revoked:'취소됨'},roleText={editor:'편집 가능',viewer:'보기만'};
+  d.innerHTML='<div class="dialog-head"><h2 id="settings-title">가족 초대</h2><button data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><form id="invite-form" class="form-grid"><label class="field full">이메일<input name="email" type="email" required placeholder="family@example.com"></label><label class="field">역할<select name="role"><option value="editor">편집 가능</option><option value="viewer">보기만</option></select></label></form><button class="soft" id="send-invite" style="margin:12px 0">'+icon('plus')+'초대 만들기</button><p class="form-note" id="invite-link"></p><div class="side-heading" style="margin-top:18px"><span>보낸 초대</span></div>'+invites.map(inv=>'<div class="settings-row"><div><strong>'+esc(inv.email)+'</strong><p>'+(roleText[inv.role]||inv.role)+' · '+(statusText[inv.status]||inv.status)+'</p></div>'+(inv.status==='pending'?'<button class="soft" data-revoke="'+esc(inv.id)+'">취소</button>':'')+'</div>').join('')+(!invites.length?'<p class="quiet small">아직 보낸 초대가 없습니다.</p>':'')+'</div><div class="dialog-actions"><button class="primary" data-close>완료</button></div>';
+  d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close());
+  $('#send-invite').onclick=async()=>{
+   const form=$('#invite-form');if(!form.email.value.trim())return;
+   const btn=$('#send-invite');btn.disabled=true;
+   try{const r=await store.request('/invites','POST',{email:form.email.value.trim(),role:form.role.value});const link=location.origin+location.pathname+r.link;$('#invite-link').innerHTML='초대 링크: <code>'+esc(link)+'</code><br>이 링크를 가족에게 전달해 주세요. 7일 후 만료됩니다.';await store.request('/invites').then(({invites})=>render(invites));}
+   catch(err){toast(err.message);}finally{btn.disabled=false;}
+  };
+  d.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=async()=>{try{await store.request('/invites/revoke','POST',{id:b.dataset.revoke});const {invites}=await store.request('/invites');render(invites);}catch(err){toast(err.message);}});
+ }
+}
 function trash(){
  const d=$('#settings'),deleted=events.filter(e=>e.deletedAt);
  d.innerHTML='<div class="dialog-head"><h2 id="settings-title">휴지통</h2><button data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body">'+deleted.map(e=>'<div class="settings-row"><strong>'+esc(e.title)+'</strong><button class="soft" data-restore="'+esc(e.id)+'">복원</button></div>').join('')+(!deleted.length?'<p class="empty">휴지통이 비어 있습니다.</p>':'')+'</div>';d.querySelector('[data-close]').onclick=()=>d.close();d.querySelectorAll('[data-restore]').forEach(b=>b.onclick=async()=>{try{const e=events.find(x=>x.id===b.dataset.restore);await store.save({...e,deletedAt:null},e.revision);await refresh();d.close();trash();toast('일정을 복원했습니다.');}catch(e){toast(e.message);}});d.showModal();
@@ -150,9 +209,9 @@ async function importFile(event){
  if(await ask('일정 '+mapped.length+'개를 가져올까요?','이 공간에 복사합니다. 같은 ID의 일정은 건너뛰며 기존 내용과 원본 파일은 덮어쓰지 않습니다.','가져오기')){const n=await store.import(mapped);toast(n+'개를 가져왔습니다.');}
  }catch(e){toast(e.message);}finally{event.target.value='';}
 }
-async function cloudLogin(){
+async function cloudLogin(prefillSpace){
  const d=$('#settings');
- d.innerHTML='<form id="login-form"><div class="dialog-head"><h2 id="settings-title">내 공간 로그인</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><p class="notice">초대된 계정만 내 공간을 열 수 있어요. 기존 Google 계정이나 등록된 이메일로 로그인해 주세요.</p><label class="field full" style="margin:20px 0">공간 ID<input name="workspace" required value="'+esc(config.workspaceId||'family')+'"></label><button type="button" class="primary" id="google-login" style="width:100%">Google 계정으로 계속</button><details class="settings-group"><summary class="quiet small">이메일과 비밀번호로 로그인</summary><div class="form-grid" style="margin-top:16px"><label class="field full">이메일<input name="email" type="email" autocomplete="username"></label><label class="field full">비밀번호<input name="password" type="password" autocomplete="current-password"></label></div><button class="soft" type="submit" style="margin-top:16px">이메일로 로그인</button></details><p class="form-note">등록된 본인·가족 계정만 사용할 수 있습니다.</p><p class="form-error" role="alert"></p></div></form>';
+ d.innerHTML='<form id="login-form"><div class="dialog-head"><h2 id="settings-title">내 공간 로그인</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><p class="notice">초대된 계정만 내 공간을 열 수 있어요. 기존 Google 계정이나 등록된 이메일로 로그인해 주세요.</p><label class="field full" style="margin:20px 0">공간 ID<input name="workspace" required value="'+esc(prefillSpace||config.workspaceId||'family')+'"></label><button type="button" class="primary" id="google-login" style="width:100%">Google 계정으로 계속</button><details class="settings-group"><summary class="quiet small">이메일과 비밀번호로 로그인</summary><div class="form-grid" style="margin-top:16px"><label class="field full">이메일<input name="email" type="email" autocomplete="username"></label><label class="field full">비밀번호<input name="password" type="password" autocomplete="current-password"></label></div><button class="soft" type="submit" style="margin-top:16px">이메일로 로그인</button></details><p class="form-note">등록된 본인·가족 계정만 사용할 수 있습니다.</p><p class="form-error" role="alert"></p></div></form>';
  const form=d.querySelector('form');d.querySelector('[data-close]').onclick=()=>d.close();
  async function connect(kind){
   const buttons=[...form.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);
@@ -160,7 +219,7 @@ async function cloudLogin(){
    if(!space)throw Error('공간 ID를 입력해 주세요.');
    if(kind==='google')await live.loginGoogle(space);else {if(!form.email.value||!form.password.value)throw Error('이메일과 비밀번호를 입력해 주세요.');await live.login(form.email.value,form.password.value,space);}
    if(!store){location.reload();return;}
-   store=live;categories=await store.meta('categories',baseCategories);disabled=await store.meta('disabled',[]);await refresh();store.subscribe(refresh);d.close();shell();$('#banner-label').textContent='클라우드 공간 · 실제 계정 데이터';$('[data-action=clear-demo]').hidden=true;toast('내 공간에 연결되었습니다.');const target=new URLSearchParams(location.search).get('event');if(target)openEditor(target);await acknowledgePush();
+   store=live;categories=await store.meta('categories',baseCategories);disabled=await store.meta('disabled',[]);await refresh();store.subscribe(refresh);d.close();shell();$('#banner-label').textContent='클라우드 공간 · 실제 계정 데이터';$('[data-action=clear-demo]').hidden=true;toast('내 공간에 연결되었습니다.');await acceptInvite();const target=new URLSearchParams(location.search).get('event');if(target)openEditor(target);await acknowledgePush();
   }catch(err){d.querySelector('.form-error').textContent=err.code==='auth/popup-closed-by-user'?'로그인 창을 닫았습니다. 다시 눌러 연결할 수 있어요.':err.message;}finally{buttons.forEach(b=>b.disabled=false);}
  }
  form.onsubmit=e=>{e.preventDefault();connect('email');};$('#google-login').onclick=()=>connect('google');d.showModal();
@@ -173,6 +232,7 @@ async function action(name){
  if(name==='menu')$('.sidebar').classList.toggle('open');
  if(name==='categories')manageCategories();
  if(name==='trash')trash();
+ if(name==='invites')manageInvites();
  if(name==='export')download('dalnim-backup-'+dayKey()+'.json',JSON.stringify({schemaVersion:1,exportedAt:new Date().toISOString(),events,categories},null,2));
  if(name==='import')$('#import-file').click();
  if(name==='print'){if(page!=='calendar'&&page!=='agenda')navigate('calendar');setTimeout(()=>window.print(),100);}
@@ -180,11 +240,12 @@ async function action(name){
 }
 async function refresh(){events=await store.list();if($('#store-state'))$('#store-state').innerHTML=icon('check')+stateLabel();paintCategories();if(page==='blocks')renderBlocks();else if(page==='inbox')renderInbox();else refreshCalendar();}
 async function init(){
+ const inviteSpace=new URLSearchParams(location.search).get('invite')?.split(':')?.[0]||null;
  if(config.apiBase){
   if(sessionStorage.getItem('dalnim-session')){try{const {CloudStore}=await import('./cloud.js');store=await new CloudStore(config).restore();}catch(err){toast('서버 연결을 확인하고 다시 로그인해 주세요.');}}
   if(!store){
    $('#app').innerHTML='<main class="welcome-gate"><img src="./icon.svg" alt="달님"><p class="eyebrow">YOUR DAYS, CONNECTED</p><h1>오늘도, 나의 달님</h1><p>일과 생활이 연결되는 나만의 캘린더.<br>로그인하면 모든 기기에서 같은 일정을 만나요.</p><button class="primary" id="open-login">내 캘린더 열기</button><small>일정은 전용 Firebase 서버에 안전하게 저장됩니다.</small></main>';
-   $('#open-login').onclick=cloudLogin;
+   $('#open-login').onclick=()=>cloudLogin(inviteSpace);
    if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{});
    return;
   }
@@ -192,6 +253,7 @@ async function init(){
  await registry.load(config.modules);categories=await store.meta('categories',baseCategories);disabled=await store.meta('disabled',[]);events=await store.list();
  if(!store.isCloud&&!await store.meta('seeded',false)){await store.import(demoEvents());await store.setMeta('seeded',true);events=await store.list();}
  shell();if(store.isCloud){$('#banner-label').textContent='클라우드 공간 · 실제 계정 데이터';$('[data-action=clear-demo]').hidden=true;}store.subscribe(refresh);
+ await acceptInvite();
  window.addEventListener('unhandledrejection',e=>{console.error(e.reason);toast(e.reason?.message||'처리하지 못했습니다. 다시 시도해 주세요.');});
  document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)||document.querySelector('dialog[open]'))return;if(e.key==='/'){e.preventDefault();$('#search').focus();}if(e.key==='n'||e.key==='N')openEditor();if(e.key==='t'||e.key==='T')calendar?.today();});
  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e;});

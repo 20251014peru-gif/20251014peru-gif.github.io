@@ -17,12 +17,12 @@
 
 ## 데이터 계약
 
-Event: schemaVersion, id, title, start, end, allDay, timeZone, category, module, status, repeat, reminder, visibility, notes, location, details, source, revision, deletedAt.
+Event: schemaVersion, id, title, start, end, allDay, timeZone, category, module, status, repeat, reminder, visibility, notes, location, details, exceptions, source, revision, deletedAt.
 
 - 시간 일정: start/end는 UTC ISO 시각. timeZone은 IANA 시간대.
 - 종일 일정: YYYY-MM-DD. end는 마지막 날 다음 날(배타적 종료).
 - 반복: none/daily/weekly/monthly/yearly. 월말 없는 날짜는 건너뜁니다.
-- 0.1에서는 반복 수정·삭제가 전체에 적용됩니다. 개별 발생 예외·종료일 UI는 후속 범위입니다.
+- 0.3부터 exceptions로 개별 발생을 다룹니다. 종료일 UI는 여전히 후속 범위입니다.
 - 삭제: deletedAt으로 보관. 다른 프로그램에도 삭제 사실을 전달할 수 있습니다.
 - source: 출처 프로그램과 안정된 원본 recordId. titles를 ID로 쓰지 않습니다.
 - details: 블록 고유 자료. 블록 비활성화 때 삭제하지 않습니다.
@@ -33,6 +33,26 @@ Event: schemaVersion, id, title, start, end, allDay, timeZone, category, module,
 list(), save(event, expectedRevision), remove(event), import(events), subscribe(listener).
 
 모든 프로그램이 공통 API를 사용하면 같은 ID의 동일 기록을 수정하게 됩니다. 서버는 expectedRevision으로 오래된 덮어쓰기를 거부하고 수정 이력을 기록합니다. 동시 동일 필드 수정은 사용자가 최신 내용을 다시 열도록 안내합니다. 자동 필드 병합은 아직 구현하지 않았습니다.
+
+## 개별 발생(occurrence) 예외 — 0.3
+
+exceptions는 반복 일정의 마스터 이벤트에 저장하는 맵입니다. 키는 그 발생의 원래 시작 시각(종일이면 YYYY-MM-DD, 아니면 UTC ISO)이며, `src/core/model.js`의 occurrenceAt이 계산하는 앵커와 같은 값입니다. 값은 { deletedAt } 또는 { title, notes, location, status, reminder } 중 저장된 필드만 포함하는 부분 재정의입니다. src/core/model.js의 sanitizeExceptions가 클라이언트·서버 양쪽에서 같은 화이트리스트로 검증합니다(최대 366개, 날짜 형식 불일치는 무시).
+
+expandEvents(화면 표시)와 server/schedule.mjs의 nextReminder(예약 알림)가 각각 독립적으로 같은 앵커 키를 계산해 exceptions를 조회합니다. 두 계산이 다른 시간대에서 어긋날 수 있는 기존 제약(브라우저/서버 시간대 불일치, 아래 "배포 전 검증" 참고)은 exceptions 앵커에도 동일하게 적용됩니다.
+
+현재 화면은 시간 이동 없이 제목·메모·장소·상태·알림만 발생 단위로 재정의합니다. 개별 발생의 시간 이동, 그리고 개별 삭제한 발생의 복원 화면은 후속 범위입니다.
+
+## 오프라인 저장 대기열 — 0.3
+
+src/core/offline-queue.js의 OfflineQueue는 클라우드 저장이 네트워크 오류(요청 자체가 서버에 닿지 못한 경우)로 실패했을 때 그 저장을 이 기기의 IndexedDB에 보관합니다. 서버가 응답했지만 거부한 경우(리비전 충돌, 권한 없음 등)는 대기열에 넣지 않고 그대로 오류로 전달합니다 — 진짜로 실패한 저장을 나중에 조용히 재적용하지 않기 위해서입니다.
+
+src/cloud.js의 CloudStore.save는 대기열에 넣을 때도 "저장했습니다"라고 말하지 않습니다. queued 플래그가 있는 오류를 던지고, 화면은 이를 "오프라인 저장 대기" 상태로 구분해서 보여줍니다. 대기 중인 항목은 CloudStore.cache에도 pendingSync 표시와 함께 반영되어 화면에는 보이지만, 클라우드 기준본과 동기화되기 전임을 구분할 수 있습니다.
+
+온라인 복귀는 15초 주기 폴링 성공 또는 브라우저 online 이벤트로 감지하며, flushQueue가 대기열을 순서대로 재전송합니다. 재전송 중 다시 오프라인이면 남은 항목은 그대로 두고 다음 기회를 기다립니다. 서버가 진짜로 거부하면 그 항목만 대기열에서 지우고 onConflict로 알립니다.
+
+## 미확인 알림 재발송 — 0.3
+
+server/index.mjs의 calendarReminderSweep은 최초 발송(sent) 후 열람 확인(openedAt)이 없으면 10분 뒤 같은 deliveryId로 재발송 작업을 예약합니다. 최대 2회까지 재발송하며(총 3회 발송), 각 재발송 시점에 이미 확인한 수신자는 제외합니다. deliveryId는 최초 발송과 모든 재발송이 공유하므로, 어느 발송을 열어도 같은 알림이 확인 처리됩니다. 일정이 수정·삭제·완료 처리되면 revision이 바뀌어 재발송 작업도 기존의 리비전 검사로 자동 취소됩니다. 다음 발생의 예약은 이 재발송 사슬이 끝난 뒤(확인됨/소진/미수신) 이어서 계산합니다.
 
 ## 연결 수준을 혼동하지 않기
 
@@ -51,6 +71,8 @@ iframe src="./dalnim-calendar/?embed=1"로 화면 삽입이 가능합니다. 공
 - 공간 문서의 members 맵에 초대된 UID와 owner/editor/viewer 역할을 저장합니다.
 - 개인 일정은 소유자만 읽고 씁니다. 가족 공유 일정은 초대된 계정이 볼 수 있고 owner/editor가 수정할 수 있습니다.
 - 서버가 인증·권한·원본 버전을 검사합니다. 클라이언트 직접 Firestore 접근은 차단합니다.
+- invites: 공간 아래 하위 컬렉션(0.3). owner만 POST /invites로 만들고 GET /invites로 조회·POST /invites/revoke로 취소합니다. 각 문서는 email/role/token/status(pending/accepted/revoked)/createdAt을 가지며, dalnimSpaces 전체가 클라이언트 직접 접근을 막는 기존 규칙에 이미 포함되어 별도 규칙 추가가 필요 없습니다.
+- POST /invites/accept는 이 공간의 구성원이 아직 아닌 계정도 호출할 수 있는 유일한 경로입니다(그 외 모든 경로는 먼저 구성원인지 검사). 토큰이 가리키는 초대의 email이 호출자의 Firebase 인증 이메일과 정확히 같고, 아직 pending이며, 7일 이내일 때만 members 맵에 그 역할로 추가합니다.
 
 예약 처리는 앱과 분리되어 클라우드에서 매분 실행됩니다. 저장 시 같은 트랜잭션에서 알림 작업을 기록합니다. 수정/삭제 후 이전 revision 작업은 취소됩니다. 실패는 지수 간격 재시도, 기기별 성공 체크포인트, 알림 tag로 중복을 줄입니다. 네트워크의 불확실성 때문에 exactly-once 전달을 보장하지 않습니다.
 

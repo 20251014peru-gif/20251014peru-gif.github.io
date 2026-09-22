@@ -8,15 +8,17 @@ import {getAuth} from 'firebase-admin/auth';
 import {getFirestore,FieldValue} from 'firebase-admin/firestore';
 import {createHash,randomUUID} from 'node:crypto';
 import webpush from 'web-push';
-import {canRead,canWrite,cleanEvent,validSubscription} from './policy.mjs';
+import {canRead,canWrite,cleanEvent,validSubscription,canInvite,EMAIL_RE,emailMatches,inviteExpired} from './policy.mjs';
 import {nextReminder} from './schedule.mjs';
 initializeApp();
 const db=getFirestore(),privateKey=defineSecret('DALNIM_VAPID_PRIVATE_KEY'),publicKey=defineString('DALNIM_VAPID_PUBLIC_KEY'),subject=defineString('DALNIM_PUSH_SUBJECT'),allowedOrigins=defineString('DALNIM_ALLOWED_ORIGINS');
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const idOK=s=>typeof s==='string'&&/^[\w.-]{1,80}$/.test(s);
 const failure=(status,message)=>Object.assign(Error(message),{status});
+const FOLLOWUP_DELAY_MS=10*60000,MAX_FOLLOWUPS=2;
 const jobRef=(space,e,alarm)=>db.collection('dalnimReminderJobs').doc(hash(space+':'+e.id+':'+e.revision+':'+alarm.occurrence));
-function addJob(tx,space,e,alarm){if(alarm)tx.set(jobRef(space,e,alarm),{space,eventId:e.id,revision:e.revision,...alarm,attempts:0,leaseUntil:0,delivered:[],createdAt:Date.now()},{merge:false});}
+const followupRef=(space,e,occurrence,seq)=>db.collection('dalnimReminderJobs').doc(hash(space+':'+e.id+':'+e.revision+':'+occurrence+':followup:'+seq));
+function addJob(tx,space,e,alarm){if(alarm)tx.set(jobRef(space,e,alarm),{space,eventId:e.id,revision:e.revision,...alarm,attempts:0,leaseUntil:0,delivered:[],followupSeq:0,createdAt:Date.now()},{merge:false});}
 export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',maxInstances:3,timeoutSeconds:120,secrets:[privateKey]},async(req,res)=>{
  const origin=req.get('Origin'),allow=allowedOrigins.value().split(',').map(s=>s.trim());
  if(origin&&!allow.includes(origin)){res.status(403).json({error:'허용되지 않은 앱입니다.'});return;}
@@ -27,10 +29,51 @@ export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',ma
   const token=req.get('Authorization')?.replace(/^Bearer /,'');if(!token)throw failure(401,'로그인이 필요합니다.');
   let user;try{user=await getAuth().verifyIdToken(token,true);}catch{throw failure(401,'로그인이 만료되었습니다.');}
   const uid=user.uid,space=req.get('X-Workspace-Id');if(!idOK(space))throw failure(400,'공간이 올바르지 않습니다.');
-  const root=db.collection('dalnimSpaces').doc(space),spaceDoc=await root.get(),role=spaceDoc.data()?.members?.[uid];
+  const root=db.collection('dalnimSpaces').doc(space),route=req.path.replace(/\/$/,'')||'/';
+  // Accepting an invite runs before the membership gate below: the whole point is the caller is not a member yet.
+  // Safety instead comes from the token match + the caller's own verified email, checked inside this branch.
+  if(route==='/invites/accept'&&req.method==='POST'){
+   const invToken=String(req.body?.token||'');if(!invToken)throw failure(400,'초대 코드가 필요합니다.');
+   if(!user.email||!user.email_verified)throw failure(400,'이메일 인증된 계정으로 로그인해 주세요.');
+   const snap=await root.collection('invites').where('token','==',invToken).limit(1).get();
+   if(snap.empty)throw failure(404,'초대를 찾지 못했습니다.');
+   const doc=snap.docs[0],invite=doc.data();
+   if(invite.status!=='pending')throw failure(409,'이미 처리된 초대입니다.');
+   if(inviteExpired(invite))throw failure(410,'초대가 만료되었습니다. 새 초대를 요청해 주세요.');
+   if(!emailMatches(invite.email,user.email))throw failure(403,'초대받은 계정으로 로그인해 주세요.');
+   const role=await db.runTransaction(async tx=>{
+    const spaceSnap=await tx.get(root);
+    if(spaceSnap.data()?.members?.[uid])throw failure(409,'이미 이 공간의 구성원입니다.');
+    tx.update(root,{['members.'+uid]:invite.role});
+    tx.set(doc.ref,{status:'accepted',acceptedBy:uid,acceptedAt:Date.now()},{merge:true});
+    return invite.role;
+   });
+   res.json({ok:true,role});return;
+  }
+  const spaceDoc=await root.get(),role=spaceDoc.data()?.members?.[uid];
   if(!role)throw failure(403,'이 공간에 초대된 계정이 아닙니다.');
-  const route=req.path.replace(/\/$/,'')||'/';
   if(await notificationRoutes({root,uid,role,req,res,route,webpush,vapid:()=>[subject.value(),publicKey.value(),privateKey.value()]}))return;
+  if(route==='/invites'&&req.method==='GET'){
+   if(!canInvite(role))throw failure(403,'초대 권한이 없습니다.');
+   const snap=await root.collection('invites').orderBy('createdAt','desc').limit(50).get();
+   res.json({invites:snap.docs.map(d=>({id:d.id,email:d.data().email,role:d.data().role,status:d.data().status,createdAt:d.data().createdAt}))});return;
+  }
+  if(route==='/invites'&&req.method==='POST'){
+   if(!canInvite(role))throw failure(403,'초대 권한이 없습니다.');
+   const email=String(req.body?.email||'').trim().toLowerCase(),inviteRole=req.body?.role;
+   if(!EMAIL_RE.test(email))throw failure(400,'이메일 주소가 올바르지 않습니다.');
+   if(!['editor','viewer'].includes(inviteRole))throw failure(400,'역할이 올바르지 않습니다.');
+   const pending=await root.collection('invites').where('status','==','pending').get();
+   if(pending.size>=20)throw failure(400,'대기 중인 초대가 너무 많습니다. 정리한 뒤 다시 시도해 주세요.');
+   const invToken=randomUUID(),id=randomUUID();
+   await root.collection('invites').doc(id).set({email,role:inviteRole,token:invToken,status:'pending',invitedBy:uid,createdAt:Date.now()});
+   res.json({id,link:'?invite='+encodeURIComponent(space)+':'+invToken});return;
+  }
+  if(route==='/invites/revoke'&&req.method==='POST'){
+   if(!canInvite(role))throw failure(403,'초대 권한이 없습니다.');
+   const id=req.body?.id;if(!idOK(id))throw failure(400,'초대 ID가 올바르지 않습니다.');
+   await root.collection('invites').doc(id).set({status:'revoked'},{merge:true});res.json({ok:true});return;
+  }
   if(route==='/preferences'&&req.method==='GET'){res.json((await root.collection('preferences').doc(uid).get()).data()||{});return;}
   if(route==='/preferences'&&req.method==='POST'){
    const {key,value}=req.body||{};if(!['categories','disabled'].includes(key)||!Array.isArray(value)||value.length>100)throw failure(400,'설정 값이 올바르지 않습니다.');
@@ -87,25 +130,47 @@ async function dispatch(ref,now){
   const root=db.collection('dalnimSpaces').doc(job.space),[eventDoc,spaceDoc]=await Promise.all([root.collection('events').doc(job.eventId).get(),root.get()]),e=eventDoc.data(),members=spaceDoc.data()?.members||{};
   if(!e||e.deletedAt||e.status==='done'||e.revision!==job.revision||!members[e.ownerId]){await ref.update({dueAt:FieldValue.delete(),state:'cancelled',leaseUntil:0});return;}
   if(now-job.dueAt>86400000){await finish('expired');return;}
-  const recipients=Object.keys(members).filter(uid=>canRead(e,uid,members[uid]));
+  // Stable across an initial send and its follow-ups, so opening any one of them marks the same
+  // notification read and the /notifications history does not fork into duplicate rows.
+  const deliveryId=job.deliveryId||ref.id;
+  let recipients=Object.keys(members).filter(uid=>canRead(e,uid,members[uid]));
+  if(job.isFollowup){
+   const opened=await Promise.all(recipients.map(async uid=>[uid,(await root.collection('members').doc(uid).collection('notifications').doc(deliveryId).get()).data()?.openedAt]));
+   recipients=opened.filter(([,at])=>!at).map(([uid])=>uid);
+   if(!recipients.length){await finish('acknowledged');return;}
+  }
   let failures=0,targets=0;const delivered=new Set(job.delivered||[]);
   for(const uid of recipients){
    let accepted=0,deviceFailures=0;
-   await recordDelivery(root,uid,ref.id,{eventId:e.id,title:e.title,kind:'event',createdAt:job.createdAt,state:'preparing'});
+   await recordDelivery(root,uid,deliveryId,{eventId:e.id,title:e.title,kind:'event',createdAt:job.createdAt,state:'preparing'});
    const subs=await root.collection('members').doc(uid).collection('subscriptions').get();
    for(const sub of subs.docs){targets++;const key=uid+':'+sub.id;if(delivered.has(key)){accepted++;continue;}
     // Recheck event revision just before sending; cancelled jobs do not survive edits.
     const current=(await eventDoc.ref.get()).data();if(!current||current.deletedAt||current.revision!==job.revision){await ref.update({dueAt:FieldValue.delete(),state:'cancelled',leaseUntil:0});return;}
-    try{await webpush.sendNotification(sub.data().subscription,JSON.stringify({title:'달님 · 일정 알림',body:e.title,eventId:e.id,deliveryId:ref.id}),{TTL:3600,urgency:'high',timeout:12000});accepted++;delivered.add(key);await ref.update({delivered:FieldValue.arrayUnion(key)});}
+    try{await webpush.sendNotification(sub.data().subscription,JSON.stringify({title:'달님 · '+(job.isFollowup?'다시 확인해 주세요':'일정 알림'),body:e.title,eventId:e.id,deliveryId}),{TTL:3600,urgency:'high',timeout:12000});accepted++;delivered.add(key);await ref.update({delivered:FieldValue.arrayUnion(key)});}
     catch(err){if(err.statusCode===404||err.statusCode===410)await sub.ref.delete();else {failures++;deviceFailures++;}}
    }
-   await recordDelivery(root,uid,ref.id,{state:deliveryState({accepted,failed:deviceFailures}),accepted,failed:deviceFailures});
+   await recordDelivery(root,uid,deliveryId,{state:deliveryState({accepted,failed:deviceFailures}),accepted,failed:deviceFailures});
   }
   if(failures&&job.attempts<5){await ref.update({attempts:job.attempts+1,dueAt:now+Math.min(3600000,60000*2**job.attempts),leaseUntil:0,state:'retry'});return;}
   await finish(failures?'failed':delivered.size?'sent':'no-device');
+  // A "sent" delivery is service acceptance, not proof of reading. If nobody has opened it yet and
+  // the follow-up budget is not spent, schedule one more check instead of the next occurrence's
+  // reminder. Only once the chain ends (acknowledged, exhausted, or nothing was delivered) does the
+  // series' next occurrence get scheduled, via the ordinary revision-guarded addJob path.
   async function finish(state){
    const alarm=nextReminder(e,Date.now(),job.occurrence);
-   await db.runTransaction(async tx=>{const current=await tx.get(eventDoc.ref);tx.update(ref,{state,dueAt:FieldValue.delete(),finishedAt:Date.now(),leaseUntil:0});if(current.data()?.revision===job.revision)addJob(tx,job.space,e,alarm);});
+   await db.runTransaction(async tx=>{
+    const current=await tx.get(eventDoc.ref);
+    tx.update(ref,{state,dueAt:FieldValue.delete(),finishedAt:Date.now(),leaseUntil:0});
+    if(current.data()?.revision!==job.revision)return;
+    if(state==='sent'&&(job.followupSeq||0)<MAX_FOLLOWUPS){
+     const seq=(job.followupSeq||0)+1;
+     tx.set(followupRef(job.space,e,job.occurrence,seq),{space:job.space,eventId:e.id,revision:e.revision,occurrence:job.occurrence,dueAt:Date.now()+FOLLOWUP_DELAY_MS,deliveryId,isFollowup:true,followupSeq:seq,attempts:0,leaseUntil:0,delivered:[],createdAt:job.createdAt},{merge:false});
+    }else{
+     addJob(tx,job.space,e,alarm);
+    }
+   });
   }
  }catch(error){console.error('calendar reminder',ref.id,error.message);await ref.update({leaseUntil:0,dueAt:Date.now()+300000,lastError:String(error.message).slice(0,300),attempts:(job.attempts||0)+1});}
 }

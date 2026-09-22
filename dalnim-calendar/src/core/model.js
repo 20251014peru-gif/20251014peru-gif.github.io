@@ -21,7 +21,31 @@ export function validateEvent(input) {
   e.location = String(e.location || '').slice(0,300); e.repeat = e.repeat || 'none';
   e.timeZone = e.timeZone || ZONE; e.schemaVersion = 1;
   if (e.source && (!e.source.app || !e.source.recordId)) throw Error('연결 원본 정보가 올바르지 않습니다.');
+  e.exceptions = sanitizeExceptions(e.exceptions, e.allDay);
   return e;
+}
+// A single-occurrence override, keyed by the occurrence's original (pre-override) start.
+// Editing "this event only" on a repeating event writes here instead of moving the whole series.
+export function sanitizeExceptions(input, allDay) {
+  const out = {};
+  if (!input || typeof input !== 'object') return out;
+  for (const key of Object.keys(input).slice(0, 366)) {
+    if (allDay ? !/^\d{4}-\d{2}-\d{2}$/.test(key) : !Number.isFinite(+new Date(key))) continue;
+    const raw = input[key]; if (!raw || typeof raw !== 'object') continue;
+    if (raw.deletedAt) { out[key] = { deletedAt: Number(raw.deletedAt) || Date.now() }; continue; }
+    const o = {};
+    if (typeof raw.title === 'string' && raw.title.trim()) o.title = raw.title.trim().slice(0, 160);
+    if (typeof raw.notes === 'string') o.notes = raw.notes.slice(0, 20000);
+    if (typeof raw.location === 'string') o.location = raw.location.slice(0, 300);
+    if (['planned', 'progress', 'done'].includes(raw.status)) o.status = raw.status;
+    if (Number.isInteger(raw.reminder) && raw.reminder >= -1 && raw.reminder <= 10080) o.reminder = raw.reminder;
+    if (raw.start && raw.end) {
+      const s = +new Date(raw.start), e2 = +new Date(raw.end);
+      if (Number.isFinite(s) && Number.isFinite(e2) && e2 > s) { o.start = raw.start; o.end = raw.end; }
+    }
+    if (Object.keys(o).length) out[key] = o;
+  }
+  return out;
 }
 // Keep the anchor date when stepping months: Jan 31 skips February instead of drifting.
 export function occurrenceAt(e, n) {
@@ -44,7 +68,9 @@ export function expandEvents(events, from, to) {
     for (let n=Math.max(0,startIndex), count=0; count<400; n++,count++) {
       const o=occurrenceAt(e,n); if(!o) continue;
       if(+new Date(o.start)>=hi) break;
-      if(+new Date(o.end)>lo) out.push({...e,...o,occurrenceId:`${e.id}@${o.start}`});
+      const ex=e.exceptions?.[o.start]; if(ex?.deletedAt) continue;
+      const occ=ex?{...o,...ex}:o;
+      if(+new Date(occ.end)>lo) out.push({...e,...occ,occurrenceId:`${e.id}@${o.start}`,isException:Boolean(ex)});
     }
   }
   return out;

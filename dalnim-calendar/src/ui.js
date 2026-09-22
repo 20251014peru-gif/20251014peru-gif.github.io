@@ -25,5 +25,9 @@ export function toast(message){const el=document.getElementById('toast');el.text
 export function ask(title,message,confirm='확인'){
  const d=document.getElementById('confirm');d.innerHTML='<form method="dialog" class="confirm-box"><h2 id="confirm-title">'+esc(title)+'</h2><p>'+esc(message)+'</p><div class="dialog-actions"><button value="cancel" class="soft">취소</button><button value="ok" class="primary">'+esc(confirm)+'</button></div></form>';d.showModal();return new Promise(resolve=>d.addEventListener('close',()=>resolve(d.returnValue==='ok'),{once:true}));
 }
+// Like ask(), but with N labelled choices instead of a single confirm — used to pick "this event only" vs "all". Resolves the clicked value, or null when cancelled.
+export function chooseScope(title,message,options){
+ const d=document.getElementById('confirm');d.innerHTML='<form method="dialog" class="confirm-box"><h2 id="confirm-title">'+esc(title)+'</h2><p>'+esc(message)+'</p><div class="dialog-actions">'+options.map(o=>'<button value="'+esc(o.value)+'" class="'+(o.cls||'soft')+'">'+esc(o.label)+'</button>').join('')+'<button value="" class="soft" formnovalidate>취소</button></div></form>';d.showModal();return new Promise(resolve=>d.addEventListener('close',()=>resolve(d.returnValue||null),{once:true}));
+}
 export function download(name,data,type='application/json'){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([data],{type}));a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
 

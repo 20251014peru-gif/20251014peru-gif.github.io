@@ -12,7 +12,15 @@ export function nextReminder(e,now=Date.now(),afterStart=0){
   const d=e.repeat==='daily'?base.plus({days:n}):e.repeat==='weekly'?base.plus({weeks:n}):e.repeat==='monthly'?base.plus({months:n}):e.repeat==='yearly'?base.plus({years:n}):base;
   if((e.repeat==='monthly'||e.repeat==='yearly')&&d.day!==base.day)continue;
   if(d.toMillis()<=afterStart||d.toMillis()<now-60000)continue;
-  return {occurrence:d.toMillis(),dueAt:Math.max(now,d.toMillis()-e.reminder*60000)};
+  // A per-occurrence exception (edited or deleted single instance) is keyed by its original anchor instant.
+  const anchorKey=e.allDay?d.toISODate():d.toUTC().toISO();
+  const ex=e.exceptions?.[anchorKey];
+  if(ex?.deletedAt||ex?.status==='done')continue;
+  const reminder=Number.isInteger(ex?.reminder)?ex.reminder:e.reminder;
+  if(reminder<0)continue;
+  const overrideStart=ex?.start?DateTime.fromISO(ex.start,{zone}):null;
+  const occurAt=overrideStart?(e.allDay?overrideStart.set({hour:9}):overrideStart).toMillis():d.toMillis();
+  return {occurrence:d.toMillis(),dueAt:Math.max(now,occurAt-reminder*60000)};
  }
  return null;
 }
