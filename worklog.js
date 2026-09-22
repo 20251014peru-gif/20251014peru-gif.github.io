@@ -697,6 +697,34 @@ function makeFieldSearchUI(inputId, listId, onSelect){
     });
   }
 
+  /* v276 — 목록칸이 입력칸 아래 48px 라고 CSS에 못박혀 있었다. 입력칸 높이가
+        달라지거나 창이 모자라면 그 자리가 어긋나 「중간에 나온다」로 보였다.
+        모달이 열릴 때 transform(scale) 이 걸려 있어 position:fixed 는
+        엉뚱한 기준으로 계산될 수 있다 — 그래서 absolute 를 쓰되,
+        48px 고정값 대신 입력칸의 실제 높이·자리(wrap 기준)로 다시 잰다. */
+  function positionList(){
+    try{
+      if(!wrap) return;
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      var r = inp.getBoundingClientRect();
+      var maxH = 260;
+      var openUp = (vh - r.bottom) < maxH && r.top > (vh - r.bottom);
+      list.style.position = 'absolute';
+      list.style.left = '0px';
+      if(openUp){
+        list.style.top = 'auto';
+        list.style.bottom = (wrap.offsetHeight - inp.offsetTop + 4) + 'px';
+        list.style.maxHeight = Math.max(120, r.top - 12) + 'px';
+      }else{
+        list.style.bottom = 'auto';
+        list.style.top = (inp.offsetTop + inp.offsetHeight + 4) + 'px';
+        list.style.maxHeight = Math.max(120, vh - r.bottom - 12) + 'px';
+      }
+      list.style.overflowY = 'auto';
+      list.style.zIndex = 40;
+    }catch(e){}
+  }
+
   function render(q){
     q = (q||"").trim();
     let filtered;
@@ -716,6 +744,7 @@ function makeFieldSearchUI(inputId, listId, onSelect){
     }
     if(!filtered.length){
       list.innerHTML = `<div style="padding:10px 14px;color:#aab8c8;font-size:13px">"${esc(q)}" 검색 결과 없음 — Enter로 새 분야 추가</div>`;
+      positionList();
       list.style.display = "block";
       return;
     }
@@ -724,6 +753,7 @@ function makeFieldSearchUI(inputId, listId, onSelect){
         <span class="pill ${fieldClass(f)}" style="margin-right:8px;font-size:11px">${esc(f)}</span>
         <span style="font-size:11px;color:#aab8c8">${esc(getChosung(f))}</span>
       </div>`).join("");
+    positionList();
     list.style.display = "block";
     list.querySelectorAll(".fsl-item").forEach(el=>{
       el.addEventListener("mouseenter",()=>el.style.background="#f0f6ff");
@@ -23395,7 +23425,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v276-0922-1819';
+  var JS_BUILD = 'v277-0922-1825';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
