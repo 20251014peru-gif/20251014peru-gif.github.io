@@ -23395,7 +23395,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v274-0922-1702';
+  var JS_BUILD = 'v275-0922-1745';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -24237,6 +24237,10 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     }catch(e){ console.warn('[지출 내역] 기록 읽기 실패', e); return null; }
   }
   function off(){ try{ window.wlAddOn(['#__none'], 'expitems', function(){ return null; }); }catch(e){} }
+  /* v277 — 업무 화면에서 항목 상자를 열기 전 「＋ 항목 추가」 작은 단추만 보일 때 쓰는 자리표시자 */
+  function offBtn(){ try{ window.wlAddOn(['#__none'], 'expitemsbtn', function(){ return null; }); }catch(e){} }
+  /* 업무 기록마다 "이번에 펼쳤나" — 새로고침하면 다시 접힌다 (담은 항목이 있으면 어차피 펼쳐진다) */
+  var openIds = {};
 
   /* ── 표 한 줄 ── */
   var COLS = {
@@ -25023,10 +25027,41 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
           (달님 : 「지출도 추가 추가 할 수 있게 해줘」). */
     var isExp     = !!(r && r.kind === 'expense');
     var isWorkExp = !!(r && r.kind === 'work' && WORK_EXP_TYPES[String(r.expType||'').trim()]);
-    if(!r || (!isExp && !isWorkExp)){ off(); return; }
+    if(!r || (!isExp && !isWorkExp)){ off(); offBtn(); return; }
     var s = sums(r);
     var edit = canEdit();
-    if(!s.any && !edit){ off(); return; }
+    if(!s.any && !edit){ off(); offBtn(); return; }
+
+    /* v277 — 업무 화면은 항목을 이미 담았을 때만 상자가 보이고, 그 전엔 작은
+          「＋ 항목 추가」 단추만 있다 — 공급가액·부가세·합계만 쓰는 사람에게는
+          평소에 화면을 안 차지하게. (지출 kind:expense 화면은 예전 그대로 둔다) */
+    if(isWorkExp && edit && !s.any && !openIds[r.id]){
+      off();
+      try{
+        window.wlAddOn(['.lf-page .pg-props', '[data-prow="_amount"] .pg-pv'], 'expitemsbtn',
+          function(){
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.style.cssText = 'margin-top:8px;height:32px;padding:0 12px;border:1.5px dashed #cfe0f3;'
+                             + 'border-radius:9px;background:#f8fbff;color:#3f7cb8;font-size:12.5px;'
+                             + 'font-weight:800;cursor:pointer;font-family:inherit';
+            return b;
+          },
+          function(b){
+            b.textContent = '＋ 항목 추가 (자재·중식·폐기물로 나눠 담기)';
+            if(!b._eiOpenB){
+              b._eiOpenB = 1;
+              b.addEventListener('click', function(){
+                openIds[r.id] = 1;
+                try{ if(typeof window.wlAfterPaint === 'function') window.wlAfterPaint(); }catch(e){}
+              });
+            }
+          });
+      }catch(e){ console.warn('[지출 내역] 열기 단추 실패', e); }
+      return;
+    }
+    offBtn();
+
     try{
       /* v241 — 달님 : 「자재·중식·폐기물이 세로로 쌓여 칸이 길어진다」
          예전에는 「합계」 값 칸(좁은 오른쪽 칸) 안에 붙어 폭이 253px 뿐이었다.
