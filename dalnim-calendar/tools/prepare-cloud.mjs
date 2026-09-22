@@ -3,7 +3,6 @@ import {spawnSync} from 'node:child_process';
 import {createECDH} from 'node:crypto';
 import {initializeApp} from 'firebase-admin/app';
 import {getAuth} from 'firebase-admin/auth';
-import {getFirestore} from 'firebase-admin/firestore';
 import webpush from 'web-push';
 // Run only inside an authenticated operator terminal. Secrets never go to stdout.
 const args=process.argv.slice(2),arg=k=>args[args.indexOf(k)+1];
@@ -11,7 +10,7 @@ const project=args.includes('--project')?arg('--project'):null,owner=args.includ
 if(!/^[a-z][a-z0-9-]{4,50}$/.test(project||'')||!owner)throw Error('--project and --owner-uid are required.');
 const run=(cmd,argv,input)=>{const r=spawnSync(cmd,argv,{encoding:'utf8',input,shell:false});if(r.status!==0)throw Error(`${cmd} failed: ${String(r.stderr).slice(0,600)}`);return r.stdout.trim();};
 const token=()=>run('gcloud',['auth','print-access-token']);
-async function google(url,method='GET',body){const r=await fetch(url,{method,headers:{Authorization:'Bearer '+token(),'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();if(!r.ok)throw Error(`${method} ${new URL(url).pathname}: ${d.error?.message||r.status}`);return d;}
+async function google(url,method='GET',body){const r=await fetch(url,{method,headers:{Authorization:'Bearer '+token(),'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();if(!r.ok)throw Object.assign(Error(`${method} ${new URL(url).pathname}: ${d.error?.message||r.status}`),{status:r.status});return d;}
 await mkdir('.cloud-setup',{recursive:true});
 const rulesBase=`https://firebaserules.googleapis.com/v1/projects/${project}`;
 const release=await google(rulesBase+'/releases/cloud.firestore');
@@ -29,8 +28,11 @@ await writeFile('.cloud-setup/firestore.after.rules',proposed,{mode:0o600});
 const app=initializeApp({projectId:project,credential:{getAccessToken:async()=>({access_token:token(),expires_in:3000})}});
 const ownerUser=await getAuth(app).getUser(owner);
 if(ownerUser.disabled||!ownerUser.emailVerified)throw Error('Owner must be an enabled verified account.');
-const root=getFirestore(app).collection('dalnimSpaces').doc('family'),existing=await root.get();
-if(existing.exists&&existing.data().members?.[owner]!=='owner')throw Error('Existing workspace has a different owner. No changes made.');
+// Cloud Shell's gcloud credential works with REST without exporting a service-account key.
+const documents=`https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents`;
+let existing=null;
+try{existing=await google(documents+'/dalnimSpaces/family');}catch(error){if(error.status!==404)throw error;}
+if(existing&&existing.fields?.members?.mapValue?.fields?.[owner]?.stringValue!=='owner')throw Error('Existing workspace has a different owner. No changes made.');
 const apps=await google(`https://firebase.googleapis.com/v1beta1/projects/${project}/webApps`);
 if(apps.apps?.length!==1)throw Error('Select the correct web app before continuing.');
 const firebase=await google(`https://firebase.googleapis.com/v1beta1/${apps.apps[0].name}/config`);
@@ -41,7 +43,7 @@ if(!apply){console.log('Dry run complete. Inspect .cloud-setup/firestore.after.r
 // Fail closed on concurrent rules changes before replacing the release.
 const latest=await google(rulesBase+'/releases/cloud.firestore');if(latest.rulesetName!==release.rulesetName)throw Error('Rules changed during preparation. Run preflight again.');
 if(proposed!==current){const created=await google(rulesBase+'/rulesets','POST',{source:{files:[{name:ruleSet.source.files[0].name,content:proposed}]}});await google(rulesBase+'/releases/cloud.firestore','PATCH',{release:{name:release.name,rulesetName:created.name},updateMask:'rulesetName'});console.log('Dedicated calendar namespaces protected.');}
-if(!existing.exists)await root.create({members:{[owner]:'owner'},createdAt:Date.now(),schemaVersion:1});
+if(!existing)await google(documents+'/dalnimSpaces?documentId=family','POST',{fields:{members:{mapValue:{fields:{[owner]:{stringValue:'owner'}}}},createdAt:{integerValue:String(Date.now())},schemaVersion:{integerValue:'1'}}});
 // gcloud only transports the secret in stdin; it is never written to the repo or logged.
 run('gcloud',['services','enable','secretmanager.googleapis.com','--project',project,'--quiet']);
 const secretName='DALNIM_VAPID_PRIVATE_KEY',list=JSON.parse(run('gcloud',['secrets','list','--project',project,'--format=json']));

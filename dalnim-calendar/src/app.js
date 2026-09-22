@@ -96,7 +96,7 @@ function openEditor(id,patch={}){
  d.showModal();setTimeout(()=>form.elements.namedItem('title').focus(),30);
 }
 function renderBlocks(){
- $('#content').innerHTML='<div class="block-page"><p class="connection-entry"><a class="soft" href="./connected.html" target="_blank" rel="noopener">'+icon('link')+'양방향 연동 체험 열기 ↗</a><span>워크로그 형식으로 기록하고, 캘린더에서 바로 확인하세요.</span></p><div class="blocks-intro"><div>'+icon('blocks')+'</div><div><strong>연결할수록 넓어지는 나의 공간</strong><p>블록을 꺼도 일정과 기록은 남습니다. 다른 블록은 그대로 사용할 수 있어요.</p></div></div><div class="block-grid"><article class="block-card" style="--cat:#5373cf;--tint:#edf2ff"><div class="block-icon">'+icon('calendar')+'</div><h3>캘린더</h3><p>모든 일정의 공통 공간. 보기·검색·편집·백업을 담당합니다.</p><div class="block-bottom"><span>공통 기반</span><span class="pill">사용 중</span></div></article>'+registry.list().map(m=>'<article class="block-card" style="--cat:'+m.color+';--tint:'+m.color+'12"><div class="block-icon">'+icon(m.icon)+'</div><h3>'+esc(m.label)+'</h3><p>'+esc(m.description)+'</p><div class="block-bottom"><span>'+(!enabled(m.id)?'일정은 보존됨':'상세 입력 사용 중')+'</span><button role="switch" aria-checked="'+enabled(m.id)+'" aria-label="'+esc(m.label)+' 블록" class="switch" data-toggle="'+esc(m.id)+'"></button></div></article>').join('')+'</div><p class="blocks-legend">워크로그 파일은 설정에서 가져올 수 있습니다. 프로그램 간 실시간 연동과 가족 공유는 클라우드 연결 후 활성화됩니다.</p>'+(registry.errors.length?'<p class="notice">일부 블록을 불러오지 못했습니다. 나머지 블록은 정상 작동합니다.</p>':'')+'</div>';
+ $('#content').innerHTML='<div class="block-page"><p class="connection-entry"><a class="soft" href="./connected.html" target="_blank" rel="noopener">'+icon('link')+'양방향 연동 체험 열기 ↗</a><span>별도 로컬 체험입니다. 서버 일정 및 기존 워크로그와 연결되지 않습니다.</span></p><div class="blocks-intro"><div>'+icon('blocks')+'</div><div><strong>연결할수록 넓어지는 나의 공간</strong><p>블록을 꺼도 일정과 기록은 남습니다. 다른 블록은 그대로 사용할 수 있어요.</p></div></div><div class="block-grid"><article class="block-card" style="--cat:#5373cf;--tint:#edf2ff"><div class="block-icon">'+icon('calendar')+'</div><h3>캘린더</h3><p>모든 일정의 공통 공간. 보기·검색·편집·백업을 담당합니다.</p><div class="block-bottom"><span>공통 기반</span><span class="pill">사용 중</span></div></article>'+registry.list().map(m=>'<article class="block-card" style="--cat:'+m.color+';--tint:'+m.color+'12"><div class="block-icon">'+icon(m.icon)+'</div><h3>'+esc(m.label)+'</h3><p>'+esc(m.description)+'</p><div class="block-bottom"><span>'+(!enabled(m.id)?'일정은 보존됨':'상세 입력 사용 중')+'</span><button role="switch" aria-checked="'+enabled(m.id)+'" aria-label="'+esc(m.label)+' 블록" class="switch" data-toggle="'+esc(m.id)+'"></button></div></article>').join('')+'</div><p class="blocks-legend">워크로그 파일은 설정에서 가져올 수 있습니다. 프로그램 간 실시간 연동과 가족 공유는 클라우드 연결 후 활성화됩니다.</p>'+(registry.errors.length?'<p class="notice">일부 블록을 불러오지 못했습니다. 나머지 블록은 정상 작동합니다.</p>':'')+'</div>';
  document.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{const id=b.dataset.toggle;disabled=disabled.includes(id)?disabled.filter(x=>x!==id):[...disabled,id];await store.setMeta('disabled',disabled);if(page==='blocks')renderBlocks();toast(enabled(id)?'블록을 연결했습니다.':'블록을 껐습니다. 기존 일정은 유지됩니다.');});
 }
 function renderInbox(){
@@ -139,13 +139,14 @@ async function importFile(event){
 }
 async function cloudLogin(){
  const d=$('#settings');
- d.innerHTML='<form id="login-form"><div class="dialog-head"><h2 id="settings-title">내 공간 로그인</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><p class="notice">초대된 계정만 내 공간을 열 수 있어요. 기존 Google 계정이나 등록된 이메일로 로그인해 주세요.</p><label class="field full" style="margin:20px 0">공간 ID<input name="workspace" required value="'+esc(config.workspaceId||'family')+'"></label><button type="button" class="primary" id="google-login" style="width:100%">Google 계정으로 계속</button><details class="settings-group"><summary class="quiet small">이메일과 비밀번호로 로그인</summary><div class="form-grid" style="margin-top:16px"><label class="field full">이메일<input name="email" type="email" autocomplete="username"></label><label class="field full">비밀번호<input name="password" type="password" autocomplete="current-password"></label></div><button class="soft" type="submit" style="margin-top:16px">이메일로 로그인</button></details><p class="form-note">체험 일정은 로그인 공간에 자동으로 옮기지 않습니다.</p><p class="form-error" role="alert"></p></div></form>';
+ d.innerHTML='<form id="login-form"><div class="dialog-head"><h2 id="settings-title">내 공간 로그인</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><p class="notice">초대된 계정만 내 공간을 열 수 있어요. 기존 Google 계정이나 등록된 이메일로 로그인해 주세요.</p><label class="field full" style="margin:20px 0">공간 ID<input name="workspace" required value="'+esc(config.workspaceId||'family')+'"></label><button type="button" class="primary" id="google-login" style="width:100%">Google 계정으로 계속</button><details class="settings-group"><summary class="quiet small">이메일과 비밀번호로 로그인</summary><div class="form-grid" style="margin-top:16px"><label class="field full">이메일<input name="email" type="email" autocomplete="username"></label><label class="field full">비밀번호<input name="password" type="password" autocomplete="current-password"></label></div><button class="soft" type="submit" style="margin-top:16px">이메일로 로그인</button></details><p class="form-note">등록된 본인·가족 계정만 사용할 수 있습니다.</p><p class="form-error" role="alert"></p></div></form>';
  const form=d.querySelector('form');d.querySelector('[data-close]').onclick=()=>d.close();
  async function connect(kind){
   const buttons=[...form.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);
   try{const {CloudStore}=await import('./cloud.js');const live=new CloudStore(config);const space=form.workspace.value.trim();
    if(!space)throw Error('공간 ID를 입력해 주세요.');
    if(kind==='google')await live.loginGoogle(space);else {if(!form.email.value||!form.password.value)throw Error('이메일과 비밀번호를 입력해 주세요.');await live.login(form.email.value,form.password.value,space);}
+   if(!store){location.reload();return;}
    store=live;categories=await store.meta('categories',baseCategories);disabled=await store.meta('disabled',[]);await refresh();store.subscribe(refresh);d.close();shell();$('#banner-label').textContent='클라우드 공간 · 실제 계정 데이터';$('[data-action=clear-demo]').hidden=true;toast('내 공간에 연결되었습니다.');const target=new URLSearchParams(location.search).get('event');if(target)openEditor(target);await acknowledgePush();
   }catch(err){d.querySelector('.form-error').textContent=err.code==='auth/popup-closed-by-user'?'로그인 창을 닫았습니다. 다시 눌러 연결할 수 있어요.':err.message;}finally{buttons.forEach(b=>b.disabled=false);}
  }
@@ -166,8 +167,15 @@ async function action(name){
 }
 async function refresh(){events=await store.list();if($('#store-state'))$('#store-state').innerHTML=icon('check')+stateLabel();paintCategories();if(page==='blocks')renderBlocks();else if(page==='inbox')renderInbox();else refreshCalendar();}
 async function init(){
- store=await new LocalStore().init();
- if(config.apiBase&&sessionStorage.getItem('dalnim-session')){try{const {CloudStore}=await import('./cloud.js');store=await new CloudStore(config).restore();}catch(err){sessionStorage.removeItem('dalnim-session');toast('클라우드에 연결하지 못해 체험 공간을 열었습니다. 다시 로그인해 주세요.');}}
+ if(config.apiBase){
+  if(sessionStorage.getItem('dalnim-session')){try{const {CloudStore}=await import('./cloud.js');store=await new CloudStore(config).restore();}catch(err){toast('서버 연결을 확인하고 다시 로그인해 주세요.');}}
+  if(!store){
+   $('#app').innerHTML='<main class="welcome-gate"><img src="./icon.svg" alt="달님"><p class="eyebrow">YOUR DAYS, CONNECTED</p><h1>오늘도, 나의 달님</h1><p>일과 생활이 연결되는 나만의 캘린더.<br>로그인하면 모든 기기에서 같은 일정을 만나요.</p><button class="primary" id="open-login">내 캘린더 열기</button><small>일정은 전용 Firebase 서버에 안전하게 저장됩니다.</small></main>';
+   $('#open-login').onclick=cloudLogin;
+   if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{});
+   return;
+  }
+ }else store=await new LocalStore().init();
  await registry.load(config.modules);categories=await store.meta('categories',baseCategories);disabled=await store.meta('disabled',[]);events=await store.list();
  if(!store.isCloud&&!await store.meta('seeded',false)){await store.import(demoEvents());await store.setMeta('seeded',true);events=await store.list();}
  shell();if(store.isCloud){$('#banner-label').textContent='클라우드 공간 · 실제 계정 데이터';$('[data-action=clear-demo]').hidden=true;}store.subscribe(refresh);
