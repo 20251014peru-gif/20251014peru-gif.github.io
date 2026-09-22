@@ -1,0 +1,30 @@
+{
+  "name": "dalnim-calendar",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "main": "server/index.mjs",
+  "engines": {
+    "node": "22",
+    "pnpm": "10.17.1"
+  },
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check:server": "node --check server/index.mjs"
+  },
+  "dependencies": {
+    "@google-cloud/functions-framework": "5.0.5",
+    "firebase-admin": "14.4.0",
+    "firebase-functions": "7.4.0",
+    "luxon": "3.7.2",
+    "web-push": "3.6.7"
+  },
+  "packageManager": "pnpm@10.17.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@firebase/util",
+      "protobufjs"
+    ]
+  }
+}

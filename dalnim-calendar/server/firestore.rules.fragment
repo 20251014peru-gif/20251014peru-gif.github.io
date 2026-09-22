@@ -1,0 +1,9 @@
+// Merge into the existing rules after inspecting them. Do not replace existing rules blindly.
+// Broad existing allow rules must also be checked; deny rules do not override allow rules.
+// New calendar collections are accessed only through the authenticated server API.
+match /dalnimSpaces/{document=**} {
+  allow read, write: if false;
+}
+match /dalnimReminderJobs/{document=**} {
+  allow read, write: if false;
+}

@@ -1,0 +1,1 @@
+export default {id:'worklog',label:'워크로그',description:'층·장소·분야와 업무 진행을 일정에 연결합니다.',icon:'building',color:'#5373cf',fields:[{key:'floor',label:'층 / 호실',placeholder:'예: 3층 공용부'},{key:'field',label:'업무 분야',placeholder:'예: 전기 · 시설 · 청소'},{key:'assignee',label:'담당자',placeholder:'담당자 이름'},{key:'cost',label:'비용 (원)',type:'number'}]};

@@ -1,0 +1,23 @@
+{
+  "functions": [
+    {
+      "source": ".",
+      "codebase": "dalnim-calendar",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "work",
+        "tests",
+        "tools",
+        "*.zip",
+        "README.md",
+        "ARCHITECTURE.md",
+        "DEPLOYMENT.md",
+        ".cloud-setup",
+        "connected.html",
+        "integrations"
+      ],
+      "runtime": "nodejs22"
+    }
+  ]
+}

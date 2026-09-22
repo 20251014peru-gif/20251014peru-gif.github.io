@@ -1,0 +1,1 @@
+export default {id:'investment',label:'투자 노트',description:'종목과 확인할 근거를 일정에 연결합니다. 시세 자동 수집은 별도 연결이 필요합니다.',icon:'chart',color:'#378e86',fields:[{key:'symbol',label:'종목 / 주제',placeholder:'종목 코드 또는 관찰할 주제'},{key:'market',label:'시장',placeholder:'한국 · 미국 · 글로벌'},{key:'nextCheck',label:'확인할 내용',placeholder:'발표 이후 확인할 근거'}]};
