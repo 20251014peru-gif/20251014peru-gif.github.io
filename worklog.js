@@ -18307,7 +18307,8 @@ async function githubUpload(token){
     'f:refYear'   : { chips:'all', search:false, lab:function(v){ return v + '년'; } },
     'f:refMonth'  : { chips:'all', search:false, lab:function(v){ return v + '월'; } },
     'f:floor'     : { chips:'all', search:false },
-    'f:field'     : { chips:'top', search:true,  cnt:'field' },
+    /* v280 — 달님이 고정으로 넣어 달란 것 (자주 쓴 순위에 안 들어도 항상 보인다) */
+    'f:field'     : { chips:'top', search:true,  cnt:'field', pin:['냉난방','청소반장일일업무'] },
     'f:status'    : { chips:'all', search:false },   /* 완료 상태 */
     'f:expType'   : { chips:'all', search:false,      /* 지출종류 — v185 이름만 통일 */
                       lab:function(v){ return (typeof wlExpTypeLabel==='function') ? wlExpTypeLabel(v, true) : v; } },
@@ -18388,20 +18389,20 @@ async function githubUpload(token){
     var box = document.createElement('div');
     box.className = 'qp-wrap';
 
-    /* v278 — 달님 : 「검색칸을 맨 위로」— 자주 쓰는 버튼판보다 검색창이 먼저 보이게 */
-    /* ── 검색창 + 목록 ── */
-    var q = null, list = null, ime = false;
+    /* v278 — 달님 : 「검색칸을 맨 위로」— 자주 쓰는 버튼판보다 검색창이 먼저 보이게
+       v280 — 「고정된 목록(자주 쓰는 버튼)은 검색창 바로 밑에」— 검색창 다음
+              찾은 결과 목록이 아니라 버튼판이 먼저 오도록, 검색창과 결과 목록을
+              따로 떼어 버튼판을 그 사이에 끼운다. */
+    var q = null, list = null, ime = false, sw = null;
     if(useSearch){
-      var sw = document.createElement('div');
+      sw = document.createElement('div');
       sw.className = 'ss-wrap';
       sw.innerHTML =
           '<input type="text" class="ss-q" autocomplete="off" '
         + 'placeholder="' + (useChips ? '다른 것 찾기' : '검색')
-        + ' (초성 가능 · 예: ㅈㄱ → 전기)">'
-        + '<div class="ss-list"></div>';
+        + ' (초성 가능 · 예: ㅈㄱ → 전기)">';
       box.appendChild(sw);
-      q    = sw.querySelector('.ss-q');
-      list = sw.querySelector('.ss-list');
+      q = sw.querySelector('.ss-q');
     }
 
     /* ── 단추판 ── */
@@ -18410,6 +18411,12 @@ async function githubUpload(token){
       chipVals = (plan.chips === 'top')
         ? topUsed(plan.cnt || pid.slice(2), opts, TOP_N)
         : opts.slice();
+      /* v280 — 자주 쓴 순위와 상관없이 늘 보이게 고정해 둔 것들 */
+      if(plan.pin){
+        plan.pin.forEach(function(v){
+          if(opts.indexOf(v) >= 0 && chipVals.indexOf(v) < 0) chipVals.push(v);
+        });
+      }
       var lab = plan.lab || function(v){ return v; };
       var grid = document.createElement('div');
       grid.className = 'qp-grid';
@@ -18419,6 +18426,13 @@ async function githubUpload(token){
       }).join('')
       + '<button type="button" class="qp-it qp-clr" data-qpv="">비우기</button>';
       box.appendChild(grid);
+    }
+
+    /* 검색 결과 목록은 버튼판 다음 — 검색어를 넣었을 때만 쓸모 있으니 맨 끝 */
+    if(useSearch){
+      list = document.createElement('div');
+      list.className = 'ss-list';
+      box.appendChild(list);
     }
 
     if(sel.parentNode) sel.parentNode.insertBefore(box, sel);
@@ -23478,7 +23492,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v279-0922-1911';
+  var JS_BUILD = 'v280-0923-0845';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */

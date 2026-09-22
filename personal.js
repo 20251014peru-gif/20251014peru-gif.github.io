@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v279-0922-1911';
+window.PERSONAL_BUILD = 'v280-0923-0845';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -5296,6 +5296,14 @@ window.PERSONAL_BUILD = 'v279-0922-1911';
                + pics.map(function(u){ return '<img src="'+esc(u)+'" class="zimg">'; }).join('')
                + '</div>')
             : '')
+      /* v280 — 달님 : 「닫기·삭제는 항상 오른쪽 위에, 아래에도 같이」 —
+            길게 내려 본 뒤 위로 안 올라가도 닫거나 지울 수 있게 아래에도 짝을 둔다. */
+      +   '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:24px;padding-top:16px;border-top:1px solid #eef3f9">'
+      +     '<button type="button" id="pgDel2" class="del" style="height:40px;padding:0 16px;border:1.5px solid #f3c9c9;'
+      +       'border-radius:10px;background:#fff5f5;color:#c23c3c;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🗑 삭제</button>'
+      +     '<button type="button" id="pgX2" style="height:40px;padding:0 16px;border:1.5px solid #dbe6f4;'
+      +       'border-radius:10px;background:#fff;color:#3f7cb8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">✕ 닫기</button>'
+      +   '</div>'
       + '</div></div>';
 
     /* ── 저장 ── */
@@ -5564,12 +5572,19 @@ window.PERSONAL_BUILD = 'v279-0922-1911';
     document.addEventListener('keydown', esc2);
     document.getElementById('pgX').addEventListener('click', close);
     document.getElementById('pgBack').addEventListener('click', close);
+    var px2=document.getElementById('pgX2'); if(px2) px2.addEventListener('click', close);
+    var pd2=document.getElementById('pgDel2');
+    if(pd2) pd2.addEventListener('click', function(){ var pd=document.getElementById('pgDel'); if(pd) pd.click(); });
     if(PGASMOD){
       /* v236 — mousedown 이면 배경을 「누르는 순간」 닫혀서, 배경에서 시작해
          안쪽으로 끌어오려던 것까지 닫혔다. click 으로 바꾸고, 반대 방향(안→배경)
          드래그는 위 「드래그 지킴이」가 막는다. 양쪽 다 안 닫힌다. */
       ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+      /* v280 — 창(모달)으로 열면 ← 목록 이 「✕ 닫기」로 바뀌는데, 줄 끝의 ✕ 단추가
+            그대로 남아 있어 같은 「닫기」가 두 번 보였다 (달님 : 「닫기도 중복」).
+            여기서는 ← 목록 쪽을 닫기로 쓰고, 줄 끝 ✕ 는 감춘다. */
       var bk=document.getElementById('pgBack'); if(bk) bk.textContent='✕ 닫기';
+      var px=document.getElementById('pgX'); if(px) px.style.display='none';
     }
     var pts=document.getElementById('pgTplSave');
     if(pts) pts.addEventListener('click', function(){ tplFromRec(pt, rec); });
