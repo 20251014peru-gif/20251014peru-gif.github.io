@@ -17,7 +17,7 @@ const idOK=s=>typeof s==='string'&&/^[\w.-]{1,80}$/.test(s);
 const failure=(status,message)=>Object.assign(Error(message),{status});
 const jobRef=(space,e,alarm)=>db.collection('dalnimReminderJobs').doc(hash(space+':'+e.id+':'+e.revision+':'+alarm.occurrence));
 function addJob(tx,space,e,alarm){if(alarm)tx.set(jobRef(space,e,alarm),{space,eventId:e.id,revision:e.revision,...alarm,attempts:0,leaseUntil:0,delivered:[],createdAt:Date.now()},{merge:false});}
-export const calendarApi=onRequest({region:'asia-northeast3',maxInstances:3,timeoutSeconds:120,secrets:[privateKey]},async(req,res)=>{
+export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',maxInstances:3,timeoutSeconds:120,secrets:[privateKey]},async(req,res)=>{
  const origin=req.get('Origin'),allow=allowedOrigins.value().split(',').map(s=>s.trim());
  if(origin&&!allow.includes(origin)){res.status(403).json({error:'허용되지 않은 앱입니다.'});return;}
  if(origin){res.set('Access-Control-Allow-Origin',origin);res.set('Vary','Origin');}

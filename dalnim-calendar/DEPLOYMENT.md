@@ -1,6 +1,12 @@
 # 클라우드 활성화
 
-현재 배포되지 않았습니다. 2026-09-22 브라우저에서 my-system-25497의 Blaze 요금제와 asia-northeast3 Firestore 및 기존 계정 로그인을 확인했습니다. Cloud Shell은 Google Cloud API 호출 권한 승인 화면에서 대기 중입니다. 기존 데이터와 규칙은 아직 변경하지 않았습니다.
+2026-09-22 my-system-25497 프로젝트의 asia-northeast3에 calendarApi와 calendarReminderSweep를 배포했습니다. Cloud Scheduler는 매분 실행하며 ENABLED 상태입니다. Firestore 기존 catch-all에서 dalnimSpaces와 dalnimReminderJobs만 제외했고, 본인 계정의 family 공간을 생성했습니다. 기존 운영 워크로그 데이터는 변경하지 않았습니다.
+
+실제 API 주소: https://calendarapi-ng2m4osziq-du.a.run.app
+
+HTTP 요청은 API의 Firebase ID 토큰·공간 권한 검사를 거칩니다. calendarApi는 웹앱 접속을 위해 Cloud Run invoker를 public으로 설정합니다. 데이터 자체를 공개하지 않습니다. 예약 함수에는 스케줄러 실행 권한만 사용합니다. 실패한 최초 함수 생성 뒤 업데이트로 복구하는 경우 IAM도 확인해야 합니다.
+
+클라우드 빌드는 package.json의 engines.pnpm=10.17.1과 잠금 파일을 사용합니다. @google-cloud/functions-framework를 명시적으로 포함하고 필요한 의존성 빌드 스크립트만 허용합니다.
 
 ## 0. 배포 준비 도구
 
