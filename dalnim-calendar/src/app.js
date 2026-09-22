@@ -10,12 +10,14 @@ import {esc,icon,button,toast,ask,chooseScope,download} from './ui.js';
 const $=s=>document.querySelector(s);
 const registry=new ModuleRegistry();
 let store,calendar,events=[],disabled=[],hidden=new Set(),categories=[],selectedDate=new Date(),page='calendar',view=innerWidth<761?'timeGridDay':'timeGridWeek',query='',selectedId=null,installEvent;
+let investmentEvents=[];
+const findAnyEvent=id=>events.find(e=>e.id===id)||investmentEvents.find(e=>e.id===id);
 const baseCategories=[{id:'personal',label:'나의 일정',color:'#8a829e'},{id:'worklog',label:'워크로그',color:'#5373cf'},{id:'investment',label:'투자 노트',color:'#378e86'},{id:'family',label:'가족 일정',color:'#bc7296'}];
 const color=e=>categories.find(c=>c.id===e.category)?.color||'#8795ad';
 const catName=e=>categories.find(c=>c.id===e.category)?.label||'보관된 일정';
 const timeLabel=e=>e.allDay?'종일':new Date(e.start).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false})+' – '+new Date(e.end).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
 const enabled=id=>id==='personal'||!disabled.includes(id);
-const visible=()=>events.filter(e=>!e.deletedAt&&!hidden.has(e.category)&&(!query||[e.title,e.notes,e.location,...Object.values(e.details||{})].join(' ').toLowerCase().includes(query.toLowerCase())));
+const visible=()=>[...events,...investmentEvents].filter(e=>!e.deletedAt&&!hidden.has(e.category)&&(!query||[e.title,e.notes,e.location,...Object.values(e.details||{})].join(' ').toLowerCase().includes(query.toLowerCase())));
 const stateLabel=()=>store?.isCloud?(store.pendingCount?'오프라인 저장 대기 · '+store.pendingCount+'건':store.lastError?'연결 확인 필요':'클라우드 연결됨'):'이 기기에 저장';
 const occurrenceAnchor=id=>id&&id.includes('@')?id.slice(id.indexOf('@')+1):null;
 function shell(){
@@ -30,7 +32,7 @@ function shell(){
 }
 function nav(id,label,ico){return '<button class="nav'+(page===id?' active':'')+'" data-action="'+id+'">'+icon(ico)+'<span>'+label+'</span></button>';}
 function paintCategories(){
- $('#categories').innerHTML=categories.map(c=>'<label class="cat-row" style="--cat:'+c.color+'"><input type="checkbox" data-category="'+esc(c.id)+'" '+(!hidden.has(c.id)?'checked':'')+'><span>'+esc(c.label)+'</span><span class="count">'+events.filter(e=>!e.deletedAt&&e.category===c.id).length+'</span></label>').join('');
+ $('#categories').innerHTML=categories.map(c=>'<label class="cat-row" style="--cat:'+c.color+'"><input type="checkbox" data-category="'+esc(c.id)+'" '+(!hidden.has(c.id)?'checked':'')+'><span>'+esc(c.label)+'</span><span class="count">'+[...events,...investmentEvents].filter(e=>!e.deletedAt&&e.category===c.id).length+'</span></label>').join('');
  $('#categories').querySelectorAll('input').forEach(el=>el.addEventListener('change',()=>{el.checked?hidden.delete(el.dataset.category):hidden.add(el.dataset.category);refreshCalendar();}));
 }
 function paintMini(){
@@ -57,10 +59,10 @@ function renderCalendar(){
   initialView:page==='agenda'?'listMonth':view,initialDate:selectedDate,locale:'ko',firstDay:1,headerToolbar:false,nowIndicator:true,allDayText:'종일',noEventsText:'표시할 일정이 없습니다.',buttonText:{today:'오늘'},height:innerWidth<761?'auto':Math.max(570,innerHeight-270),expandRows:true,slotMinTime:'07:00:00',slotMaxTime:'22:00:00',scrollTime:'08:00:00',slotDuration:'00:30:00',snapDuration:'00:05:00',slotLabelInterval:'01:00:00',slotLabelFormat:{hour:'2-digit',minute:'2-digit',hour12:false},eventTimeFormat:{hour:'2-digit',minute:'2-digit',hour12:false},selectable:true,editable:true,eventDurationEditable:true,longPressDelay:350,selectMirror:true,dayMaxEvents:3,navLinks:true,
   dayHeaderContent:arg=>{if(arg.view.type==='listMonth')return arg.text;return {html:'<span class="day-name">'+['일','월','화','수','목','금','토'][arg.date.getDay()]+'</span><span class="day-number">'+arg.date.getDate()+'</span>'};},
   events:(info,success)=>success(expandEvents(visible(),info.start,info.end).map(e=>({id:e.occurrenceId,title:e.title,start:e.start,end:e.end,allDay:e.allDay,backgroundColor:color(e)+'1b',borderColor:color(e),extendedProps:{record:e},editable:e.repeat==='none'&&!e.readOnly}))),
-  eventContent:arg=>{const e=arg.event.extendedProps.record;if(arg.view.type==='listMonth')return {html:esc(e.title)};return {html:'<div class="'+(e.status==='done'?'event-done':'')+'">'+(!e.allDay&&arg.view.type.startsWith('timeGrid')?'<div class="event-time">'+esc(timeLabel(e))+'</div>':'')+'<div class="event-title">'+esc(e.title)+'</div>'+((e.location&&arg.view.type.startsWith('timeGrid'))?'<div class="event-place">'+esc(e.location)+'</div>':'')+'</div>'};},
+  eventContent:arg=>{const e=arg.event.extendedProps.record;if(arg.view.type==='listMonth')return {html:esc(e.title)};return {html:'<div class="'+(e.status==='done'?'event-done':'')+'">'+(!e.allDay&&arg.view.type.startsWith('timeGrid')?'<div class="event-time">'+esc(timeLabel(e))+'</div>':'')+'<div class="event-title">'+(e.readOnly?icon('link','tiny')+' ':'')+esc(e.title)+'</div>'+((e.location&&arg.view.type.startsWith('timeGrid'))?'<div class="event-place">'+esc(e.location)+'</div>':'')+'</div>'};},
   eventDidMount:arg=>{arg.el.style.setProperty('--event-color',color(arg.event.extendedProps.record));arg.el.title=arg.event.title;},
   select:arg=>{openEditor(null,{start:arg.allDay?dayKey(arg.start):arg.start.toISOString(),end:arg.allDay?dayKey(arg.end):arg.end.toISOString(),allDay:arg.allDay});calendar.unselect();},
-  eventClick:arg=>openEditor(arg.event.extendedProps.record.id,{},occurrenceAnchor(arg.event.extendedProps.record.occurrenceId)),
+  eventClick:arg=>{const r=arg.event.extendedProps.record;if(r.readOnly)openReadOnlyRecord(r);else openEditor(r.id,{},occurrenceAnchor(r.occurrenceId));},
   eventDrop:moveEvent,eventResize:moveEvent,
   datesSet:()=>{selectedDate=calendar?.getDate()||selectedDate;setHeading();paintMini();paintRail();},
  });
@@ -79,10 +81,16 @@ function paintRail(){
  if(!$('#rail'))return;
  const daily=expandEvents(visible(),atDay(dayKey(selectedDate),0),atDay(dayKey(shiftDay(selectedDate,1)),0)).sort((a,b)=>a.start.localeCompare(b.start)),next=daily.find(e=>e.status!=='done'),done=daily.filter(e=>e.status==='done').length;
  $('#rail').innerHTML='<div class="rail-date">'+selectedDate.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'long'})+'</div><div class="rail-title"><h2>하루의 흐름</h2><span class="pill">'+daily.length+'개의 일정</span></div>'+(next?'<div class="focus-card"><div class="label">NEXT ON YOUR DAY</div><h3>'+esc(next.title)+'</h3><p>'+esc(timeLabel(next))+'</p><button data-open="'+esc(next.id)+'" data-anchor="'+esc(occurrenceAnchor(next.occurrenceId)||'')+'">일정 살펴보기 '+icon('arrow')+'</button></div>':'<div class="focus-card"><div class="label">A LITTLE SPACE</div><h3>여유가 있는 하루</h3><p>나를 위한 시간을 남겨 두세요.</p></div>')+'<div class="side-heading"><span>오늘의 일정</span><span>'+done+' / '+daily.length+' 완료</span></div>'+daily.map(e=>'<button class="agenda-row '+(e.status==='done'?'done':'')+'" data-open="'+esc(e.id)+'" data-anchor="'+esc(occurrenceAnchor(e.occurrenceId)||'')+'" style="--cat:'+color(e)+'"><span class="agenda-dot"></span><span><strong>'+esc(e.title)+'</strong><small>'+esc(timeLabel(e))+' · '+esc(catName(e))+'</small></span><span class="check-circle">'+(e.status==='done'?icon('check'):'')+'</span></button>').join('')+(!daily.length?'<p class="quiet small">아직 등록된 일정이 없어요.</p>':'')+'<div class="rail-section"><div class="side-heading"><span>연결 상태</span>'+icon('link')+'</div><div class="notice">'+(store.isCloud?'클라우드에 연결되어 있습니다. 휴대폰 알림은 기기별로 허용해 주세요.':'지금은 내 기기에서 체험 중이에요.<br>가족 공유와 휴대폰 푸시는 클라우드 연결 후 사용할 수 있어요.')+'<br><button data-rail-settings>연결 설정 보기 →</button></div></div>';
- $('#rail').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEditor(b.dataset.open,{},b.dataset.anchor||null));
+ $('#rail').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const r=findAnyEvent(b.dataset.open);r?.readOnly?openReadOnlyRecord(r):openEditor(b.dataset.open,{},b.dataset.anchor||null);});
  $('[data-rail-settings]').onclick=()=>openSettings();
 }
 const dateInput=s=>{const d=new Date(s);return dayKey(d)+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+function openReadOnlyRecord(record){
+ const d=$('#editor');
+ d.innerHTML='<div class="dialog-head"><h2>'+esc(record.title)+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><p class="form-note">'+icon('link')+'투자 기록보관실에서 가져온 읽기 전용 기록입니다. 원본을 고치려면 투자 기록보관실에서 열어 주세요.</p>'+(record.location?'<p><strong>종목</strong> '+esc(record.location)+'</p>':'')+(record.notes?'<p style="white-space:pre-wrap">'+esc(record.notes)+'</p>':'')+'<p class="quiet small">'+new Date(record.start).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})+' · '+(record.status==='done'?'기록됨':'예정')+'</p></div><div class="dialog-actions"><button class="primary" type="button" data-close>닫기</button></div>';
+ d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close());
+ d.showModal();
+}
 function openEditor(id,patch={},anchor=null){
  const old=id?events.find(e=>e.id===id):null;if(id&&!old)return;
  selectedId=id;
@@ -150,7 +158,7 @@ function renderInbox(){
  const reminders=expandEvents(events.filter(e=>!e.deletedAt&&e.reminder>=0&&e.status!=='done'),new Date(),shiftDay(new Date(),14)).sort((a,b)=>a.start.localeCompare(b.start));
  $('#content').innerHTML='<div class="block-page"><p class="form-note" style="margin-bottom:18px">아래는 다가오는 알림 예약입니다. 실제 발송 내역은 위 상태 패널에서 확인하세요.</p><div class="side-heading"><span>앞으로 2주 · 알림이 설정된 일정</span><span>'+reminders.length+'건</span></div>'+reminders.map(e=>'<div class="inbox-item" style="--cat:'+color(e)+';--tint:'+color(e)+'12"><div class="block-icon">'+icon('bell')+'</div><div><strong>'+esc(e.title)+'</strong><p>'+new Date(e.start).toLocaleDateString('ko-KR',{month:'long',day:'numeric'})+' · '+esc(timeLabel(e))+'<br>'+(e.reminder===0?'시작할 때':e.reminder+'분 전')+' 알림 · '+(store.isCloud?'예약 설정':'연결 대기')+'</p></div><button data-open="'+esc(e.id)+'" data-anchor="'+esc(occurrenceAnchor(e.occurrenceId)||'')+'">'+icon('chevron')+'</button></div>').join('')+(!reminders.length?'<div class="empty">'+icon('bell')+'<p>다가오는 알림이 없습니다.</p></div>':'')+'</div>';
  const panel=document.createElement('div');panel.id='push-panel';$('#content .block-page').prepend(panel);import('./notifications.js').then(m=>m.mountNotifications(panel,store,()=>store.isCloud?enablePush():openSettings())).catch(e=>{panel.textContent='알림 상태를 불러오지 못했습니다: '+e.message;});
- document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEditor(b.dataset.open,{},b.dataset.anchor||null));
+ document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const r=findAnyEvent(b.dataset.open);r?.readOnly?openReadOnlyRecord(r):openEditor(b.dataset.open,{},b.dataset.anchor||null);});
 }
 async function acknowledgePush(){if(!store.isCloud)return;try{const {confirmNotificationOpen}=await import('./notifications.js');await confirmNotificationOpen(store);}catch(e){toast('알림 열기 확인을 저장하지 못했습니다. 앱을 다시 열면 재시도합니다.');}}
 async function acceptInvite(){
@@ -173,7 +181,7 @@ function openSettings(){
 function manageCategories(){
  const d=$('#settings');d.innerHTML='<div class="dialog-head"><h2 id="settings-title">내 캘린더 관리</h2><button data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body">'+categories.map(c=>'<div class="settings-row"><input data-cat-name="'+esc(c.id)+'" aria-label="캘린더 이름" value="'+esc(c.label)+'" maxlength="30"><input type="color" data-cat-color="'+esc(c.id)+'" aria-label="색상" value="'+c.color+'" style="width:52px;height:40px;padding:5px"><button class="danger" data-cat-delete="'+esc(c.id)+'" aria-label="'+esc(c.label)+' 삭제">'+icon('trash')+'</button></div>').join('')+'<button class="soft" id="add-category" style="margin-top:17px">'+icon('plus')+'캘린더 추가</button><p class="form-note">일정이 있는 캘린더는 먼저 일정을 다른 캘린더로 옮겨 주세요.</p></div><div class="dialog-actions"><button class="primary" id="save-categories">저장</button></div>';
  d.querySelector('[data-close]').onclick=()=>d.close();
- d.querySelectorAll('[data-cat-delete]').forEach(b=>b.onclick=async()=>{const id=b.dataset.catDelete;if(events.some(e=>!e.deletedAt&&e.category===id)){toast('일정이 있어 삭제할 수 없습니다. 먼저 일정을 옮겨 주세요.');return;}if(id==='personal'){toast('기본 캘린더는 유지됩니다.');return;}categories=categories.filter(c=>c.id!==id);await store.setMeta('categories',categories);d.close();manageCategories();paintCategories();});
+ d.querySelectorAll('[data-cat-delete]').forEach(b=>b.onclick=async()=>{const id=b.dataset.catDelete;if([...events,...investmentEvents].some(e=>!e.deletedAt&&e.category===id)){toast('일정이 있어 삭제할 수 없습니다. 먼저 일정을 옮겨 주세요.');return;}if(id==='personal'){toast('기본 캘린더는 유지됩니다.');return;}categories=categories.filter(c=>c.id!==id);await store.setMeta('categories',categories);d.close();manageCategories();paintCategories();});
  $('#add-category').onclick=async()=>{categories.push({id:newId(),label:'새 캘린더',color:'#607cbb'});await store.setMeta('categories',categories);d.close();manageCategories();};
  $('#save-categories').onclick=async()=>{for(const c of categories){c.label=d.querySelector('[data-cat-name="'+c.id+'"]').value.trim()||c.label;c.color=d.querySelector('[data-cat-color="'+c.id+'"]').value;}await store.setMeta('categories',categories);d.close();paintCategories();refreshCalendar();toast('캘린더 구성을 저장했습니다.');};d.showModal();
 }
@@ -219,7 +227,7 @@ async function cloudLogin(prefillSpace){
    if(!space)throw Error('공간 ID를 입력해 주세요.');
    if(kind==='google')await live.loginGoogle(space);else {if(!form.email.value||!form.password.value)throw Error('이메일과 비밀번호를 입력해 주세요.');await live.login(form.email.value,form.password.value,space);}
    if(!store){location.reload();return;}
-   store=live;categories=await store.meta('categories',baseCategories);disabled=await store.meta('disabled',[]);await refresh();store.subscribe(refresh);d.close();shell();$('#banner-label').textContent='클라우드 공간 · 실제 계정 데이터';$('[data-action=clear-demo]').hidden=true;toast('내 공간에 연결되었습니다.');await acceptInvite();const target=new URLSearchParams(location.search).get('event');if(target)openEditor(target);await acknowledgePush();
+   store=live;categories=await store.meta('categories',baseCategories);disabled=await store.meta('disabled',[]);await refresh();store.subscribe(refresh);d.close();shell();$('#banner-label').textContent='클라우드 공간 · 실제 계정 데이터';$('[data-action=clear-demo]').hidden=true;toast('내 공간에 연결되었습니다.');await acceptInvite();if(store.isCloud){store.request('/investment-feed').then(r=>{investmentEvents=r.events;paintCategories();refreshCalendar();}).catch(()=>{});}const target=new URLSearchParams(location.search).get('event');if(target)openEditor(target);await acknowledgePush();
   }catch(err){d.querySelector('.form-error').textContent=err.code==='auth/popup-closed-by-user'?'로그인 창을 닫았습니다. 다시 눌러 연결할 수 있어요.':err.message;}finally{buttons.forEach(b=>b.disabled=false);}
  }
  form.onsubmit=e=>{e.preventDefault();connect('email');};$('#google-login').onclick=()=>connect('google');d.showModal();
@@ -254,6 +262,7 @@ async function init(){
  if(!store.isCloud&&!await store.meta('seeded',false)){await store.import(demoEvents());await store.setMeta('seeded',true);events=await store.list();}
  shell();if(store.isCloud){$('#banner-label').textContent='클라우드 공간 · 실제 계정 데이터';$('[data-action=clear-demo]').hidden=true;}store.subscribe(refresh);
  await acceptInvite();
+ if(store.isCloud){store.request('/investment-feed').then(r=>{investmentEvents=r.events;paintCategories();refreshCalendar();}).catch(()=>{});}
  window.addEventListener('unhandledrejection',e=>{console.error(e.reason);toast(e.reason?.message||'처리하지 못했습니다. 다시 시도해 주세요.');});
  document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)||document.querySelector('dialog[open]'))return;if(e.key==='/'){e.preventDefault();$('#search').focus();}if(e.key==='n'||e.key==='N')openEditor();if(e.key==='t'||e.key==='T')calendar?.today();});
  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e;});

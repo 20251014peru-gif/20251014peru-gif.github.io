@@ -10,6 +10,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import webpush from 'web-push';
 import {canRead,canWrite,cleanEvent,validSubscription,canInvite,EMAIL_RE,emailMatches,inviteExpired} from './policy.mjs';
 import {nextReminder} from './schedule.mjs';
+import {mapRecordToEvent,mapTodoToEvent} from './investment-feed.mjs';
 initializeApp();
 const db=getFirestore(),privateKey=defineSecret('DALNIM_VAPID_PRIVATE_KEY'),publicKey=defineString('DALNIM_VAPID_PUBLIC_KEY'),subject=defineString('DALNIM_PUSH_SUBJECT'),allowedOrigins=defineString('DALNIM_ALLOWED_ORIGINS');
 const hash=s=>createHash('sha256').update(s).digest('hex');
@@ -80,6 +81,21 @@ export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',ma
    if(key==='categories'&&!value.every(c=>typeof c.id==='string'&&/^[\w:.-]{1,160}$/.test(c.id)&&typeof c.label==='string'&&c.label.length<=30&&/^#[0-9a-fA-F]{6}$/.test(c.color)))throw failure(400,'캘린더 분류가 올바르지 않습니다.');
    if(key==='disabled'&&!value.every(v=>typeof v==='string'&&v.length<=80))throw failure(400,'블록 설정이 올바르지 않습니다.');
    await root.collection('preferences').doc(uid).set({[key]:value},{merge:true});res.json({ok:true});return;
+  }
+  if(route==='/investment-feed'&&req.method==='GET'){
+   // Read-only, one-way: the owner's separate 투자 기록보관실 app (records/records_todos), same
+   // Firebase project. Bounded window + limits control read cost; nothing here is ever written back.
+   if(role!=='owner')throw failure(403,'투자 기록은 공간 관리자만 볼 수 있습니다.');
+   const cutoff=new Date(Date.now()-400*86400000).toISOString().slice(0,10);
+   const [recordsSnap,todosSnap]=await Promise.all([
+    db.collection('records').where('date','>=',cutoff).orderBy('date','desc').limit(1500).get(),
+    db.collection('records_todos').where('date','>=',cutoff).orderBy('date','desc').limit(500).get(),
+   ]);
+   const feed=[
+    ...recordsSnap.docs.map(d=>mapRecordToEvent({id:d.id,...d.data()})),
+    ...todosSnap.docs.map(d=>mapTodoToEvent({id:d.id,...d.data()})),
+   ].filter(Boolean);
+   res.json({events:feed});return;
   }
   if(route==='/events'&&req.method==='GET'){
    const snapshot=await root.collection('events').limit(5001).get();
