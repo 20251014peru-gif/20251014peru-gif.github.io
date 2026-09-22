@@ -1,4 +1,4 @@
-import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {writeFile,mkdir} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {createECDH} from 'node:crypto';
 import {initializeApp} from 'firebase-admin/app';
@@ -57,8 +57,8 @@ if(list.some(s=>s.name.endsWith('/secrets/'+secretName))){
 }
 privateKey=null;
 await writeFile(`.env.${project}`,`DALNIM_ALLOWED_ORIGINS=https://20251014peru-gif.github.io\nDALNIM_VAPID_PUBLIC_KEY=${publicKey}\nDALNIM_PUSH_SUBJECT=mailto:${ownerUser.email}\n`,{mode:0o600});
-const configPath='src/config.js',configText=await readFile(configPath,'utf8');
+const {config:baseConfig}=await import('../src/config.js');
 const publicConfig={apiKey:firebase.apiKey,projectId:firebase.projectId,authDomain:firebase.authDomain,appId:firebase.appId};
-const output=configText.replace(/firebase:\s*null/,`firebase: ${JSON.stringify(publicConfig)}`).replace("apiBase: ''",`apiBase: 'https://asia-northeast3-${project}.cloudfunctions.net/calendarApi'`).replace("vapidPublicKey: ''",`vapidPublicKey: '${publicKey}'`);
+const output='// Public client settings only. Never add server credentials.\nexport const config = '+JSON.stringify({...baseConfig,firebase:publicConfig,apiBase:`https://asia-northeast3-${project}.cloudfunctions.net/calendarApi`,vapidPublicKey:publicKey},null,2)+';\n';
 await writeFile('.cloud-setup/config.production.js',output);
 console.log('Server configuration ready. Deploy only functions:dalnim-calendar. Publish .cloud-setup/config.production.js as src/config.js after API checks pass.');
