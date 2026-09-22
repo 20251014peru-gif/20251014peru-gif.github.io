@@ -23395,7 +23395,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v275-0922-1745';
+  var JS_BUILD = 'v276-0922-1819';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -25035,10 +25035,17 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     /* v277 — 업무 화면은 항목을 이미 담았을 때만 상자가 보이고, 그 전엔 작은
           「＋ 항목 추가」 단추만 있다 — 공급가액·부가세·합계만 쓰는 사람에게는
           평소에 화면을 안 차지하게. (지출 kind:expense 화면은 예전 그대로 둔다) */
+    /* v278 — 달님 : 「업체부터 항목까지, 폐기물 있는 곳이 애매하다」
+          업무 화면은 v241 의 「전체 폭」 자리(.pg-props 맨 끝)에 붙다 보니
+          업체·시각 같은 딴 구역 뒤로 밀려나 비용 칸과 뚝 떨어져 보였다.
+          업무에서는 비용 묶음 발치(지출 잇기 칩과 같은 자리)에 붙여 비용 칸 바로 곁에 둔다. */
+    var WORK_HOSTS = ['[data-gfoot="gc"]', '[data-prow="_amount"] .pg-pv', '[data-prow="f:expType"] .pg-pv'];
+    var EXP_HOSTS  = ['.lf-page .pg-props', '[data-prow="_amount"] .pg-pv'];
+
     if(isWorkExp && edit && !s.any && !openIds[r.id]){
       off();
       try{
-        window.wlAddOn(['.lf-page .pg-props', '[data-prow="_amount"] .pg-pv'], 'expitemsbtn',
+        window.wlAddOn(WORK_HOSTS, 'expitemsbtn',
           function(){
             var b = document.createElement('button');
             b.type = 'button';
@@ -25067,7 +25074,7 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
          예전에는 「합계」 값 칸(좁은 오른쪽 칸) 안에 붙어 폭이 253px 뿐이었다.
          속성 목록 전체 폭에 붙여 세 덩이가 가로로 늘어서게 한다.
          (합계 칸 안으로 되돌리려면 두 주소의 앞뒤를 바꾸면 된다) */
-      window.wlAddOn(['.lf-page .pg-props', '[data-prow="_amount"] .pg-pv'], 'expitems',
+      window.wlAddOn(isWorkExp ? WORK_HOSTS : EXP_HOSTS, 'expitems',
         function(){
           var d = document.createElement('div');
           d.style.cssText = 'margin-top:8px;border:1.5px solid #dbe6f4;border-radius:10px;'
