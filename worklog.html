@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v287-0923-1233";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v288-0923-1246";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=287-20260923t1233"></script>
+<script src="worklog.js?v=288-20260923t1246"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -11326,7 +11326,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   };
 
   /* ── 용도 관리 모달 ── */
-  function openPurposeMgr(){
+  function openPurposeMgr(onClose){
     var ov=document.getElementById('expV2PurposeMgrOv');
     if(ov) ov.remove();
     ov=document.createElement('div');
@@ -11386,9 +11386,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     document.getElementById('purposeMgrNew').addEventListener('keydown',function(e){
       if(e.key==='Enter') document.getElementById('purposeMgrAdd').click();
     });
-    document.getElementById('purposeMgrClose').addEventListener('click',function(){ ov.remove(); renderChips(); });
+    document.getElementById('purposeMgrClose').addEventListener('click',function(){
+      ov.remove();
+      try{ renderChips(); }catch(e){}
+      if(typeof onClose === 'function') onClose();
+    });
     /* 배경 클릭 닫기 비활성화 */
   }
+  window.openPurposeMgr = openPurposeMgr;   /* v287 — 카드 화면(wlPick)이 「⚙ 목록 관리」로 부른다 */
 
   /* ── 이벤트 바인딩 ── */
   function bind(){
@@ -20861,7 +20866,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=287-20260923t1233"></script>
+<script src="personal.js?v=288-20260923t1246"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에

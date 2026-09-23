@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v287-0923-1233';
+window.PERSONAL_BUILD = 'v288-0923-1246';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -722,12 +722,13 @@ window.PERSONAL_BUILD = 'v287-0923-1233';
          세부에도 또 나와 헷갈림」(달님 : 「제목이 나와야 알수 있는데 좀 이상해」).
          고정 목록에서 고르는 게 아니라 그때그때 자유롭게 적는 글자칸이 맞다. */
       {k:'fieldSub',    label:'세부',         type:'text'},
-      {k:'purpose',     label:'용도',         type:'select',
-       opts:(function(){ try{ return JSON.parse(localStorage.getItem('wl_exp_purposes_v44')||'null')
-                              || ['자재구매','소모품','식대','폐기물 처리','기타']; }
-                         catch(e){ return ['자재구매','소모품','식대','폐기물 처리','기타']; } })()},
+      /* v287 — 달님 : 「하위구분·용도도 카드에서 바로 목록 편집」— 용도는
+         옛날에 한 번만 읽어 굳어 있었다(관리 창에서 고쳐도 새로고침 전엔
+         안 보임) · 하위구분은 지출 화면(wlExpSubs)과 따로 노는 고정 목록
+         이었다. 둘 다 지출 화면과 같은 살아있는 목록을 쓰게 통일한다. */
+      {k:'purpose',     label:'용도',         type:'select'},   /* opts 는 workOpts() 가 매번 새로 읽는다 */
       {k:'expSubType',  label:'하위 구분',      type:'select',   /* v185 — 업무 창과 같은 말로 */
-       opts:['공사성','전기','수도','유선방송','전화','정수기','기타']},
+       get opts(){ try{ return (window.wlExpSubs ? window.wlExpSubs.all() : []); }catch(e){ return []; } } },
       {k:'supplyAmt',   label:'공급가액 (원)', type:'number'},
       {k:'taxAmt',      label:'부가세 (원)',   type:'number'},
       {k:'workVendor',  label:'업체',         type:'text'},
@@ -857,8 +858,9 @@ window.PERSONAL_BUILD = 'v287-0923-1233';
           if(Array.isArray(pu) && pu.length) return [''].concat(pu);
         }catch(e){}
       }
-      if(k==='expSubType' && kind==='expense')
-        return ['','공사성','전기','수도','유선방송','전화','정수기','기타'];
+      /* v287 — 위 고정 목록이 「관리 창에서 고칠 수 있다」(v242, wlExpSubs)는
+         약속을 늘 덮어써 왔다 — given(=wlExpSubs.all()) 까지 못 갔다.
+         이제 밑에서 given 을 그대로 쓰게 지운다. */
       if(k==='expType' && kind==='expense')
         return ['','개인지출','세금계산서','전표','급여'];
       if(k==='refYear'){            /* v129 — 올해부터 2030년까지 (달님 요청) */

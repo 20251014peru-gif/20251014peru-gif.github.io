@@ -18415,6 +18415,34 @@ async function githubUpload(token){
      search: true   검색창도 함께
      lab   : 단추에 쓸 글자 (값은 그대로 저장된다)
      ──────────────────────────────────────────────── */
+  /* v287 — 달님 : 「하위구분·용도도 카드에서 바로 목록 편집」— 「⚙ 목록 관리」를
+     누르면 고르는 칸을 닫고 그 칸의 관리 창을 연다. 관리 창을 닫으면 지금 보던
+     기록을 다시 그려 고친 목록이 바로 보이게 한다. 창구 하나만 쓴다. */
+  function mgrOf(openFnOrName, missMsg){
+    /* v287 — 이름(문자열)이면 window[이름]을 「부를 때」 찾는다 — worklog.js 가
+       personal.js·worklog.html 의 인라인 스크립트보다 먼저 실행돼, PLAN 을
+       만드는 지금은 그 함수가 아직 없을 수 있다. 함수를 바로 주면(직접
+       만든 감싸개) 그 함수 몸통이 알아서 필요할 때 찾으므로 그대로 쓴다. */
+    return function(closePicker){
+      closePicker();
+      var openFn = (typeof openFnOrName === 'string') ? window[openFnOrName] : openFnOrName;
+      if(typeof openFn !== 'function'){
+        if(typeof toast==='function') toast(missMsg + ' — worklog.js 를 올렸는지 확인해 주세요');
+        return;
+      }
+      openFn(function(){
+        try{
+          /* v287 — 고른 목록(용도·하위구분·분야)은 기록 수와 무관하게 바뀌는데,
+             화면을 쓰는 칸 정의(DS)는 「종류가 안 바뀌면」 그대로 재사용하는
+             캐시가 있어(dsForRec) wlGoPage 로 같은 기록을 다시 열어도 고친
+             목록이 안 보였다. 새로고침이 확실하다 — 주소(#lp=id)가 그대로라
+             같은 기록으로 돌아온다. */
+          if(typeof toast==='function') toast('목록을 반영하려고 화면을 새로고침합니다');
+          setTimeout(function(){ location.reload(); }, 300);
+        }catch(e){ console.warn('[목록 관리] 고친 뒤 새로고침 실패', e); }
+      });
+    };
+  }
   var PLAN = {
     'f:refYear'   : { chips:'all', search:false, lab:function(v){ return v + '년'; } },
     'f:refMonth'  : { chips:'all', search:false, lab:function(v){ return v + '월'; } },
@@ -18423,27 +18451,25 @@ async function githubUpload(token){
     /* v283 — 「분야 목록을 카드에서 바로 추가·삭제」— 이미 있던 분야 관리 창
        (openFieldManager, 옛 입력창에서 쓰던 것)을 그대로 불러 쓴다. */
     'f:field'     : { chips:'top', search:true,  cnt:'field', pin:['냉난방','청소반장일일업무'],
-                      manage:function(closePicker){
-                        closePicker();
-                        if(typeof window.openFieldManager !== 'function'){
-                          if(typeof toast==='function') toast('분야 관리 창을 못 불러왔어요 — worklog.js 를 올렸는지 확인해 주세요');
-                          return;
-                        }
-                        window.openFieldManager(function(){
-                          try{
-                            var m = String(location.hash||'').match(/^#lp=([^&]+)/);
-                            if(m && typeof window.wlGoPage==='function') window.wlGoPage(decodeURIComponent(m[1]));
-                          }catch(e){ console.warn('[분야 관리] 고친 뒤 새로고침 실패', e); }
-                        });
-                      } },
+                      manage: mgrOf('openFieldManager', '분야 관리 창을 못 불러왔어요') },
     /* v283 — 「세부」는 분야와 무관한 자유 글자칸(text)으로 바꿔 wlPick 이 붙지 않는다 —
        분야 목록을 그대로 재활용하니 「제목이 나와야 알수 있는데 이상해」(=분야 이름이
        세부에도 또 나와 헷갈림). PLAN 항목도 필요 없어 지운다. */
     'f:status'    : { chips:'all', search:false },   /* 완료 상태 */
     'f:expType'   : { chips:'all', search:false,      /* 지출종류 — v185 이름만 통일 */
                       lab:function(v){ return (typeof wlExpTypeLabel==='function') ? wlExpTypeLabel(v, true) : v; } },
-    'f:expSubType': { chips:'all', search:false },   /* 세금계산서·전표 구분 */
-    'f:purpose'   : { chips:'all', search:false }    /* 용도 */
+    /* v287 — 하위구분은 이제 업무·지출 두 종류가 같은 목록(wlExpSubs)을 쓴다 —
+       관리 창도 그 창구(wlExpSubs.manage)를 그대로 연다. */
+    'f:expSubType': { chips:'all', search:false,      /* 세금계산서·전표 구분 */
+                      manage: mgrOf(function(cb){
+                        if(window.wlExpSubs && window.wlExpSubs.manage) window.wlExpSubs.manage(undefined, cb);
+                        else if(cb) cb();
+                      }, '하위 구분 관리 창을 못 불러왔어요') },
+    'f:purpose'   : { chips:'all', search:false,      /* 용도 */
+                      manage: mgrOf(function(cb){
+                        if(typeof window.openPurposeMgr === 'function') window.openPurposeMgr(cb);
+                        else if(cb) cb();
+                      }, '용도 관리 창을 못 불러왔어요') }
   };
 
   function cho(s){
@@ -23692,7 +23718,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v287-0923-1233';
+  var JS_BUILD = 'v288-0923-1246';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -26427,7 +26453,9 @@ window.wlAskText = function(title, value, opt){
 
   function note(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
 
-  function manage(grp){
+  var _mgrOnClose = null;   /* v287 — 카드 화면(wlPick)이 「닫히면 새로고침해라」로 쓴다 */
+  function manage(grp, onClose){
+    _mgrOnClose = onClose || null;
     var o = load();
     var cur = ORDER.indexOf(grp) >= 0 ? grp : '선납부';
     var ov = document.getElementById('wlSubMgrOv');
@@ -26437,7 +26465,11 @@ window.wlAskText = function(title, value, opt){
       ov.style.cssText = 'position:fixed;inset:0;z-index:100150;background:rgba(12,26,42,.45);'
                        + 'display:flex;align-items:center;justify-content:center;padding:20px';
       document.body.appendChild(ov);
-      ov.addEventListener('mousedown', function(e){ if(e.target===ov) ov.remove(); });
+      ov.addEventListener('mousedown', function(e){
+        if(e.target!==ov) return;
+        ov.remove();
+        try{ if(_mgrOnClose) _mgrOnClose(); }finally{ _mgrOnClose = null; }
+      });
     }
     function draw(){
       o = load();
@@ -26485,7 +26517,10 @@ window.wlAskText = function(title, value, opt){
         +   '</div>'
         + '</div>';
 
-      ov.querySelector('[data-x]').addEventListener('click', function(){ ov.remove(); });
+      ov.querySelector('[data-x]').addEventListener('click', function(){
+        ov.remove();
+        try{ if(_mgrOnClose) _mgrOnClose(); }finally{ _mgrOnClose = null; }
+      });
       ov.querySelectorAll('[data-g]').forEach(function(b){
         b.addEventListener('click', function(){ cur = b.getAttribute('data-g'); draw(); }); });
       ov.querySelectorAll('[data-up],[data-dn]').forEach(function(b){
