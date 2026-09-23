@@ -23734,7 +23734,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v290-0923-1312';
+  var JS_BUILD = 'v291-0923-1320';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -24533,7 +24533,9 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
   var LS_EDIT = 'wl_exp_items_edit';   /* 고치기 허용 (기본 켬) */
   var LS_AUTO = 'wl_exp_items_auto';   /* 금액 저절로 반영 (기본 끔) */
 
-  function on(){     try{ return localStorage.getItem(LS)      !== '0'; }catch(e){ return true;  } }
+  /* v290 — 달님 : 「지출 모달인데 이부분은 없어도돼 간단히 가자」— 기본을
+     켬→꺼짐으로 뒤집는다. 다시 쓰고 싶으면 콘솔에서 wlExpItems.on(). */
+  function on(){     try{ return localStorage.getItem(LS)      === '1'; }catch(e){ return false; } }
   function canEdit(){try{ return localStorage.getItem(LS_EDIT) !== '0'; }catch(e){ return true;  } }
   function autoOn(){ try{ return localStorage.getItem(LS_AUTO) === '1'; }catch(e){ return false; } }
 
