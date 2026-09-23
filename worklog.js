@@ -18593,14 +18593,22 @@ async function githubUpload(token){
              + 'data-qpv="' + ES(v) + '">' + ES(lab(v)) + '</button>';
       }).join('')
       + '<button type="button" class="qp-it qp-clr" data-qpv="">비우기</button>';
-      box.appendChild(grid);
     }
 
-    /* 검색 결과 목록은 버튼판 다음 — 검색어를 넣었을 때만 쓸모 있으니 맨 끝 */
+    /* v288 — 달님 : 「스크롤이 맨 위에서부터 가능하게」— 단추판(자주 쓴 것)과
+       검색 결과(나머지 전부)가 각각 따로 스크롤돼서, 위 칸을 다 스크롤해야
+       아래 칸으로 넘어갔다. 하나의 상자(.qp-scroll)에 같이 넣어 전기부터
+       끝까지 한 스크롤로 쭉 내려가게 한다. */
     if(useSearch){
       list = document.createElement('div');
       list.className = 'ss-list';
-      box.appendChild(list);
+    }
+    if(grid || list){
+      var scroll = document.createElement('div');
+      scroll.className = 'qp-scroll';
+      if(grid) scroll.appendChild(grid);
+      if(list) scroll.appendChild(list);
+      box.appendChild(scroll);
     }
 
     if(sel.parentNode) sel.parentNode.insertBefore(box, sel);
@@ -23718,7 +23726,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v288-0923-1246';
+  var JS_BUILD = 'v289-0923-1303';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */

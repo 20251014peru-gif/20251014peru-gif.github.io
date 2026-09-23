@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v288-0923-1246";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v289-0923-1303";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=288-20260923t1246"></script>
+<script src="worklog.js?v=289-20260923t1303"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -19624,8 +19624,14 @@ if('serviceWorker' in navigator){
     pPush(rec.id, rec); pSave();
   }
 
-  /* ── 속성 정의(스키마) 문서 ── */
-  var SCHEMA_ID='__schema__';
+  /* ── 속성 정의(스키마) 문서 ──
+     v288 — 🔴 근본 수정 : "__schema__" 는 Firestore 가 예약해 둔 문서 ID
+        패턴(앞뒤 이중 밑줄)이라 매번 "reserved" 오류로 저장이 거부됐다.
+        즉 「+속성추가」로 만들거나 지운 커스텀 칸은 지금까지 한 번도
+        클라우드에 실제로 올라간 적이 없다 — 기기 A 에서 지워도 기기 B
+        에는 그대로 남아 있던 진짜 원인 (달님 : 「사진의 자재 부분 지워져」
+        — 예전에 지웠다고 확인했는데 다시 나타난 문제도 이것 때문). */
+  var SCHEMA_ID='schema_props_v1';
   function schemaSave(o){
     if(!pOnline()) return;
     db.collection(PCOL).doc(SCHEMA_ID).set({ _schema:1, at:now(), json:JSON.stringify(o) })
@@ -20866,7 +20872,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=288-20260923t1246"></script>
+<script src="personal.js?v=289-20260923t1303"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에

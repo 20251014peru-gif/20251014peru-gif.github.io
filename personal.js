@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v288-0923-1246';
+window.PERSONAL_BUILD = 'v289-0923-1303';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -1180,8 +1180,42 @@ window.PERSONAL_BUILD = 'v288-0923-1246';
   }
   function pnameReset(pt){ var all=pnameAll(); delete all[dsk(pt)]; lsSet(LS_PNAME, all); }
 
-  /* ── 내 속성 저장소 ── */
-  function customAll(){ var o=lsGet(LS_PROPS,null); return (o&&typeof o==='object')?o:{}; }
+  /* ── 내 속성 저장소 ──
+     v288 — 🔴 근본 수정 : 스키마의 클라우드 저장이 예약 문서 ID("__schema__")
+        오류로 계속 실패해 왔다(worklog.html schemaSave 근처 참고) — 그래서
+        기기마다 따로 놀았다. 달님이 예전에 지운 "자재"(work:work:work,
+        c1787789853425334) 커스텀 칸이 다른 기기에는 그대로 남아 있다가
+        다시 보이는 것도 이 때문. 저장이 고쳐진 뒤에도 이미 갈라진 기기들은
+        스스로 한 번 고쳐야 하므로, 이 칸 하나는 코드로 못박아 되살아나지
+        못하게 한다(기기마다 한 번씩 자동으로 지워짐 · _amount 를 못
+        숨기게 막은 것과 같은 요령). */
+  var _matStrayHealed = false;
+  function healStrayMatProp(){
+    /* v288 — customAll() 은 아주 자주 불린다(초당 수백 번) — 하지만 앱이
+       막 켜졌을 때는 wl_life_props 가 아직 안 채워져 있을 수 있어(비동기
+       불러오기), 「한 번만」 검사했다가는 그 한 번이 데이터가 없던 순간에
+       걸려 영영 못 고친다. 다 고쳐질 때까지(_matStrayHealed=true) 매번
+       가볍게 검사한다 — 배열 하나 훑는 정도라 값싸다. */
+    if(_matStrayHealed) return;
+    try{
+      var o = lsGet(LS_PROPS, null);
+      if(!o || typeof o !== 'object') return;
+      var changed = false, sawIt = false;
+      Object.keys(o).forEach(function(scope){
+        var arr = o[scope];
+        if(!Array.isArray(arr)) return;
+        arr.forEach(function(p){
+          if(p && p.id === 'c1787789853425334'){
+            sawIt = true;
+            if(!p.archived){ p.archived = true; changed = true; }
+          }
+        });
+      });
+      if(changed){ o._at = Date.now(); lsSet(LS_PROPS, o); schemaPush(o); }
+      if(sawIt) _matStrayHealed = true;   /* 찾아서 처리했으면 그만 — 못 찾았으면 다음 번에 다시 */
+    }catch(e){ console.warn('[속성] 자재 잔재 정리 실패', e); }
+  }
+  function customAll(){ healStrayMatProp(); var o=lsGet(LS_PROPS,null); return (o&&typeof o==='object')?o:{}; }
   function dsk(pt){ return (isPersonal()? '' : (DS.key+':')) + (pt||'_all'); }
   function customOf(pt){ var a=customAll()[dsk(pt)]; return Array.isArray(a)?a:[]; }
   function customSave(pt, arr){
