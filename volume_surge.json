@@ -1,0 +1,199 @@
+{
+ "updated": "2026-09-23 09:32",
+ "byAmount": [
+  {
+   "name": "삼성전자",
+   "code": "005930",
+   "price": 285500,
+   "changeRate": 3.25,
+   "amount": 5376619000000,
+   "surgeRate": 4.3
+  },
+  {
+   "name": "SK하이닉스",
+   "code": "000660",
+   "price": 1863000,
+   "changeRate": 1.25,
+   "amount": 5308053000000,
+   "surgeRate": -12.7
+  },
+  {
+   "name": "삼성전자우",
+   "code": "005935",
+   "price": 220000,
+   "changeRate": 4.02,
+   "amount": 1187548000000,
+   "surgeRate": 0.8
+  },
+  {
+   "name": "와이즈플래닛컴퍼니",
+   "code": "0010S0",
+   "price": 46350,
+   "changeRate": 286.25,
+   "amount": 1071693593000,
+   "surgeRate": 0.0
+  },
+  {
+   "name": "SK스퀘어",
+   "code": "402340",
+   "price": 1180000,
+   "changeRate": 4.15,
+   "amount": 749209000000,
+   "surgeRate": 8.9
+  },
+  {
+   "name": "삼성전기",
+   "code": "009150",
+   "price": 1499000,
+   "changeRate": 0.87,
+   "amount": 731065000000,
+   "surgeRate": -46.3
+  },
+  {
+   "name": "두산에너빌리티",
+   "code": "034020",
+   "price": 82600,
+   "changeRate": -4.51,
+   "amount": 370658000000,
+   "surgeRate": 49.1
+  },
+  {
+   "name": "원익IPS",
+   "code": "240810",
+   "price": 133100,
+   "changeRate": 2.15,
+   "amount": 347809509000,
+   "surgeRate": 85.1
+  },
+  {
+   "name": "엑스게이트",
+   "code": "356680",
+   "price": 18370,
+   "changeRate": 11.06,
+   "amount": 324818818000,
+   "surgeRate": 573.2
+  },
+  {
+   "name": "NAVER",
+   "code": "035420",
+   "price": 195600,
+   "changeRate": -2.69,
+   "amount": 223215000000,
+   "surgeRate": 129.1
+  },
+  {
+   "name": "네오사피엔스",
+   "code": "0161M0",
+   "price": 25400,
+   "changeRate": -17.4,
+   "amount": 219050953000,
+   "surgeRate": -40.0
+  },
+  {
+   "name": "현대차",
+   "code": "005380",
+   "price": 355500,
+   "changeRate": -1.39,
+   "amount": 192993000000,
+   "surgeRate": 18.6
+  }
+ ],
+ "bySurge": [
+  {
+   "name": "KTis",
+   "code": "058860",
+   "price": 2595,
+   "changeRate": 5.92,
+   "amount": 13668000000,
+   "surgeRate": 18483.4
+  },
+  {
+   "name": "보원케미칼",
+   "code": "0010F0",
+   "price": 2565,
+   "changeRate": 12.25,
+   "amount": 6956907000,
+   "surgeRate": 4230.1
+  },
+  {
+   "name": "서울전자통신",
+   "code": "027040",
+   "price": 1867,
+   "changeRate": 9.57,
+   "amount": 14738891000,
+   "surgeRate": 3909.8
+  },
+  {
+   "name": "삼일씨엔에스",
+   "code": "004440",
+   "price": 5550,
+   "changeRate": 7.98,
+   "amount": 3803000000,
+   "surgeRate": 1838.7
+  },
+  {
+   "name": "카페24",
+   "code": "042000",
+   "price": 17890,
+   "changeRate": 19.27,
+   "amount": 16491213000,
+   "surgeRate": 1441.7
+  },
+  {
+   "name": "레메디",
+   "code": "387690",
+   "price": 18940,
+   "changeRate": 22.04,
+   "amount": 139746106000,
+   "surgeRate": 1292.2
+  },
+  {
+   "name": "빛샘전자",
+   "code": "072950",
+   "price": 14070,
+   "changeRate": 8.23,
+   "amount": 175090443000,
+   "surgeRate": 1126.0
+  },
+  {
+   "name": "케이쓰리아이",
+   "code": "431190",
+   "price": 4645,
+   "changeRate": 20.65,
+   "amount": 5587537000,
+   "surgeRate": 962.4
+  },
+  {
+   "name": "티로보틱스",
+   "code": "117730",
+   "price": 14210,
+   "changeRate": 8.14,
+   "amount": 8141271000,
+   "surgeRate": 931.2
+  },
+  {
+   "name": "피엠티",
+   "code": "147760",
+   "price": 3810,
+   "changeRate": 12.39,
+   "amount": 3029417000,
+   "surgeRate": 895.5
+  },
+  {
+   "name": "우리넷",
+   "code": "115440",
+   "price": 12120,
+   "changeRate": 29.9,
+   "amount": 79584957000,
+   "surgeRate": 891.9
+  },
+  {
+   "name": "제우스",
+   "code": "079370",
+   "price": 12760,
+   "changeRate": 14.44,
+   "amount": 27321741000,
+   "surgeRate": 856.5
+  }
+ ]
+}
