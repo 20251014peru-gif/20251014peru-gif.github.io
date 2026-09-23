@@ -15385,6 +15385,12 @@ async function githubUpload(token){
             그만큼 다음 줄로 밀려난다 — 칸을 옮기는 게 아니라 차례만 바꾼다. */
       { id:'g0', on:1, base:1, icon:'📌', name:'기본 — 언제 · 어디서 · 무엇', head:'_date',
         keys:['f:refYear','f:refMonth','f:floor','f:field','f:fieldSub','f:status'], openDefault:1 },
+      /* v283 — 달님 : 「시각은 비용 위로」 — 차례만 위로 올린다 (자리는 그대로 둔다) */
+      /* v118 — 자재 속성 칸(자재명·규격·수량)은 더 이상 묶지 않는다.
+            진짜 자재는 「자재 사용 내역」이고, 그것은 위쪽 📦 줄이 보여준다.
+            비어 있을 때 「(자재명 없음) · 0」 같은 줄이 나와서 오히려 헷갈렸다. */
+      { id:'g3', on:1, base:1, icon:'🕐', name:'시각 — 언제부터 언제까지', head:'f:startTime',
+        keys:['f:endTime'], even:1, sep:' ~ ', openDefault:1 },   /* 시작·끝은 대등하므로 굵기를 같게 */
       /* v121 — 달님 : 「업체랑 자재가 한 덩어리로 나와. 구분하고 그룹 지어줘」
             용도·구분은 돈 이야기지 업체 이야기가 아니다 → 💰 비용 묶음으로 옮겼다. */
       { id:'gc', on:1, base:1, icon:'💰', name:'비용 — 얼마를 어떻게', head:'f:expType',
@@ -15405,11 +15411,6 @@ async function githubUpload(token){
               'f:ownerContact','f:ownerRole','f:ownerPhone','f:ownerMemo', /* 진행업무 v161 */
               'f:partyType','f:partyContact','f:partyRole',              /* 사고 v162 */
               'f:partyPhone','f:partyMemo'] },
-      /* v118 — 자재 속성 칸(자재명·규격·수량)은 더 이상 묶지 않는다.
-            진짜 자재는 「자재 사용 내역」이고, 그것은 위쪽 📦 줄이 보여준다.
-            비어 있을 때 「(자재명 없음) · 0」 같은 줄이 나와서 오히려 헷갈렸다. */
-      { id:'g3', on:1, base:1, icon:'🕐', name:'시각 — 언제부터 언제까지', head:'f:startTime',
-        keys:['f:endTime'], even:1, sep:' ~ ', openDefault:1 },   /* 시작·끝은 대등하므로 굵기를 같게 */
       /* 🧾 세금계산서 칸들은 일부러 묶지 않는다 —
             「세금계산서를 고르면 발행여부가 나온다」는 연결 규칙이 보여줘야 하는데,
             묶어버리면 접혀서 안 보인다. (2026-08-29 실측으로 확인) */
@@ -18321,8 +18322,9 @@ async function githubUpload(token){
     'f:floor'     : { chips:'all', search:false },
     /* v280 — 달님이 고정으로 넣어 달란 것 (자주 쓴 순위에 안 들어도 항상 보인다) */
     'f:field'     : { chips:'top', search:true,  cnt:'field', pin:['냉난방','청소반장일일업무'] },
-    /* v282 — 분야 옆 세부항목 — 같은 분야 목록에서 고르되, 자주 쓴 것 위주로 */
-    'f:fieldSub'  : { chips:'top', search:true,  cnt:'fieldSub' },
+    /* v283 — 「세부」는 분야와 무관한 자유 글자칸(text)으로 바꿔 wlPick 이 붙지 않는다 —
+       분야 목록을 그대로 재활용하니 「제목이 나와야 알수 있는데 이상해」(=분야 이름이
+       세부에도 또 나와 헷갈림). PLAN 항목도 필요 없어 지운다. */
     'f:status'    : { chips:'all', search:false },   /* 완료 상태 */
     'f:expType'   : { chips:'all', search:false,      /* 지출종류 — v185 이름만 통일 */
                       lab:function(v){ return (typeof wlExpTypeLabel==='function') ? wlExpTypeLabel(v, true) : v; } },
@@ -23506,7 +23508,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v282-0923-0933';
+  var JS_BUILD = 'v283-0923-1017';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */

@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v282-0923-0933';
+window.PERSONAL_BUILD = 'v283-0923-1017';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -717,8 +717,11 @@ window.PERSONAL_BUILD = 'v282-0923-0933';
       {k:'towelOut',  label:'핸드타월 출고', type:'number'}
     ],
     work: [
-      /* v282 — 달님 : 「분야 옆으로 세부항목, 소방-월간점검 이런식으로」 */
-      {k:'fieldSub',    label:'세부',         type:'select'},
+      /* v282 — 달님 : 「분야 옆으로 세부항목, 소방-월간점검 이런식으로」
+         v283 — select 로 하니 분야(FIELDS) 목록을 그대로 재활용해 「분야 이름이
+         세부에도 또 나와 헷갈림」(달님 : 「제목이 나와야 알수 있는데 좀 이상해」).
+         고정 목록에서 고르는 게 아니라 그때그때 자유롭게 적는 글자칸이 맞다. */
+      {k:'fieldSub',    label:'세부',         type:'text'},
       {k:'purpose',     label:'용도',         type:'select',
        opts:(function(){ try{ return JSON.parse(localStorage.getItem('wl_exp_purposes_v44')||'null')
                               || ['자재구매','소모품','식대','폐기물 처리','기타']; }
@@ -841,10 +844,7 @@ window.PERSONAL_BUILD = 'v282-0923-0933';
         return [''].concat(CALLDIR.slice());
       if(k==='vtype' && typeof VTYPES!=='undefined' && VTYPES.length)
         return [''].concat(VTYPES.slice());
-      /* v282 — 달님 : 「분야 옆에 세부항목, 소방-월간점검 처럼」 — 세부도 같은
-            분야 목록(FIELDS)에서 고른다. 엄격한 부모·자식 관계는 아니고,
-            그냥 분야 옆 칸에 하나 더 고를 수 있는 것뿐이다. */
-      if((k==='field' || k==='fieldSub') && typeof FIELDS!=='undefined' && FIELDS.length){
+      if(k==='field' && typeof FIELDS!=='undefined' && FIELDS.length){
         var fd = FIELDS.filter(Boolean).slice();
         (entries||[]).forEach(function(e){
           if(e && e.kind===kind && e[k] && fd.indexOf(String(e[k]))<0) fd.push(String(e[k]));
@@ -1224,6 +1224,17 @@ window.PERSONAL_BUILD = 'v282-0923-0933';
     if(!m) return {h:9, mi:0};
     return { h:Math.min(23,parseInt(m[1],10)||0), mi:Math.min(59,parseInt(m[2],10)||0) };
   }
+  /* v283 — 달님 : 「8시부터 30분 간격으로 18시30분까지, 클릭으로 넣어주게」
+        시계판을 일일이 안 돌려도 되게 자주 쓰는 근무시간대를 단추로 늘어놓는다.
+        눌러도 확정(닫힘)은 안 한다 — 눌러 놓고 시계판에서 더 다듬을 수 있게. */
+  var TD_QUICK = (function(){
+    var out = [], h = 8, m = 0;
+    while(h < 18 || (h===18 && m<=30)){
+      out.push(tdPad(h)+':'+tdPad(m));
+      m += 30; if(m>=60){ m=0; h++; }
+    }
+    return out;
+  })();
   function openTimeDial(initial, onPick, onCancel){
     var _picked = false;
     var st = tdParse(initial);
@@ -1240,6 +1251,8 @@ window.PERSONAL_BUILD = 'v282-0923-0933';
       +   '<div class="td-ap"><button type="button" id="tdAM">오전</button>'
       +     '<button type="button" id="tdPM">오후</button></div>'
       + '</div>'
+      + '<div class="td-quick" id="tdQuick" style="max-height:76px;overflow-y:auto;'
+      +   'padding:6px;border:1px solid #e6eef7;border-radius:9px;background:#f9fcff"></div>'
       + '<div class="td-face" id="tdFace">'
       +   '<svg viewBox="0 0 260 260" id="tdSvg">'
       +     '<circle cx="130" cy="130" r="122" class="td-bg"/>'
@@ -1405,9 +1418,26 @@ window.PERSONAL_BUILD = 'v282-0923-0933';
         });
       });
     }
+    function drawQuick(){
+      var el = document.getElementById('tdQuick'); if(!el) return;
+      var cur = tdPad(H)+':'+tdPad(MI);
+      el.innerHTML = TD_QUICK.map(function(t){
+        return '<button type="button" data-tdq="'+t+'"'
+             + (t===cur ? ' style="background:#2563a8;border-color:#2563a8;color:#fff"' : '')
+             + '>'+t+'</button>';
+      }).join('');
+      el.querySelectorAll('[data-tdq]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var pr = b.getAttribute('data-tdq').split(':');
+          H = +pr[0]; MI = +pr[1]; mode = 'm';
+          paint();
+        });
+      });
+    }
+    drawQuick();
     drawDur();
     var _paint0 = paint;
-    paint = function(){ _paint0(); try{ drawDur(); }catch(e){} };
+    paint = function(){ _paint0(); try{ drawQuick(); }catch(e){} try{ drawDur(); }catch(e){} };
 
     document.getElementById('tdC').addEventListener('click', cl);
     ov.addEventListener('mousedown', function(e){ if(e.target===ov) cl(); });

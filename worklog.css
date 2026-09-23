@@ -1124,11 +1124,15 @@ tr.wk-checked td{background:#e8f3fd !important}
   border:1.5px solid #2563a8; border-radius:8px; font-family:inherit;
   background:#f7faff; outline:none; min-height:36px;
 }
-.ss-list{ display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; max-height:132px; overflow:auto }
+/* v283 — 달님 : 「검색결과가 두개면 두개, 세개면 세개로 일정하게」
+   flex-wrap 은 버튼 글자 길이에 따라 줄마다 개수가 들쭉날쭉해진다 —
+   grid(auto-fill) 로 바꿔 줄마다 칸 수가 항상 같게 고정한다. */
+.ss-list{ display:grid; grid-template-columns:repeat(auto-fill, minmax(70px,1fr)); gap:5px; margin-top:5px; max-height:132px; overflow:auto }
 .ss-it{
-  height:30px; padding:0 11px; border:1.5px solid #dbe6f4; border-radius:8px;
+  min-height:30px; padding:5px 8px; border:1.5px solid #dbe6f4; border-radius:8px;
   background:#fff; color:#3d5875; font-size:12.5px; font-weight:700;
-  cursor:pointer; font-family:inherit; white-space:nowrap;
+  cursor:pointer; font-family:inherit; white-space:normal; word-break:keep-all;
+  display:flex; align-items:center; justify-content:center; text-align:center; box-sizing:border-box;
 }
 .ss-it:hover{ background:#eef5fd }
 .ss-it.on{ background:#2563a8; border-color:#2563a8; color:#fff }
@@ -1136,11 +1140,12 @@ tr.wk-checked td{background:#e8f3fd !important}
 
 /* ⌨ 고르는 칸 단추판 (wlPick v129) */
 .qp-wrap{ display:block }
-.qp-grid{ display:flex; flex-wrap:wrap; gap:5px; max-height:168px; overflow:auto; margin-bottom:6px }
+.qp-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(76px,1fr)); gap:5px; max-height:168px; overflow:auto; margin-bottom:6px }
 .qp-it{
-  min-height:34px; padding:0 12px; border:1.5px solid #cfe0f2; border-radius:9px;
+  min-height:34px; padding:6px 10px; border:1.5px solid #cfe0f2; border-radius:9px;
   background:#f7faff; color:#2b4763; font-size:13px; font-weight:800;
-  cursor:pointer; font-family:inherit; white-space:nowrap;
+  cursor:pointer; font-family:inherit; white-space:normal; word-break:keep-all;
+  display:flex; align-items:center; justify-content:center; text-align:center; box-sizing:border-box;
 }
 .qp-it:hover{ background:#e8f1fb; border-color:#9fc2e4 }
 .qp-it.on{ background:#2563a8; border-color:#2563a8; color:#fff }
