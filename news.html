@@ -256,7 +256,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정&#10;· v5.1 급상승: 같은 시간대 비중 비교 · 검색량 · 급상승어 기록&#10;· v5.2 급상승어 투자 판정: 네이버 경제면 비율 + 상장사명 + 단어 점수&#10;· v5.3 급상승 AI 이유분석(Sonnet 5·내 AI키 이용·요금표시) · 이슈·테마에 급상승 투자 키워드 자동추천/정렬">v5.3</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span id="aiCostBadge" onclick="openKey()" title="AI 사용 요금 (누적, 이 브라우저 기준) · 탭하면 내역 보기" style="cursor:pointer;font-weight:700;color:#6D28D9"></span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정&#10;· v5.1 급상승: 같은 시간대 비중 비교 · 검색량 · 급상승어 기록&#10;· v5.2 급상승어 투자 판정: 네이버 경제면 비율 + 상장사명 + 단어 점수&#10;· v5.3 급상승 AI 이유분석(Sonnet 5·내 AI키 이용·요금표시) · 이슈·테마에 급상승 투자 키워드 자동추천/정렬&#10;· v5.4 AI 요금 표시(헤더+설정 내역) · 오늘 뉴스에서 AI가 새 투자 키워드 찾기">v5.4</span></div>
   </div>
 </header>
 <main>
@@ -277,6 +277,11 @@
     <div class="cap"><span>📰 이슈·테마 관리</span><span class="mini">칩 = 클릭 수정 · ✕ 삭제</span></div>
     <div class="kwlist" id="kwlist"></div>
     <div class="kwadd"><input id="kwAdd" placeholder="키워드 추가 (예: 반도체, 금리)" /><button onclick="addKeyword()">추가</button></div>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="aiBtn" id="btnKwAI" onclick="suggestKeywordsAI()">🤖 오늘 뉴스에서 키워드 찾기</button>
+      <span id="kwAiCost" style="font-size:11px;color:var(--ink-3)"></span>
+    </div>
+    <div id="kwAiSuggest" style="margin-top:6px"></div>
     <div class="cap" style="margin-top:16px"><span>💹 내 종목 관리</span><span class="mini">보드 '주요 종목' 탭에 표시</span></div>
     <div class="kwlist" id="stockList"></div>
     <div class="kwadd"><input id="stockAdd" placeholder="종목 추가 (예: 삼성전자, 엔비디아, 테슬라)" /><button onclick="addStock()">추가</button></div>
@@ -436,6 +441,12 @@
     <button class="close" style="flex:0 0 auto;margin-top:0;padding:13px 16px" onclick="clearKey()">키 삭제</button>
   </div>
   <p class="psub" style="margin-top:12px;font-size:11px">키 발급: console.anthropic.com → Settings → API Keys. 사용량만큼 소액 과금(개인 리서치는 월 몇백~몇천원).</p>
+  <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line-2)">
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:800"><span>🤖 AI 사용 요금 (누적)</span><span id="aiCostSheetTotal" style="color:#6D28D9">$0</span></div>
+    <div id="aiCostSheetList" style="font-size:11.5px;color:var(--ink-2);margin-top:6px"></div>
+    <div style="font-size:10.5px;color:var(--ink-3);margin-top:6px;line-height:1.5">이 브라우저에 기록된 값을 요청 토큰 수로 직접 계산한 추정치예요 (Sonnet 5 기준). 실제 청구는 console.anthropic.com에서 확인하세요.</div>
+    <button onclick="resetAiCost()" style="margin-top:8px;padding:5px 10px;border:1px solid var(--line);border-radius:7px;background:var(--card);cursor:pointer;font-size:11px;color:var(--ink-2)">기록 초기화</button>
+  </div>
   <button class="close" onclick="closeSheet('keyBg')">닫기</button></div>
 </div>
 
@@ -801,11 +812,10 @@ function analyzeSurgeAI(){
       map[line.slice(0,i).trim()] = line.slice(i+1).trim();
     });
     surgeAiReasons=map;
-    var c = usage ? addAiCost(usage) : 0;
     var costEl=document.getElementById("surgeAiCost");
-    if(costEl) costEl.textContent = "이번 분석 "+fmtUsd(c)+" · 누적 "+fmtUsd(aiCostTotal);
+    if(costEl) costEl.textContent = "이번 분석 "+fmtUsd(aiCostOf(usage))+" · 누적 "+fmtUsd(aiCostTotal);
     renderSurgeAiText();
-  }, {noSearch:true, maxTokens:500});
+  }, {noSearch:true, maxTokens:500, feature:"surge"});
 }
 function renderSurgeAiText(){
   var host=document.getElementById("surgeAiText");
@@ -815,6 +825,66 @@ function renderSurgeAiText(){
     Object.keys(surgeAiReasons).map(function(k){ return "🤖 <b>"+_escH(k)+"</b> — "+_escH(surgeAiReasons[k]); }).join("<br>")+
     '</div>';
 }
+
+/* AI 키워드 발견 — 구글 급상승어(하루 10개, 대부분 투자 무관)만으로는 못 잡는 걸,
+   오늘 실제로 수집된 뉴스 제목 자체에서 반복되는 투자 관련 주제를 AI가 찾아 추천한다.
+   자동으로 목록에 넣지 않고, 사람이 확인하고 눌러야 추가되게 한다(오판 가능성이 규칙 기반보다 큼). */
+var kwAiSuggestions=null, kwAiBusy=false;
+function suggestKeywordsAI(){
+  if(kwAiBusy) return;
+  if(!AI_KEY){ toast("먼저 AI 키를 넣어주세요 (하단 🤖 탭 → ⚙️)"); openKey(); return; }
+  var today=kstToday();
+  var seen={}, titles=[];
+  NEWS.forEach(function(n){
+    if(dayKey(n.date)!==today) return;
+    var t=(n.title||"").trim(); if(!t||seen[t]) return; seen[t]=1; titles.push(t);
+  });
+  if(titles.length<20){ toast("오늘 뉴스가 아직 적어요(더 쌓인 뒤 시도해보세요)"); return; }
+  if(titles.length>220) titles=titles.slice(0,220);          // 토큰 절약(제목만 사용)
+  var known=keywords.concat(stocks).join(", ");
+  kwAiBusy=true;
+  var btn=document.getElementById("btnKwAI"); if(btn){ btn.disabled=true; btn.textContent="찾는 중…"; }
+  var sys="너는 한국 주식투자자를 위한 리서치 보조야. 아래는 오늘 수집된 뉴스 제목 목록이야(중복 제거). "+
+    "이미 추적 중인 키워드/종목은 다음과 같아 — 이것들은 추천하지 마: "+known+". "+
+    "제목들에서 반복적으로 등장하는, 아직 추적 안 하는 투자 관련 주제·종목·업종·이슈를 최대 6개 찾아. "+
+    "반드시 주어진 제목 안에서만 근거를 잡고 새로운 사실을 지어내지 마. 확신이 약하면 추천하지 마. "+
+    "출력은 줄마다 정확히 '키워드: 왜 지금 주목할 만한지(30자 내외)' 형식만, 다른 설명은 넣지 마. 추천할 게 없으면 '없음' 한 줄만 출력해.";
+  callClaude([{role:"user",content:titles.join("\n")}], sys, function(txt,err,usage){
+    kwAiBusy=false;
+    if(btn){ btn.disabled=false; btn.textContent="🤖 오늘 뉴스에서 키워드 찾기"; }
+    var costEl=document.getElementById("kwAiCost");
+    if(costEl) costEl.textContent = usage ? ("이번 "+fmtUsd(aiCostOf(usage))+" · 누적 "+fmtUsd(aiCostTotal)) : "";
+    if(err){ toast("AI 추천 실패: "+err); return; }
+    var map={};
+    (txt||"").split("\n").forEach(function(line){
+      if(/^없음/.test(line.trim())) return;
+      var i=line.indexOf(":"); if(i<0) return;
+      var k=line.slice(0,i).trim(), why=line.slice(i+1).trim();
+      if(k && keywords.indexOf(k)<0 && stocks.indexOf(k)<0) map[k]=why;
+    });
+    kwAiSuggestions=map;
+    renderKwAiSuggest();
+    if(!Object.keys(map).length) toast("오늘은 추천할 새 키워드가 없어요");
+  }, {noSearch:true, maxTokens:400, feature:"keyword"});
+}
+function renderKwAiSuggest(){
+  var host=document.getElementById("kwAiSuggest");
+  if(!host) return;
+  if(!kwAiSuggestions || !Object.keys(kwAiSuggestions).length){ host.innerHTML=""; return; }
+  host.innerHTML='<div style="font-size:11px;color:var(--ink-3);margin-bottom:6px">AI 추천 — 눌러서 추가 (오늘 뉴스 제목만 근거, 확인 후 추가하세요)</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+    Object.keys(kwAiSuggestions).map(function(k){
+      return '<span class="kwitem" style="border-color:#DDD6FE;background:#F5F3FF" title="'+_escH(kwAiSuggestions[k])+'">'+
+        '<span class="nm" style="cursor:pointer;color:#6D28D9" onclick="addAiSuggestedKw(\''+_escH(k).replace(/'/g,"&#39;")+'\')">+ '+_escH(k)+'</span>'+
+        '<button class="del" onclick="dismissAiSuggestedKw(\''+_escH(k).replace(/'/g,"&#39;")+'\')" title="추천 지우기">✕</button></span>';
+    }).join("")+'</div>';
+}
+function addAiSuggestedKw(k){
+  if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]={n:0,d:"up",bars:[1,2,3,5,8,13,20]}; lsSet("nr_keywords",keywords); syncSoon(); toast(k+" 추가됨"); }
+  if(kwAiSuggestions){ delete kwAiSuggestions[k]; renderKwAiSuggest(); }
+  renderAll();
+}
+function dismissAiSuggestedKw(k){ if(kwAiSuggestions){ delete kwAiSuggestions[k]; renderKwAiSuggest(); } }
 function renderFilters(){ var base=[{k:null,label:"전체"}].concat(keywords.map(function(k){return {k:k,label:k};})); document.getElementById("filters").innerHTML=base.map(function(f){ var cnt=f.k?NEWS.filter(function(n){return n.kw===f.k;}).length:NEWS.length; return '<span class="fchip '+(filterKw===f.k?'on':'')+'" onclick="pickKw('+(f.k?"'"+f.k+"'":'null')+')">'+f.label+'<span class="n">'+cnt+'</span></span>';}).join(""); }
 
 
@@ -1042,7 +1112,7 @@ function openSummary(){
     // 줄바꿈 → <br>, 안전하게 표시(간단 정리)
     var html=(txt||"").replace(/\n/g,"<br>");
     box.innerHTML=html || '<span style="color:var(--ink-3)">요약을 만들지 못했어요.</span>';
-  });
+  }, {feature:"brief"});
 }
 function closeSheet(id){ document.getElementById(id).classList.remove("on"); }
 
@@ -1259,7 +1329,7 @@ function aiRankLive(items,q){
     if(err) return; var arr=extractJsonArray(txt); if(!arr) return;
     arr.forEach(function(o){ var n=items[o.i]; if(n){ if(o.summary)n.summary=o.summary; if(o.sig)n.sig=o.sig; } });
     renderRows();
-  });
+  }, {feature:"search"});
 }
 function proxify(url){ return [
   "https://api.allorigins.win/raw?url="+encodeURIComponent(url),
@@ -1320,16 +1390,39 @@ var AI_KEY = lsGet("nr_aikey","");
 var AI_MODEL="claude-sonnet-5";
 var AI_PRICE_IN=2/1e6, AI_PRICE_OUT=10/1e6;   // $ / token (Sonnet 5: $2 입력, $10 출력 · 1M당)
 var aiCostTotal = parseFloat(lsGet("nr_ai_cost","0"))||0;
+var AI_FEATURE_LABEL = {summarize:"기사 요약", brief:"통합 요약/브리핑", search:"AI 뉴스검색", reader:"기사 읽기 질문", surge:"급상승 이유 분석", keyword:"키워드 AI 추천"};
+function loadAiCostBy(){ try{ var j=JSON.parse(lsGet("nr_ai_cost_by","{}")); return (j&&typeof j==="object")?j:{}; }catch(e){ return {}; } }
+var aiCostBy = loadAiCostBy();
 function fmtUsd(v){ if(!v) return "$0"; return v<0.01 ? ("$"+v.toFixed(4)) : ("$"+v.toFixed(3)); }
-function addAiCost(usage){
-  if(!usage) return 0;
-  var c=(usage.input_tokens||0)*AI_PRICE_IN + (usage.output_tokens||0)*AI_PRICE_OUT;
+function aiCostOf(usage){ return usage ? (usage.input_tokens||0)*AI_PRICE_IN + (usage.output_tokens||0)*AI_PRICE_OUT : 0; }
+// 모든 AI 호출이 여기로 모인다 — callClaude 가 성공할 때마다 자동으로 누적/저장하고, 화면 표시를 갱신한다.
+function addAiCost(usage, feature){
+  var c=aiCostOf(usage);
+  if(!c) return 0;
   aiCostTotal+=c; lsSet("nr_ai_cost", String(aiCostTotal));
+  if(feature){ aiCostBy[feature]=(aiCostBy[feature]||0)+c; lsSet("nr_ai_cost_by", JSON.stringify(aiCostBy)); }
+  renderAiCostAll();
   return c;
+}
+function resetAiCost(){
+  if(!window.confirm("AI 요금 기록을 초기화할까요? (실제 청구 내역과는 무관 — 이 화면의 누적 표시만 지워요)")) return;
+  aiCostTotal=0; aiCostBy={}; lsSet("nr_ai_cost","0"); lsSet("nr_ai_cost_by","{}"); renderAiCostAll(); toast("초기화됨");
+}
+function renderAiCostAll(){
+  var badge=document.getElementById("aiCostBadge");
+  if(badge) badge.textContent = "🤖 "+fmtUsd(aiCostTotal);
+  var tot=document.getElementById("aiCostSheetTotal");
+  if(tot) tot.textContent = fmtUsd(aiCostTotal);
+  var list=document.getElementById("aiCostSheetList");
+  if(list){
+    var keys=Object.keys(aiCostBy).filter(function(k){return aiCostBy[k]>0;}).sort(function(a,b){return aiCostBy[b]-aiCostBy[a];});
+    list.innerHTML = keys.length ? keys.map(function(k){ return '<div style="display:flex;justify-content:space-between;padding:3px 0"><span>'+(AI_FEATURE_LABEL[k]||k)+'</span><span>'+fmtUsd(aiCostBy[k])+'</span></div>'; }).join("")
+      : '<div style="color:var(--ink-3)">아직 사용 내역 없음</div>';
+  }
 }
 var NAVER_ID = lsGet("nr_naver_id",""); var NAVER_SECRET2 = lsGet("nr_naver_secret","");
 var GH_TOKEN = lsGet("nr_gh_token",""); var GH_REPO = lsGet("nr_gh_repo","20251014peru-gif/20251014peru-gif.github.io"); var GH_WF = lsGet("nr_gh_wf","news.yml"); var NAVER_SECRET = lsGet("nr_naver_secret","");
-function openKey(){ document.getElementById("keyInput").value=AI_KEY||""; document.getElementById("keyBg").classList.add("on"); setTimeout(function(){document.getElementById("keyInput").focus();},120); }
+function openKey(){ document.getElementById("keyInput").value=AI_KEY||""; renderAiCostAll(); document.getElementById("keyBg").classList.add("on"); setTimeout(function(){document.getElementById("keyInput").focus();},120); }
 function saveKey(){ AI_KEY=document.getElementById("keyInput").value.trim(); lsSet("nr_aikey",AI_KEY); closeSheet("keyBg"); toast(AI_KEY?"AI 키 저장됨 — 이제 질문해보세요":"키 비움"); }
 function clearKey(){ AI_KEY=""; lsSet("nr_aikey",""); document.getElementById("keyInput").value=""; toast("키 삭제됨"); }
 function callClaude(history, systemText, cb, opts){
@@ -1346,6 +1439,7 @@ function callClaude(history, systemText, cb, opts){
       if(!data||!data.content){ cb(null,"응답 형식 오류"); return; }
       var text=data.content.filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join("\n").trim();
       var usage=data.usage||null;
+      if(usage) addAiCost(usage, opts.feature);
       cb(text||"(빈 응답)",null,usage);
     }).catch(function(e){ cb(null,String(e.message||e)); });
   }catch(e){ cb(null,String(e.message||e)); }
@@ -1372,7 +1466,7 @@ function rowSummarize(id, ev){
       if(el){ el.innerHTML='<b>한 줄 요약</b> · '+sm+(n.url?' &nbsp;<a href="'+n.url+'" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800;white-space:nowrap">🔗 기사 원문 열기 ↗</a>':''); }
     }
     toast("요약 완료");
-  });
+  }, {feature:"summarize"});
 }
 
 /* 드로어(전역) */
@@ -1441,7 +1535,7 @@ function autoSaveQA(q,a){
   }catch(e){}
 }
 
-function rSend(){ var inp=document.getElementById("rInput"); var t=inp.value.trim(); if(!t||!curArticle)return; inp.value=""; rPush("me",esc(t)); readerHistory.push({role:"user",content:t}); var tp=rPush("typing","생각 중…"); callClaude(readerHistory,articleSys(curArticle),function(a,e){ tp.remove(); if(e){rPush("ai","⚠️ 응답 실패 ("+e+") — 실제 배포 환경에선 정상 작동해요.");return;} lastAI=a; readerHistory.push({role:"assistant",content:a}); rPush("ai",esc(a).replace(/\n/g,"<br>")); autoSaveQA(t,a); }); }
+function rSend(){ var inp=document.getElementById("rInput"); var t=inp.value.trim(); if(!t||!curArticle)return; inp.value=""; rPush("me",esc(t)); readerHistory.push({role:"user",content:t}); var tp=rPush("typing","생각 중…"); callClaude(readerHistory,articleSys(curArticle),function(a,e){ tp.remove(); if(e){rPush("ai","⚠️ 응답 실패 ("+e+") — 실제 배포 환경에선 정상 작동해요.");return;} lastAI=a; readerHistory.push({role:"assistant",content:a}); rPush("ai",esc(a).replace(/\n/g,"<br>")); autoSaveQA(t,a); }, {feature:"reader"}); }
 
 /* 리서치(AI로 알아본 것) 저장 = 스크랩에 원문+대화 함께 저장 */
 function saveResearch(){
@@ -1463,7 +1557,8 @@ document.getElementById("kwAdd").addEventListener("keydown",function(e){if(e.key
 document.getElementById("editKw").addEventListener("keydown",function(e){if(e.key==="Enter")applyEditKw();});
 document.getElementById("dInput").addEventListener("keydown",function(e){if(e.key==="Enter")dSend();});
 document.getElementById("rInput").addEventListener("keydown",function(e){if(e.key==="Enter")rSend();});
-(function(){ var el=document.getElementById("surgeAiCost"); if(el&&aiCostTotal>0) el.textContent="누적 "+fmtUsd(aiCostTotal); })();
+renderAiCostAll();
+if(aiCostTotal>0){ var _sc=document.getElementById("surgeAiCost"); if(_sc) _sc.textContent="누적 "+fmtUsd(aiCostTotal); }
 loadData(false);
 </script>
   <script src="news_patch.js?v=20260830-20"></script>
