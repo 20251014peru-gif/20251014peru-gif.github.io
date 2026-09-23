@@ -61,7 +61,7 @@ function renderCalendar(){
    const mapped=expandEvents(visible(),info.start,info.end).map(e=>({id:e.occurrenceId,title:e.title,start:e.start,end:e.end,allDay:e.allDay,backgroundColor:color(e)+'1b',borderColor:color(e),extendedProps:{record:e},editable:e.repeat==='none'&&!e.readOnly}));
    // Read-only investment items all share one category color, so several on the same day blur
    // together — alternate two colors by their order within that day instead.
-   const READONLY_ALT=['#ce4b59','#c99a1e'],dayCount={};
+   const READONLY_ALT=['#1e3f78','#e2760f'],dayCount={};
    mapped.filter(m=>m.extendedProps.record.readOnly).forEach(m=>{
     const day=String(m.start).slice(0,10),i=dayCount[day]=(dayCount[day]||0)+1,c=READONLY_ALT[(i-1)%2];
     m.borderColor=c;m.backgroundColor=c+'1b';
