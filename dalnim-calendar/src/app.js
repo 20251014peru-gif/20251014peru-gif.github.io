@@ -95,9 +95,9 @@ function openEditor(id,patch={},anchor=null){
  selectedId=id;
  const perOccurrence=Boolean(old&&old.repeat!=='none'&&anchor);
  const start=atDay(dayKey(selectedDate),9);
- const e=old||{id:newId(),title:'',start:start.toISOString(),end:new Date(+start+3600000).toISOString(),allDay:false,category:'personal',module:'personal',status:'done',visibility:'personal',reminder:10,repeat:'none',notes:'',location:'',details:{},...patch};
+ const e=old||{id:newId(),title:'',start:start.toISOString(),end:new Date(+start+3600000).toISOString(),allDay:false,category:'personal',module:'personal',status:'done',visibility:'personal',reminder:10,repeat:'none',notes:'',location:'',details:{},checklist:[],...patch};
  const d=$('#editor'),field=(label,body,full=false,attrs='')=>'<label class="field'+(full?' full':'')+'"'+(attrs?' '+attrs:'')+'><span>'+label+'</span>'+body+'</label>';
- d.innerHTML='<form id="event-form"><div class="dialog-head"><h2 id="editor-title">'+(old?'일정 살펴보기':'새로운 일정')+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><input class="editor-name" name="title" placeholder="어떤 하루를 계획하나요?" aria-label="일정 이름" maxlength="160" required value="'+esc(e.title)+'"><div class="form-grid">'+dateTimeField('start','시작',e.allDay?e.start:dateInput(e.start),e.allDay)+dateTimeField('end',e.allDay?'마지막 날짜':'종료',e.allDay?dayKey(shiftDay(atDay(e.end),-1)):dateInput(e.end),e.allDay)+'</div><div class="form-grid tri">'+field('반복','<select name="repeat">'+[['none','반복 안 함'],['daily','매일'],['weekly','매주'],['monthly','매월 같은 날짜'],['yearly','매년 같은 날짜']].map(([v,l])=>'<option value="'+v+'" '+(e.repeat===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+field('미리 알림','<select name="reminder">'+[[-1,'알림 없음'],[0,'시작할 때'],[10,'10분 전'],[30,'30분 전'],[60,'1시간 전'],[1440,'하루 전']].map(([v,l])=>'<option value="'+v+'" '+(e.reminder===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+'<label class="form-check compact"><input type="checkbox" name="allDay"'+(e.allDay?'checked':'')+'>종일 일정</label></div><div class="form-grid">'+field('캘린더','<select name="category">'+(categories.some(c=>c.id===e.category)?categories:[...categories,{id:e.category,label:'보관된 분류'}]).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===e.category?'selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select>')+field('진행 상태','<select name="status">'+[['planned','예정'],['progress','진행 중'],['done','완료']].map(([v,l])=>'<option value="'+v+'" '+(e.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select>',false,'id="status-field"')+'</div><div id="extra-fields"></div><label class="field full"><div class="memo-head"><span id="notes-label">메모</span><div class="memo-actions"><button type="button" class="soft" data-memo-insert="check">'+icon('check')+'체크박스</button><button type="button" class="soft" data-memo-insert="bullet">'+icon('list')+'목록</button></div></div><textarea name="notes" style="min-height:190px" placeholder="기억할 내용이나 준비할 것을 남겨 주세요.">'+esc(e.notes)+'</textarea><div class="memo-checklist" id="memo-checklist"></div></label>'+(store.isCloud?field('공개 범위','<select name="visibility"><option value="personal" '+(e.visibility==='personal'?'selected':'')+'>나만 보기</option><option value="family" '+(e.visibility==='family'?'selected':'')+'>가족과 공유</option></select>',true):'')+'</div><p class="form-note">'+(perOccurrence?'저장하거나 삭제할 때 이 날짜만 바꿀지, 전체 반복을 바꿀지 선택할 수 있어요. ':e.repeat!=='none'?'반복 일정의 수정·삭제는 전체 반복에 적용됩니다. ':'')+(store.isCloud?'':'체험 공간의 알림은 설정만 저장됩니다. 휴대폰으로 발송되지 않습니다.')+(e.worklogRecord?'<br>연결 기록의 기본 항목을 함께 저장합니다. 기존 업무일지와의 자동 동기화는 아직 연결 전입니다.':e.source?'<br>가져온 원본: '+esc(e.source.app)+' · 원본 수정은 아직 반영하지 않습니다.':'')+'</p><p class="form-error" role="alert"></p></div><div class="dialog-actions">'+(old?'<button type="button" class="danger" id="delete-event">'+icon('trash')+'삭제</button>':'')+'<button type="button" data-close class="soft">닫기</button><button type="submit" class="primary">'+icon('check')+'저장하기</button></div></form>';
+ d.innerHTML='<form id="event-form"><div class="dialog-head"><h2 id="editor-title">'+(old?'일정 살펴보기':'새로운 일정')+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><input class="editor-name" name="title" placeholder="어떤 하루를 계획하나요?" aria-label="일정 이름" maxlength="160" required value="'+esc(e.title)+'"><div class="form-grid">'+dateTimeField('start','시작',e.allDay?e.start:dateInput(e.start),e.allDay)+dateTimeField('end',e.allDay?'마지막 날짜':'종료',e.allDay?dayKey(shiftDay(atDay(e.end),-1)):dateInput(e.end),e.allDay)+'</div><div class="form-grid tri">'+field('반복','<select name="repeat">'+[['none','반복 안 함'],['daily','매일'],['weekly','매주'],['monthly','매월 같은 날짜'],['yearly','매년 같은 날짜']].map(([v,l])=>'<option value="'+v+'" '+(e.repeat===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+field('미리 알림','<select name="reminder">'+[[-1,'알림 없음'],[0,'시작할 때'],[10,'10분 전'],[30,'30분 전'],[60,'1시간 전'],[1440,'하루 전']].map(([v,l])=>'<option value="'+v+'" '+(e.reminder===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+'<label class="form-check compact"><input type="checkbox" name="allDay"'+(e.allDay?'checked':'')+'>종일 일정</label></div><div class="form-grid">'+field('캘린더','<select name="category">'+(categories.some(c=>c.id===e.category)?categories:[...categories,{id:e.category,label:'보관된 분류'}]).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===e.category?'selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select>')+field('진행 상태','<select name="status">'+[['planned','예정'],['progress','진행 중'],['done','완료']].map(([v,l])=>'<option value="'+v+'" '+(e.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select>',false,'id="status-field"')+'</div><div id="extra-fields"></div><label class="field full"><span id="notes-label">메모</span><textarea name="notes" style="min-height:130px" placeholder="기억할 내용이나 준비할 것을 남겨 주세요.">'+esc(e.notes)+'</textarea></label><div class="field full"><div class="memo-head"><span>체크리스트</span><button type="button" class="soft" id="checklist-add">'+icon('plus')+'항목 추가</button></div><div id="checklist-rows"></div></div>'+(store.isCloud?field('공개 범위','<select name="visibility"><option value="personal" '+(e.visibility==='personal'?'selected':'')+'>나만 보기</option><option value="family" '+(e.visibility==='family'?'selected':'')+'>가족과 공유</option></select>',true):'')+'</div><p class="form-note">'+(perOccurrence?'저장하거나 삭제할 때 이 날짜만 바꿀지, 전체 반복을 바꿀지 선택할 수 있어요. ':e.repeat!=='none'?'반복 일정의 수정·삭제는 전체 반복에 적용됩니다. ':'')+(store.isCloud?'':'체험 공간의 알림은 설정만 저장됩니다. 휴대폰으로 발송되지 않습니다.')+(e.worklogRecord?'<br>연결 기록의 기본 항목을 함께 저장합니다. 기존 업무일지와의 자동 동기화는 아직 연결 전입니다.':e.source?'<br>가져온 원본: '+esc(e.source.app)+' · 원본 수정은 아직 반영하지 않습니다.':'')+'</p><p class="form-error" role="alert"></p></div><div class="dialog-actions">'+(old?'<button type="button" class="danger" id="delete-event">'+icon('trash')+'삭제</button>':'')+'<button type="button" data-close class="soft">닫기</button><button type="submit" class="primary">'+icon('check')+'저장하기</button></div></form>';
  const form=$('#event-form');let draftDetails={...(e.details||{})};
  function extras(){
   form.querySelectorAll('[data-detail]').forEach(x=>draftDetails[x.dataset.detail]=x.value);
@@ -113,31 +113,16 @@ function openEditor(id,patch={},anchor=null){
  bindDateTimes(form);
  // Plain-text markdown-lite prefixes ("- [ ] ", "- ") — a real WYSIWYG editor would mean storing
  // HTML and re-escaping it everywhere notes is shown; this stays inside the existing plain-text field.
- // A "- [ ] text" line in the plain-text notes renders below as an actual, clickable checkbox —
- // toggling it flips just that line's [ ]/[x] in the underlying text, so the checklist stays real
- // without turning notes into stored HTML.
- const renderMemoChecklist=()=>{
-  const box=$('#memo-checklist');if(!box)return;
-  const lines=form.notes.value.split('\n');
-  const rows=lines.map((line,i)=>({i,m:line.match(/^(\s*)- \[([ xX])\] (.*)$/)})).filter(r=>r.m);
-  box.innerHTML=rows.map(({i,m})=>'<label class="memo-check-row"><input type="checkbox" data-line="'+i+'" '+(m[2]!==' '?'checked':'')+'><span>'+esc(m[3])+'</span></label>').join('');
-  box.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.onchange=()=>{
-   const idx=Number(cb.dataset.line),ls=form.notes.value.split('\n'),m=ls[idx]?.match(/^(\s*)- \[([ xX])\] (.*)$/);if(!m)return;
-   ls[idx]=m[1]+'- ['+(cb.checked?'x':' ')+'] '+m[3];form.notes.value=ls.join('\n');renderMemoChecklist();
-  });
- };
- form.notes.addEventListener('input',renderMemoChecklist);renderMemoChecklist();
- form.querySelectorAll('[data-memo-insert]').forEach(b=>b.onclick=()=>{
-  const ta=form.notes,prefix=b.dataset.memoInsert==='check'?'- [ ] ':'- ';
-  // Checking a rendered checklist box sets ta.value directly and can leave a stale selectionStart
-  // of 0 behind (since it never re-focuses the textarea) — trust the cursor only while it's live.
-  const start=document.activeElement===ta?(ta.selectionStart??ta.value.length):ta.value.length;
-  const end=document.activeElement===ta?(ta.selectionEnd??start):start;
-  const before=ta.value.slice(0,start),selected=ta.value.slice(start,end),after=ta.value.slice(end);
-  const insertion=(start===0||before.endsWith('\n')?'':'\n')+prefix+selected;
-  ta.value=before+insertion+after;const pos=before.length+insertion.length;
-  ta.focus();ta.setSelectionRange(pos,pos);renderMemoChecklist();
- });
+ let draftChecklist=(e.checklist||[]).map(x=>({...x}));
+ function renderChecklistRows(){
+  const host=$('#checklist-rows');if(!host)return;
+  host.innerHTML=draftChecklist.length?draftChecklist.map((item,i)=>'<div class="memo-row"><input type="checkbox" data-check-idx="'+i+'" '+(item.done?'checked':'')+'><input type="text" data-check-text="'+i+'" placeholder="할 일" value="'+esc(item.text)+'"><button type="button" class="icon-btn" data-check-del="'+i+'" aria-label="삭제">'+icon('close')+'</button></div>').join(''):'<p class="quiet small">아직 추가한 항목이 없습니다.</p>';
+  host.querySelectorAll('[data-check-idx]').forEach(cb=>cb.onchange=()=>{draftChecklist[Number(cb.dataset.checkIdx)].done=cb.checked;});
+  host.querySelectorAll('[data-check-text]').forEach(inp=>inp.oninput=()=>{draftChecklist[Number(inp.dataset.checkText)].text=inp.value;});
+  host.querySelectorAll('[data-check-del]').forEach(b=>b.onclick=()=>{draftChecklist.splice(Number(b.dataset.checkDel),1);renderChecklistRows();});
+ }
+ renderChecklistRows();
+ $('#checklist-add').onclick=()=>{draftChecklist.push({text:'',done:false});renderChecklistRows();const inputs=document.querySelectorAll('[data-check-text]');inputs[inputs.length-1]?.focus();};
  d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close());
  if(old)$('#delete-event').onclick=async()=>{
   let scope='all';
@@ -158,7 +143,7 @@ function openEditor(id,patch={},anchor=null){
   try{
    form.querySelectorAll('[data-detail]').forEach(x=>draftDetails[x.dataset.detail]=x.value);
    const allDay=form.allDay.checked;
-   const fields={title:form.elements.namedItem('title').value,category:form.category.value,module:form.category.value===e.category?e.module:(registry.get(form.category.value)?form.category.value:'personal'),status:form.status.value,repeat:form.repeat.value,reminder:Number(form.reminder.value),allDay,start:allDay?form.start.value:new Date(form.start.value).toISOString(),end:allDay?dayKey(shiftDay(atDay(form.end.value),1)):new Date(form.end.value).toISOString(),notes:form.notes.value,location:e.location||'',details:draftDetails,visibility:store.isCloud?form.visibility.value:'personal'};
+   const fields={title:form.elements.namedItem('title').value,category:form.category.value,module:form.category.value===e.category?e.module:(registry.get(form.category.value)?form.category.value:'personal'),status:form.status.value,repeat:form.repeat.value,reminder:Number(form.reminder.value),allDay,start:allDay?form.start.value:new Date(form.start.value).toISOString(),end:allDay?dayKey(shiftDay(atDay(form.end.value),1)):new Date(form.end.value).toISOString(),notes:form.notes.value,location:e.location||'',details:draftDetails,checklist:draftChecklist.filter(x=>x.text.trim()).map(x=>({text:x.text.trim(),done:!!x.done})),visibility:store.isCloud?form.visibility.value:'personal'};
    let scope='all';
    if(perOccurrence){
     scope=await chooseScope('저장 범위를 선택해 주세요.','반복 일정 중 이 날짜만 바꿀지, 전체 반복을 바꿀지 골라 주세요.',[{value:'one',label:'이 날짜만'},{value:'all',label:'전체 반복'}]);

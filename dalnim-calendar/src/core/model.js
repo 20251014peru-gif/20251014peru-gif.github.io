@@ -22,7 +22,16 @@ export function validateEvent(input) {
   e.timeZone = e.timeZone || ZONE; e.schemaVersion = 1;
   if (e.source && (!e.source.app || !e.source.recordId)) throw Error('연결 원본 정보가 올바르지 않습니다.');
   e.exceptions = sanitizeExceptions(e.exceptions, e.allDay);
+  e.checklist = sanitizeChecklist(e.checklist);
   return e;
+}
+// A real, structured to-do list — separate from the free-text notes field, so a checkbox is an
+// actual <input type=checkbox> the whole way through, not text inside notes that only looks like one.
+export function sanitizeChecklist(input) {
+  if (!Array.isArray(input)) return [];
+  return input.slice(0, 50)
+    .filter(x => x && typeof x.text === 'string' && x.text.trim())
+    .map(x => ({text: x.text.trim().slice(0, 200), done: !!x.done}));
 }
 // A single-occurrence override, keyed by the occurrence's original (pre-override) start.
 // Editing "this event only" on a repeating event writes here instead of moving the whole series.

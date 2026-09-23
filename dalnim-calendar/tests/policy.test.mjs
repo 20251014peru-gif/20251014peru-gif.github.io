@@ -10,6 +10,10 @@ test('a single-occurrence exception on save is sanitized like every other field'
  assert.deepEqual(Object.keys(out.exceptions),[key]);
  assert.deepEqual(out.exceptions[key],{title:'변경'});
 });
+test('checklist items survive a save as real structured entries, not text',()=>{
+ const out=cleanEvent({...e,checklist:[{text:' 자재 확인 ',done:true},{text:'',done:false}]},e,'a');
+ assert.deepEqual(out.checklist,[{text:'자재 확인',done:true}]);
+});
 test('only the space owner can invite, and invites need a real email and a known role',()=>{
  assert.equal(canInvite('owner'),true);assert.equal(canInvite('editor'),false);assert.equal(canInvite('viewer'),false);
  assert.equal(EMAIL_RE.test('family@example.com'),true);assert.equal(EMAIL_RE.test('not-an-email'),false);

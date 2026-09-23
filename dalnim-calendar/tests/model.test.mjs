@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {expandEvents,validateEvent,occurrenceAt,sanitizeExceptions} from '../src/core/model.js';import {mapWorklog} from '../src/adapters/worklog.js';import {ModuleRegistry} from '../src/core/registry.js';
+import test from 'node:test';import assert from 'node:assert/strict';import {expandEvents,validateEvent,occurrenceAt,sanitizeExceptions,sanitizeChecklist} from '../src/core/model.js';import {mapWorklog} from '../src/adapters/worklog.js';import {ModuleRegistry} from '../src/core/registry.js';
 const event={id:'one',title:'점검',start:'2026-01-31',end:'2026-02-01',allDay:true,status:'planned',repeat:'monthly',reminder:10,visibility:'personal'};
 test('monthly recurrence skips missing days without drifting',()=>{assert.equal(occurrenceAt(event,1),null);assert.equal(occurrenceAt(event,2).start,'2026-03-31');});
 test('repeat generation works for old anchors without walking every day',()=>{const e={...event,repeat:'daily',start:'1990-01-01',end:'1990-01-02'};assert.equal(expandEvents([e],'2026-09-21','2026-09-28').length,7);});
@@ -15,6 +15,15 @@ test('deleting one occurrence hides only that date, the series continues',()=>{
  const e={id:'daily',title:'운동',start:'2026-09-01',end:'2026-09-02',allDay:true,status:'planned',repeat:'daily',reminder:10,visibility:'personal',exceptions:{'2026-09-03':{deletedAt:1}}};
  const days=expandEvents([e],'2026-09-01','2026-09-06').map(o=>o.start);
  assert.deepEqual(days,['2026-09-01','2026-09-02','2026-09-04','2026-09-05']);
+});
+test('sanitizeChecklist keeps real checkboxes only — trims blanks, caps length and count',()=>{
+ const out=sanitizeChecklist([{text:'  우유 사기 ',done:false},{text:'',done:true},{text:'x'.repeat(300),done:'yes'},...Array.from({length:60},()=>({text:'항목',done:false}))]);
+ assert.equal(out[0].text,'우유 사기');assert.equal(out[0].done,false);
+ assert.equal(out[1].text.length,200);assert.equal(out[1].done,true);
+ assert.ok(out.length<=50);
+});
+test('sanitizeChecklist drops non-array input instead of throwing',()=>{
+ assert.deepEqual(sanitizeChecklist(undefined),[]);assert.deepEqual(sanitizeChecklist('- [ ] x'),[]);
 });
 test('editing one occurrence only changes that date, others keep the series value',()=>{
  const e={id:'daily',title:'운동',start:'2026-09-01',end:'2026-09-02',allDay:true,status:'planned',repeat:'daily',reminder:10,visibility:'personal',exceptions:{'2026-09-03':{title:'병원',status:'done'}}};
