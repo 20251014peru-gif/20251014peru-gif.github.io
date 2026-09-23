@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v296-0923-1424';
+window.PERSONAL_BUILD = 'v297-0923-1503';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -4840,8 +4840,14 @@ window.PERSONAL_BUILD = 'v296-0923-1424';
     {sep:1},
     {c:'clearBody',   i:'✕',               t:'본문 내용을 전부 지웁니다'}
   ];
-  function pgToolbarHTML(){
-    return '<div class="pg-tb">' + PGTOOLS.map(function(t){
+  /* v296 — 달님 : 「본문은 그대로네 어쩔수 없는거야?」— 아니다, 지출은
+     제목·인용·목록·번호·체크·구분선·사진 넣기까지 다 필요 없다(사진은
+     이미 아래 「사진·첨부」칸이 따로 있다) — 지출에서는 글자 서식(굵게·
+     기울임·밑줄·취소선)과 지우기만 남긴다. */
+  var PGTOOLS_SLIM = ['bold','italic','underline','strikeThrough','clearBody'];
+  function pgToolbarHTML(slim){
+    var tools = slim ? PGTOOLS.filter(function(t){ return t.sep ? false : PGTOOLS_SLIM.indexOf(t.c)>=0; }) : PGTOOLS;
+    return '<div class="pg-tb">' + tools.map(function(t){
       if(t.sep) return '<span class="sp"></span>';
       return '<button type="button" data-pgc="'+t.c+'" title="'+esc(t.t)+'">'+t.i+'</button>';
     }).join('') + '</div>';
@@ -5373,7 +5379,7 @@ window.PERSONAL_BUILD = 'v296-0923-1424';
       +   (rec.kind==='expense' ? extrasHTML(rec, true) : extrasHTML(rec))
       +   '<div class="pg-div"></div>'
       +   '<div class="pg-sec">📝 본문 <span>글자를 고르고 서식을 누르세요 · 사진은 끌어다 놓으면 됩니다</span></div>'
-      +   pgToolbarHTML()
+      +   pgToolbarHTML(rec.kind==='expense')
       +   '<div id="pgBodyTx" class="pg-text" contenteditable="true" spellcheck="false"'
       +     ' data-ph="여기에 자유롭게 쓰세요. 회의 내용, 확인할 것, 나중에 볼 메모 …">'
       +     bodyToHTML(rec.body) + '</div>'

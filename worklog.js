@@ -17016,9 +17016,9 @@ async function githubUpload(token){
                       hint:'합계를 넣으면 공급가액·부가세가 나뉩니다 · 발급을 마치면 「발급 완료」를 켜세요' }
       },
       expense: {
+        /* v296 — 달님 : 「이것도 지우고」(개인지출 안내 문구) */
         '개인지출': { secs:{ mat:true,  pics:true,  att:false, sub:false, time:false },
-                      props:['_sub','f:purpose','f:supplyAmt','f:taxAmt','_amount'],
-                      hint:'영수증 사진을 남겨 두세요 · 합계를 넣으면 공급가액·부가세가 나뉩니다' },
+                      props:['_sub','f:purpose','f:supplyAmt','f:taxAmt','_amount'] },
         '세금계산서':{ secs:{ mat:false, pics:false, att:true,  sub:false, time:false },
                       props:['_sub','_amount','f:isIssued','f:supplyAmt','f:taxAmt'],
                       hint:'발행 여부와 공급가액·부가세를 확인하세요' },
@@ -23764,7 +23764,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v296-0923-1424';
+  var JS_BUILD = 'v297-0923-1503';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
