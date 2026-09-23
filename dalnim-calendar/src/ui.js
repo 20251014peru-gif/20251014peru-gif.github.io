@@ -30,4 +30,21 @@ export function chooseScope(title,message,options){
  const d=document.getElementById('confirm');d.innerHTML='<form method="dialog" class="confirm-box"><h2 id="confirm-title">'+esc(title)+'</h2><p>'+esc(message)+'</p><div class="dialog-actions">'+options.map(o=>'<button value="'+esc(o.value)+'" class="'+(o.cls||'soft')+'">'+esc(o.label)+'</button>').join('')+'<button value="" class="soft" formnovalidate>취소</button></div></form>';d.showModal();return new Promise(resolve=>d.addEventListener('close',()=>resolve(d.returnValue||null),{once:true}));
 }
 export function download(name,data,type='application/json'){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([data],{type}));a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
+// Shared by modules that need their own address + phone (not the generic location field): a
+// module-scoped 주소 always links to Naver Map, 전화번호 always links to tel: — no guessing needed
+// because the fields are already separate, unlike the old combined "장소" field.
+export function addressPhoneFieldsHtml(draft,field){
+ return field('주소','<input data-detail="address" maxlength="300" placeholder="주소를 입력하세요" value="'+esc(draft.address??'')+'"><p class="form-note" data-address-link></p>',true)
+  +field('전화번호','<input data-detail="phone" type="tel" maxlength="40" placeholder="010-0000-0000" value="'+esc(draft.phone??'')+'"><p class="form-note" data-phone-link></p>',true);
+}
+export function wireAddressPhoneLinks(host){
+ const addr=host.querySelector('[data-detail="address"]'),addrLink=host.querySelector('[data-address-link]');
+ const phone=host.querySelector('[data-detail="phone"]'),phoneLink=host.querySelector('[data-phone-link]');
+ const set=(input,link,build)=>{if(!input||!link)return;const v=(input.value||'').trim();link.innerHTML=v?build(v):'';};
+ const refresh=()=>{
+  set(addr,addrLink,v=>'<a href="https://map.naver.com/p/search/'+encodeURIComponent(v)+'" target="_blank" rel="noopener">'+icon('link')+'네이버 지도에서 보기</a>');
+  set(phone,phoneLink,v=>'<a href="tel:'+esc(v.replace(/[^0-9+]/g,''))+'">'+icon('link')+'전화 걸기</a>');
+ };
+ addr?.addEventListener('input',refresh);phone?.addEventListener('input',refresh);refresh();
+}
 
