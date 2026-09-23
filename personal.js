@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v280-0923-0845';
+window.PERSONAL_BUILD = 'v281-0923-0917';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -725,7 +725,6 @@ window.PERSONAL_BUILD = 'v280-0923-0845';
        opts:['공사성','전기','수도','유선방송','전화','정수기','기타']},
       {k:'supplyAmt',   label:'공급가액 (원)', type:'number'},
       {k:'taxAmt',      label:'부가세 (원)',   type:'number'},
-      {k:'isIssued',    label:'발급 완료',     type:'checkbox'},
       {k:'workVendor',  label:'업체',         type:'text'},
       {k:'spec',        label:'규격 · 사양',   type:'text'},
       {k:'matCost',     label:'자재 합계 (원)', type:'number'},   /* v135 — 자재 값은 여기 (비용 합계와 분리) */
@@ -746,7 +745,6 @@ window.PERSONAL_BUILD = 'v280-0923-0845';
        get opts(){ try{ return (window.wlExpSubs ? window.wlExpSubs.all() : []); }catch(e){ return []; } } },
       {k:'supplyAmt',   label:'공급가액 (원)',  type:'number'},
       {k:'taxAmt',      label:'부가세 (원)',    type:'number'},
-      {k:'isIssued',    label:'계산서 발행',    type:'checkbox'},
       {k:'isJeonpyo',   label:'전표',          type:'checkbox'},
       /* v241 — 업체를 넣으면 연락처에서 저절로 채워질 자리 (비어 있으면 「빈 항목」 안에 숨는다) */
       {k:'workContact', label:'담당자',        type:'text'},
@@ -5582,9 +5580,10 @@ window.PERSONAL_BUILD = 'v280-0923-0845';
       ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
       /* v280 — 창(모달)으로 열면 ← 목록 이 「✕ 닫기」로 바뀌는데, 줄 끝의 ✕ 단추가
             그대로 남아 있어 같은 「닫기」가 두 번 보였다 (달님 : 「닫기도 중복」).
-            여기서는 ← 목록 쪽을 닫기로 쓰고, 줄 끝 ✕ 는 감춘다. */
-      var bk=document.getElementById('pgBack'); if(bk) bk.textContent='✕ 닫기';
-      var px=document.getElementById('pgX'); if(px) px.style.display='none';
+            v281 — 처음엔 맨 앞(← 목록 자리)을 남기고 끝의 ✕ 를 감췄는데,
+            그러면 닫기가 줄 왼쪽에 있게 된다 — 「닫기는 늘 오른쪽」이어야 하므로
+            반대로: 오른쪽 끝 ✕ 를 남기고, 맨 앞 것을 감춘다. */
+      var bk=document.getElementById('pgBack'); if(bk) bk.style.display='none';
     }
     var pts=document.getElementById('pgTplSave');
     if(pts) pts.addEventListener('click', function(){ tplFromRec(pt, rec); });

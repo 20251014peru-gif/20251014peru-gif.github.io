@@ -10289,8 +10289,13 @@ function v43CopyWorkExcel(){
     const costPart = (expType==='개인비용'||expType==='후불청구') && Number(e.cost)>0
       ? `${Math.round(Number(e.cost)).toLocaleString('ko-KR')}원`
       : '';
+    // v281: 대상년도·대상월이 있으면 제목 앞에 "2026년 9월 " 처럼 붙인다
+    const refYear = (e.refYear||'').trim();
+    const refMonth = (e.refMonth||'').trim();
+    const refPrefix = (refYear ? refYear+'년 ' : '') + (refMonth ? Number(refMonth)+'월 ' : '');
+    const titleWithRef = (title && refPrefix) ? (refPrefix + title) : title;
     // v276: 제목_내용은 밑줄로 이어 붙인다 (나머지는 그대로 공백 구분)
-    const titleDetail = [title, detail].filter(Boolean).join('_');
+    const titleDetail = [titleWithRef, detail].filter(Boolean).join('_');
     return [floor, titleDetail, material, costPart].filter(Boolean).join(' ');
   });
   const text = rows.join('\n');
@@ -15622,14 +15627,18 @@ async function githubUpload(token){
             접기 단추가 아무 일도 안 해서 「안 된다」로 보였다.
             → 값이 하나라도 있으면 접을 수 있다. 대표 값이 비어 있으면
               「(업체 없음)」 이라고 적어 준다. */
-      var anyVal = hVal || parts.length;
       var gid = g.id || '';
       /* v123 — 사람이 정한 것 > 이 화면에서 누른 것 > 처음 값 */
       var uOpen = (window.wlUser ? window.wlUser.get('grp', gid) : undefined);
       var ok = okey(gid);
       var wantOpen = (uOpen !== undefined) ? !!uOpen
                    : ((OPEN[ok] === undefined) ? !!g.openDefault : !!OPEN[ok]);
-      if(anyVal && !wantOpen){
+      /* v281 — 달님 : 「업체·시각 접어도 접히질 않아」
+            v116 이 「값이 하나라도 있으면 접을 수 있다」로 고쳤었는데, 묶음이
+            통째로 빈 채면 여전히 못 접었다(anyVal 이 거짓). 사람이 [접기]를
+            눌렀다는 건 wantOpen 하나로 이미 분명하다 — 비어 있어도 접는다
+            (빈 대표값은 아래에서 이미 "(업체 없음)" 으로 적어 준다). */
+      if(!wantOpen){
         var line = document.createElement('div');
         line.className = 'pg-prow wide pg-grow';
         line.setAttribute('data-gid', g.id || '');    /* v113 — 어떤 묶음인지 (↩ 단추가 찾아 쓴다) */
@@ -23492,7 +23501,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v280-0923-0845';
+  var JS_BUILD = 'v281-0923-0917';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
