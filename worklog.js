@@ -22746,18 +22746,24 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   📐 완료 상태 + 내용 나란히 (wlStatusMemoPair)  v285-0923
+   📐 나란히 두 칸 (wlFieldPair)  v285-0923 → v289 여러 짝으로 확장
 
    달님 : 「내용+완료 2열로 나오게 하지만 완료 상태 가로크기는 좀 줄여서」
+        · 「전화 옆으로 업체 메모 넣어서 2열로 나오게 해줘」
 
    격자(.pg-props)는 앞에서부터 순서대로 칸을 채우는데, 대상년도·세부처럼
-   비어서 접히는 칸이 몇 개냐에 따라 완료 상태가 짝수/홀수 자리를 오락가락
-   해서 「내용」과 짝이 맞을 때도, 안 맞을 때도 있었다 — 격자 흐름에 기대지
-   않고 두 칸을 직접 한 상자(.pg-statuspair)로 묶어 버린다. 완료 상태·내용은
-   DOM 차례로는 항상 바로 옆칸(형제)이라 — 비어서 숨는 칸이 몇 개든 안 변한다.
+   비어서 접히는 칸이 몇 개냐에 따라 좁은 칸이 짝수/홀수 자리를 오락가락
+   해서 옆 칸과 짝이 맞을 때도, 안 맞을 때도 있었다 — 격자 흐름에 기대지
+   않고 두 칸을 직접 한 상자(.pg-statuspair)로 묶어 버린다. PAIRS 목록에
+   적힌 두 칸은 DOM 차례로는 항상 바로 옆칸(형제)이라 — 비어서 숨는 칸이
+   몇 개든 안 변한다. 짝을 더 늘리려면 PAIRS 배열에 한 줄만 추가하면 된다.
    ============================================================ */
 (function(){
   'use strict';
+  var PAIRS = [
+    ['f:status', '_memo'],          /* 완료 상태 + 내용 (g0 바로 뒤) */
+    ['f:workPhone', 'f:workMemo']   /* 전화 + 업체 메모 (g1 — 업체) */
+  ];
   /* 묶음 발치(.pg-gfoot)·이음줄 같은 표시(꼬리)는 진짜 다음 칸이 아니다 — 건너뛴다 */
   function nextMeaningful(el){
     var n = el.nextElementSibling;
@@ -22774,26 +22780,28 @@ async function githubUpload(token){
     [].forEach.call(page.querySelectorAll('.pg-statuspair'), function(b){
       if(!b.children.length) b.remove();
     });
-    var status = page.querySelector('[data-prow="f:status"]');
-    var memo   = page.querySelector('[data-prow="_memo"]');
-    if(!status || !memo) return;
-    /* 이미 한 상자 안에 형제로 있다 — 묶음 발치(.pg-gfoot)가 그 사이에
-       끼어들어도(wlGroup 이 매번 새로 만든다) 둘의 짝은 안 변한다. */
-    if(status.parentNode === memo.parentNode
-       && status.parentNode.classList && status.parentNode.classList.contains('pg-statuspair')) return;
-    /* v285 — 묶기 전 조건 : 완료 상태 다음(묶음 발치는 빼고)이 내용이어야
-       한다(둘 다 감춰진 #pgHidden 안이어도 형제 차례는 그대로다).
-       아니면 억지로 묶지 않는다. */
-    if(nextMeaningful(status) !== memo) return;
     var host = page.querySelector('.pg-props'); if(!host) return;
-    var box = document.createElement('div');
-    box.className = 'pg-statuspair';
-    host.insertBefore(box, status);
-    box.appendChild(status);
-    box.appendChild(memo);
+    PAIRS.forEach(function(pair){
+      var a = page.querySelector('[data-prow="' + pair[0] + '"]');
+      var b = page.querySelector('[data-prow="' + pair[1] + '"]');
+      if(!a || !b) return;
+      /* 이미 한 상자 안에 형제로 있다 — 묶음 발치(.pg-gfoot)가 그 사이에
+         끼어들어도(wlGroup 이 매번 새로 만든다) 둘의 짝은 안 변한다. */
+      if(a.parentNode === b.parentNode
+         && a.parentNode.classList && a.parentNode.classList.contains('pg-statuspair')) return;
+      /* 묶기 전 조건 : 앞 칸 다음(묶음 발치는 빼고)이 뒤 칸이어야 한다
+         (둘 다 감춰진 #pgHidden 안이어도 형제 차례는 그대로다).
+         아니면 억지로 묶지 않는다. */
+      if(nextMeaningful(a) !== b) return;
+      var box = document.createElement('div');
+      box.className = 'pg-statuspair';
+      host.insertBefore(box, a);
+      box.appendChild(a);
+      box.appendChild(b);
+    });
   }
-  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:60, n:'완료+내용 나란히', f:run });
-  console.log('[완료+내용 나란히] v285 준비됨');
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:60, n:'나란히 두 칸', f:run });
+  console.log('[나란히 두 칸] v289 준비됨 — ' + PAIRS.length + '쌍');
 })();
 
 
@@ -23726,7 +23734,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v289-0923-1303';
+  var JS_BUILD = 'v290-0923-1312';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */

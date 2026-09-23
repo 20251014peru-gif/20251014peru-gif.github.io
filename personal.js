@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v289-0923-1303';
+window.PERSONAL_BUILD = 'v290-0923-1312';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -5083,8 +5083,11 @@ window.PERSONAL_BUILD = 'v289-0923-1303';
       /* 긴 글·표·연결 같은 것은 한 줄 통째로 쓴다
          v285 — 달님 : 「내용+완료 2열로, 완료 상태는 좁게」— 「내용」(_memo)만은
          예외로 통줄을 풀어 바로 앞 완료 상태와 한 상자(.pg-statuspair,
-         wlStatusMemoPair/worklog.js)에 나란히 놓인다. */
-      var wide = (['area','rows','rel','multi','att','map','link'].indexOf(p.type)>=0) && p.id!=='_memo';
+         wlFieldPair/worklog.js)에 나란히 놓인다.
+         v289 — 달님 : 「전화 옆으로 업체 메모 넣어서 2열로」— 같은 예외를
+         업체 메모(f:workMemo)에도 준다. */
+      var PAIR_WIDE_EXC = { '_memo':1, 'f:workMemo':1 };
+      var wide = (['area','rows','rel','multi','att','map','link'].indexOf(p.type)>=0) && !PAIR_WIDE_EXC[p.id];
       return '<div class="pg-prow'+(wide?' wide':'')+'" data-prow="'+esc(p.id)+'">'
         + '<div class="pg-pk">'
         +   '<span class="pg-drag" title="끌어서 옮기기">⋮⋮</span>'
