@@ -56,7 +56,7 @@ jobs:
           set -o pipefail
           git config user.name "news-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add news.json glossary.json trends.json trending_log.json listed_names.json stocks.json archive/ lite/ bodies/ 2>/dev/null || true
+          git add news.json glossary.json trends.json trending_log.json listed_names.json volume_surge.json stocks.json archive/ lite/ bodies/ 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "::notice::새로 들어온 뉴스가 없어 커밋할 것이 없습니다."

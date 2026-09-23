@@ -330,6 +330,50 @@ def fetch_datalab(terms, days=14):
             print("    (뉴스 검색은 되는데 트렌드만 401/429면, 이 API 선택이 누락된 것입니다)")
     return out
 
+# ──────────────────────────────────────────────────────────────
+# 거래대금·거래량 급증 (2026-09-23 추가)
+# 네이버가 2026-09 사이트를 새로 만들면서 예전 '인기 검색 종목' 페이지(lastsearch2)는 없어지고
+# 자바스크립트로 그리는 새 화면이 됐다(단순 크롤링 불가). 대신 그 화면이 쓰는 공개 JSON API를
+# 찾았다: 인증·가입 없이 국내 전 종목(코스피+코스닥, 2026-09-23 확인 2,872종목)의 실시간
+# 가격·거래량·거래대금·"전일 대비 거래량 증가율(quantDiffRate)"을 한 번의 요청으로 준다.
+# 이건 '검색으로 뜬 것'이 아니라 '실제 돈이 몰린 것'이라 투자 신호로 더 직접적이다(달님 시스템
+# 원칙: 말/뉴스와 돈의 행동을 항상 비교). 비공식 API라 언제든 바뀔 수 있음 — 실패해도 전체 수집은
+# 계속되게(try/except) 해뒀다.
+NAVER_STOCK_API = "https://stock.naver.com/api/domestic/market/stock/default"
+VOLUME_SURGE_MIN_AMOUNT = 3_000_000_000   # 거래대금 30억 미만은 잡주 잡음으로 보고 제외
+VOLUME_SURGE_TOP_N = 12
+
+def fetch_volume_surge():
+    """전 종목 실시간 시세에서 거래대금 상위·거래량 급증 상위를 뽑아 반환.
+    반환: {"updated":..., "byAmount":[...], "bySurge":[...]}  (실패 시 None)"""
+    try:
+        r = requests.get(NAVER_STOCK_API, params={"page": 1, "pageSize": 3000},
+                          headers={**HEADERS, "Referer": "https://stock.naver.com/"}, timeout=20)
+        r.raise_for_status()
+        rows = r.json()
+        if not isinstance(rows, list) or len(rows) < 500:   # 비정상 응답(개편 등) 방어
+            raise ValueError(f"응답 종목 수 이상함: {len(rows) if isinstance(rows,list) else type(rows)}")
+    except Exception as ex:
+        print("  ! 거래대금/거래량 급증 수집 실패:", ex)
+        return None
+
+    def f(x, k):
+        try:
+            return float(x.get(k) or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def item(x):
+        return {"name": x.get("itemname", ""), "code": x.get("itemcode", ""),
+                "price": int(f(x, "nowPrice")), "changeRate": round(f(x, "prevChangeRate"), 2),
+                "amount": int(f(x, "tradeAmount")), "surgeRate": round(f(x, "quantDiffRate"), 1)}
+
+    stocks = [x for x in rows if x.get("type") == "ST" and f(x, "tradeAmount") >= VOLUME_SURGE_MIN_AMOUNT]
+    by_amount = sorted(stocks, key=lambda x: f(x, "tradeAmount"), reverse=True)[:VOLUME_SURGE_TOP_N]
+    by_surge = sorted(stocks, key=lambda x: f(x, "quantDiffRate"), reverse=True)[:VOLUME_SURGE_TOP_N]
+    return {"updated": dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
+            "byAmount": [item(x) for x in by_amount], "bySurge": [item(x) for x in by_surge]}
+
 def load_keywords() -> list:
     try:
         with open("keywords.json", "r", encoding="utf-8") as f:
@@ -798,6 +842,18 @@ def main():
             print(f"→ trends.json 저장됨 (대중 관심 {len(dl)}개, 인기순: {top5} …)")
     except Exception as e:
         print("  ! trends.json 저장 건너뜀:", e)
+
+    # ── 거래대금 상위·거래량 급증 종목 → volume_surge.json ──
+    try:
+        vs = fetch_volume_surge()
+        if vs:
+            with open("volume_surge.json", "w", encoding="utf-8") as f:
+                json.dump(vs, f, ensure_ascii=False, indent=1)
+            top_amt = ", ".join(x["name"] for x in vs["byAmount"][:3])
+            top_srg = ", ".join(x["name"] for x in vs["bySurge"][:3])
+            print(f"→ volume_surge.json 저장됨 (거래대금 상위: {top_amt} … / 거래량 급증: {top_srg} …)")
+    except Exception as e:
+        print("  ! volume_surge.json 저장 건너뜀:", e)
 
     save_glossary(glossary)
 

@@ -56,6 +56,7 @@
   .schip{flex:0 0 auto;background:#FFF1F1;color:var(--up);border:1px solid #FBD7D7;border-radius:999px;padding:6px 11px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
   .schip .pct{font-size:11px;font-weight:800} .schip .plus{opacity:.6;font-weight:800}
   .schip.sch{background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE} .schip.tr{background:#FFF7ED;color:#C2410C;border-color:#FED7AA}
+  .schip.vs{background:#ECFDF5;color:#047857;border-color:#A7F3D0}
   .aiBtn{border:1px solid var(--line-2);background:#F5F3FF;color:#6D28D9;border-radius:999px;padding:5px 11px;font-size:11.5px;font-weight:700;cursor:pointer}
   .aiBtn:disabled{opacity:.55;cursor:default}
   .autoTag{display:inline-block;background:#ECFDF5;color:#047857;border:1px solid #A7F3D0;border-radius:5px;font-size:9.5px;font-weight:800;padding:1px 4px;margin-right:4px;vertical-align:1px}
@@ -256,7 +257,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span id="aiCostBadge" onclick="openKey()" title="AI 사용 요금 (누적, 이 브라우저 기준) · 탭하면 내역 보기" style="cursor:pointer;font-weight:700;color:#6D28D9"></span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정&#10;· v5.1 급상승: 같은 시간대 비중 비교 · 검색량 · 급상승어 기록&#10;· v5.2 급상승어 투자 판정: 네이버 경제면 비율 + 상장사명 + 단어 점수&#10;· v5.3 급상승 AI 이유분석(Sonnet 5·내 AI키 이용·요금표시) · 이슈·테마에 급상승 투자 키워드 자동추천/정렬&#10;· v5.4 AI 요금 표시(헤더+설정 내역) · 오늘 뉴스에서 AI가 새 투자 키워드 찾기&#10;· v5.5 버그수정: 속보 등 다른 탭에서 급상승/키워드 클릭 시 뉴스가 0건으로 보이던 문제(전체 탭으로 자동 전환)&#10;· v5.6 AI 키워드 찾기 버튼을 설정창에서 이슈/테마 메인 화면으로 이동&#10;· v5.7 AI 키워드 찾기가 급상승/대중관심에 이미 뜬 것까지 겹치던 문제 수정&#10;· v5.8 AI 키워드 찾기가 너무 쉽게 없음이라고 답하던 것 완화(반복 3회 이상이면 후보로)&#10;· v5.9 AI 키워드 찾기를 급상승 바로 아래로 이동(항상 보임), 이유분석과 한 줄로">v5.9</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span id="aiCostBadge" onclick="openKey()" title="AI 사용 요금 (누적, 이 브라우저 기준) · 탭하면 내역 보기" style="cursor:pointer;font-weight:700;color:#6D28D9"></span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정&#10;· v5.1 급상승: 같은 시간대 비중 비교 · 검색량 · 급상승어 기록&#10;· v5.2 급상승어 투자 판정: 네이버 경제면 비율 + 상장사명 + 단어 점수&#10;· v5.3 급상승 AI 이유분석(Sonnet 5·내 AI키 이용·요금표시) · 이슈·테마에 급상승 투자 키워드 자동추천/정렬&#10;· v5.4 AI 요금 표시(헤더+설정 내역) · 오늘 뉴스에서 AI가 새 투자 키워드 찾기&#10;· v5.5 버그수정: 속보 등 다른 탭에서 급상승/키워드 클릭 시 뉴스가 0건으로 보이던 문제(전체 탭으로 자동 전환)&#10;· v5.6 AI 키워드 찾기 버튼을 설정창에서 이슈/테마 메인 화면으로 이동&#10;· v5.7 AI 키워드 찾기가 급상승/대중관심에 이미 뜬 것까지 겹치던 문제 수정&#10;· v5.8 AI 키워드 찾기가 너무 쉽게 없음이라고 답하던 것 완화(반복 3회 이상이면 후보로)&#10;· v5.9 AI 키워드 찾기를 급상승 바로 아래로 이동(항상 보임), 이유분석과 한 줄로&#10;· v6.0 거래대금/거래량 급증(네이버 전종목 실시간 시세, 검색 아닌 실제 매매 신호) 추가">v6.0</span></div>
   </div>
 </header>
 <main>
@@ -701,7 +702,7 @@ function renderTrend(){
    지금: ① 뉴스 — 오늘 0시~지금 vs 어제 같은 시간대, 기사 '수' 대신 그 시간대 전체 기사 중 '비중'을 비교
          ② 검색 — 네이버 데이터랩 검색량(수집 횟수와 무관): 마지막 완료일 vs 그 전 7일 평균
          ③ 급상승어 — 수집기가 매번 기록하는 구글 급상승어(trending_log.json) 중 투자 관련, 최근 72시간 */
-var searchSurging = [], trendLog = null, trendRecent = [], trendOther = 0;
+var searchSurging = [], trendLog = null, trendRecent = [], trendOther = 0, volumeSurge = null;
 function _escH(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
 function _newsWindow(from, to){
   return NEWS.filter(function(n){ var t=Date.parse(n.date); return !isNaN(t) && t>=from && t<to; });
@@ -772,10 +773,19 @@ function renderSurge(){
     h+= trendRecent.length ? trendRecent.map(function(x){ return chip(x.k, x.e.seen>1?"×"+x.e.seen:"", "구글 급상승 · 처음 "+(x.e.first||"")+" · 최근 "+(x.e.last||"")+(x.e.why&&x.e.why.length?"\n판정 "+(x.e.score>0?"+":"")+x.e.score+"점: "+x.e.why.join(" · "):"")+(x.e.news&&x.e.news[0]?"\n"+x.e.news[0]:""), " tr"); }).join("") : gray+'투자 관련 없음</span>';
     if(trendOther) h+=gray+'(투자 무관 '+trendOther+'개 제외)</span>';
   }
+  if(volumeSurge){
+    // 검색·뉴스가 아니라 실제 거래(네이버 국내 전 종목 실시간 시세)에서 뽑은 신호 — "말"이 아니라 "돈의 행동"
+    h+='<span class="lab" style="margin-left:6px">💰 거래량 급증</span>';
+    h+= (volumeSurge.bySurge&&volumeSurge.bySurge.length) ? volumeSurge.bySurge.slice(0,6).map(function(x){
+        var pct=x.surgeRate>=999?"×"+Math.round(x.surgeRate/100)+"배":(x.surgeRate>=0?"+":"")+Math.round(x.surgeRate)+"%";
+        return chip(x.name, pct, "전일 대비 거래량 "+pct+" · 등락률 "+(x.changeRate>=0?"+":"")+x.changeRate+"% · 거래대금 "+Math.round(x.amount/1e8)+"억", " vs");
+      }).join("") : gray+'자료 없음</span>';
+  }
   host.innerHTML=h;
 }
-(function(){ // 급상승어 기록은 목록 로딩과 따로 받는다(없어도 나머지는 그대로 동작)
+(function(){ // 급상승어·거래량급증 기록은 목록 로딩과 따로 받는다(없어도 나머지는 그대로 동작)
   try{ fetch("trending_log.json?t="+Date.now(),{cache:"no-store"}).then(function(r){ return r.ok?r.json():null; }).then(function(j){ if(j&&j.terms){ trendLog=j; try{ renderSurge(); if(boardMode==="kw") renderTrend(); }catch(e){} } }).catch(function(){}); }catch(e){}
+  try{ fetch("volume_surge.json?t="+Date.now(),{cache:"no-store"}).then(function(r){ return r.ok?r.json():null; }).then(function(j){ if(j&&(j.byAmount||j.bySurge)){ volumeSurge=j; try{ renderSurge(); }catch(e){} } }).catch(function(){}); }catch(e){}
 })();
 
 /* 급상승 이유 AI 분석 — 사이트에 이미 있는 AI(내 Claude 키, 브라우저에만 저장)를 그대로 이용한다.
@@ -790,6 +800,11 @@ function surgeAiContext(){
     var titles=(x.e.news||[]).join(" / ");
     lines.push(x.k+" | 구글 급상승어(투자판정 "+(x.e.score>0?"+":"")+x.e.score+"점, 근거: "+(x.e.why||[]).join(",")+") | 관련기사: "+(titles||"없음"));
   });
+  if(volumeSurge&&volumeSurge.bySurge){
+    volumeSurge.bySurge.slice(0,6).forEach(function(x){
+      lines.push(x.name+" | 실제 거래량 급증(검색이 아니라 매매) | 전일 대비 거래량 "+Math.round(x.surgeRate)+"% · 등락률 "+x.changeRate+"% · 거래대금 "+Math.round(x.amount/1e8)+"억원");
+    });
+  }
   return lines.join("\n");
 }
 function analyzeSurgeAI(){
@@ -848,6 +863,7 @@ function suggestKeywordsAI(){
     .concat(surging.map(function(s){return s.k;}))
     .concat(searchSurging.map(function(s){return s.k;}))
     .concat(trendRecent.map(function(x){return x.k;}))
+    .concat(volumeSurge&&volumeSurge.bySurge?volumeSurge.bySurge.map(function(x){return x.name;}):[])
     .forEach(function(k){ if(k) alreadyShown[k]=1; });
   var known=Object.keys(alreadyShown).join(", ");
   kwAiBusy=true;
