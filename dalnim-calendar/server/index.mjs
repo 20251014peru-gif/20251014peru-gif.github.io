@@ -12,7 +12,9 @@ import webpush from 'web-push';
 import {canRead,canWrite,cleanEvent,validSubscription,canInvite,EMAIL_RE,emailMatches,inviteExpired} from './policy.mjs';
 import {nextReminder} from './schedule.mjs';
 import {mapRecordToEvent,mapCheckToEvent,mapReviewToEvent} from './investment-feed.mjs';
+import {dueInvestmentItems} from './investment-reminders.mjs';
 import {MAX_PHOTOS,MAX_PHOTO_BYTES,ALLOWED_CONTENT_TYPES,photoPath,photoDownloadUrl} from './photos.mjs';
+import {DateTime} from 'luxon';
 initializeApp({storageBucket:'my-system-25497.firebasestorage.app'});
 const db=getFirestore(),privateKey=defineSecret('DALNIM_VAPID_PRIVATE_KEY'),publicKey=defineString('DALNIM_VAPID_PUBLIC_KEY'),subject=defineString('DALNIM_PUSH_SUBJECT'),allowedOrigins=defineString('DALNIM_ALLOWED_ORIGINS');
 const hash=s=>createHash('sha256').update(s).digest('hex');
@@ -238,4 +240,30 @@ async function dispatch(ref,now){
   }
  }catch(error){console.error('calendar reminder',ref.id,error.message);await ref.update({leaseUntil:0,dueAt:Date.now()+300000,lastError:String(error.message).slice(0,300),attempts:(job.attempts||0)+1});}
 }
+// Investment archive checks[]/reviewAt items are never stored as real calendar events (see
+// investment-feed.mjs), so the per-event reminder sweep above can never see them. This is a
+// separate, read-only digest instead: twice a day, find what's due today and push one summary
+// notification to each space's owner (investment data is owner-only, same as the /investment-feed
+// route). No per-item acknowledgement or follow-up chain — just "here's what's due, go check".
+export const investmentReminderSweep=onSchedule({schedule:'0 9,18 * * *',timeZone:'Asia/Seoul',region:'asia-northeast3',maxInstances:1,timeoutSeconds:120,secrets:[privateKey]},async()=>{
+ const today=DateTime.now().setZone('Asia/Seoul').toISODate();
+ const cutoff=new Date(Date.now()-400*86400000).toISOString().slice(0,10);
+ const recordsSnap=await db.collection('records').where('date','>=',cutoff).orderBy('date','desc').limit(1500).get();
+ const records=recordsSnap.docs.map(d=>({id:d.id,...d.data()}));
+ const due=dueInvestmentItems(records,today);
+ if(!due.length)return;
+ webpush.setVapidDetails(subject.value(),publicKey.value(),privateKey.value());
+ const body=due.length===1?due[0].title:due.length+'건의 확인 예정 항목이 있어요';
+ const spacesSnap=await db.collection('dalnimSpaces').get();
+ for(const spaceDoc of spacesSnap.docs){
+  const members=spaceDoc.data()?.members||{},ownerUids=Object.keys(members).filter(uid=>members[uid]==='owner');
+  for(const uid of ownerUids){
+   const subs=await spaceDoc.ref.collection('members').doc(uid).collection('subscriptions').get();
+   for(const sub of subs.docs){
+    try{await webpush.sendNotification(sub.data().subscription,JSON.stringify({title:'달님 · 투자 확인 예정',body}),{TTL:3600,urgency:'high',timeout:12000});}
+    catch(err){if(err.statusCode===404||err.statusCode===410)await sub.ref.delete();}
+   }
+  }
+ }
+});
 
