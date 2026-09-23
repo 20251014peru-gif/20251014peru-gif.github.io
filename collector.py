@@ -366,13 +366,20 @@ def fetch_volume_surge():
     def item(x):
         return {"name": x.get("itemname", ""), "code": x.get("itemcode", ""),
                 "price": int(f(x, "nowPrice")), "changeRate": round(f(x, "prevChangeRate"), 2),
-                "amount": int(f(x, "tradeAmount")), "surgeRate": round(f(x, "quantDiffRate"), 1)}
+                "amount": int(f(x, "tradeAmount")), "surgeRate": round(f(x, "quantDiffRate"), 1),
+                "turnoverRate": round(f(x, "tradeAmount") / f(x, "marketSum") * 100, 1) if f(x, "marketSum") > 0 else None}
 
     stocks = [x for x in rows if x.get("type") == "ST" and f(x, "tradeAmount") >= VOLUME_SURGE_MIN_AMOUNT]
     by_amount = sorted(stocks, key=lambda x: f(x, "tradeAmount"), reverse=True)[:VOLUME_SURGE_TOP_N]
     by_surge = sorted(stocks, key=lambda x: f(x, "quantDiffRate"), reverse=True)[:VOLUME_SURGE_TOP_N]
+    # 거래대금 기준: 순수 거래대금 액수는 삼성전자·SK하이닉스 등 대형주가 매번 상위를 차지해 '급증'을
+    # 못 보여준다. 그래서 거래대금을 시가총액으로 나눈 회전율(오늘 하루 시총 대비 얼마나 거래됐는지)로
+    # 줄을 세운다 — 몸집 대비 이례적으로 돈이 몰린 종목을 찾는 지표(거래량 대신 '금액' 기준 급증).
+    turnover_pool = [x for x in stocks if f(x, "marketSum") > 0]
+    by_turnover = sorted(turnover_pool, key=lambda x: f(x, "tradeAmount") / f(x, "marketSum"), reverse=True)[:VOLUME_SURGE_TOP_N]
     return {"updated": dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
-            "byAmount": [item(x) for x in by_amount], "bySurge": [item(x) for x in by_surge]}
+            "byAmount": [item(x) for x in by_amount], "bySurge": [item(x) for x in by_surge],
+            "byTurnover": [item(x) for x in by_turnover]}
 
 def load_keywords() -> list:
     try:
@@ -851,7 +858,8 @@ def main():
                 json.dump(vs, f, ensure_ascii=False, indent=1)
             top_amt = ", ".join(x["name"] for x in vs["byAmount"][:3])
             top_srg = ", ".join(x["name"] for x in vs["bySurge"][:3])
-            print(f"→ volume_surge.json 저장됨 (거래대금 상위: {top_amt} … / 거래량 급증: {top_srg} …)")
+            top_to = ", ".join(x["name"] for x in vs["byTurnover"][:3])
+            print(f"→ volume_surge.json 저장됨 (거래대금 상위: {top_amt} … / 거래량 급증: {top_srg} … / 거래대금 급증: {top_to} …)")
     except Exception as e:
         print("  ! volume_surge.json 저장 건너뜀:", e)
 
