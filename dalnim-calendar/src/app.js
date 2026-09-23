@@ -425,7 +425,7 @@ async function refresh(){events=await store.list();if($('#store-state'))$('#stor
 async function init(){
  const inviteSpace=new URLSearchParams(location.search).get('invite')?.split(':')?.[0]||null;
  if(config.apiBase){
-  if(sessionStorage.getItem('dalnim-session')){try{const {CloudStore}=await import('./cloud.js');store=await new CloudStore(config).restore();}catch(err){toast('서버 연결을 확인하고 다시 로그인해 주세요.');}}
+  if(localStorage.getItem('dalnim-session')){try{const {CloudStore}=await import('./cloud.js');store=await new CloudStore(config).restore();}catch(err){toast('서버 연결을 확인하고 다시 로그인해 주세요.');}}
   if(!store){
    $('#app').innerHTML='<main class="welcome-gate"><img src="./icon.svg" alt="달님"><p class="eyebrow">YOUR DAYS, CONNECTED</p><h1>오늘도, 나의 달님</h1><p>일과 생활이 연결되는 나만의 캘린더.<br>로그인하면 모든 기기에서 같은 일정을 만나요.</p><button class="primary" id="open-login">내 캘린더 열기</button><small>일정은 전용 Firebase 서버에 안전하게 저장됩니다.</small></main>';
    $('#open-login').onclick=()=>cloudLogin(inviteSpace);

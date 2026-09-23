@@ -23,8 +23,10 @@ export class CloudStore{
   const d=await r.json();if(!r.ok)throw Error('로그인하지 못했습니다. 계정과 비밀번호를 확인해 주세요.');
   return this.connectSession(d);
  }
- persistSession(){sessionStorage.setItem('dalnim-session',JSON.stringify({refreshToken:this.refreshToken,workspaceId:this.workspaceId}));}
- async restore(){const d=JSON.parse(sessionStorage.getItem('dalnim-session')||'null');if(!d?.refreshToken)throw Error('로그인이 필요합니다.');this.refreshToken=d.refreshToken;this.workspaceId=d.workspaceId;this.expires=0;await this.reload();this.startPolling();if(this.pendingCount)this.flushQueue().catch(()=>{});return this;}
+ // localStorage (not sessionStorage) so a phone stays signed in after the browser/PWA is fully
+ // closed and reopened — the same Firebase refresh token either way, just persisted longer.
+ persistSession(){localStorage.setItem('dalnim-session',JSON.stringify({refreshToken:this.refreshToken,workspaceId:this.workspaceId}));}
+ async restore(){const d=JSON.parse(localStorage.getItem('dalnim-session')||'null');if(!d?.refreshToken)throw Error('로그인이 필요합니다.');this.refreshToken=d.refreshToken;this.workspaceId=d.workspaceId;this.expires=0;await this.reload();this.startPolling();if(this.pendingCount)this.flushQueue().catch(()=>{});return this;}
  async accessToken(){if(Date.now()<this.expires-60000)return this.token;
   if(!this.tokenRequest)this.tokenRequest=this.refreshAccessToken().finally(()=>this.tokenRequest=null);return this.tokenRequest;
  }
@@ -89,7 +91,7 @@ export class CloudStore{
  async deletePhoto(eventId,photoId){return this.request('/events/'+eventId+'/photos/'+photoId,'DELETE');}
  async meta(k,f){if(!this.preferences)this.preferences=await this.request("/preferences");return this.preferences[k]??f;}
  async setMeta(k,v){await this.request("/preferences","POST",{key:k,value:v});this.preferences={...this.preferences,[k]:v};}
- close(){clearInterval(this.timer);this.token=null;this.refreshToken=null;sessionStorage.removeItem("dalnim-session");}
+ close(){clearInterval(this.timer);this.token=null;this.refreshToken=null;localStorage.removeItem("dalnim-session");}
 }
 export async function subscribePush(store){
  if(!('serviceWorker' in navigator)||!('PushManager' in window))throw Error('이 브라우저는 푸시 알림을 지원하지 않습니다.');
