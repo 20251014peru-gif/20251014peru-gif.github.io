@@ -11,7 +11,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import webpush from 'web-push';
 import {canRead,canWrite,cleanEvent,validSubscription,canInvite,EMAIL_RE,emailMatches,inviteExpired} from './policy.mjs';
 import {nextReminder} from './schedule.mjs';
-import {mapRecordToEvent,mapTodoToEvent} from './investment-feed.mjs';
+import {mapRecordToEvent,mapCheckToEvent,mapReviewToEvent} from './investment-feed.mjs';
 import {MAX_PHOTOS,MAX_PHOTO_BYTES,ALLOWED_CONTENT_TYPES,photoPath,photoDownloadUrl} from './photos.mjs';
 initializeApp({storageBucket:'my-system-25497.firebasestorage.app'});
 const db=getFirestore(),privateKey=defineSecret('DALNIM_VAPID_PRIVATE_KEY'),publicKey=defineString('DALNIM_VAPID_PUBLIC_KEY'),subject=defineString('DALNIM_PUSH_SUBJECT'),allowedOrigins=defineString('DALNIM_ALLOWED_ORIGINS');
@@ -85,17 +85,18 @@ export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',ma
    await root.collection('preferences').doc(uid).set({[key]:value},{merge:true});res.json({ok:true});return;
   }
   if(route==='/investment-feed'&&req.method==='GET'){
-   // Read-only, one-way: the owner's separate 투자 기록보관실 app (records/records_todos), same
-   // Firebase project. Bounded window + limits control read cost; nothing here is ever written back.
+   // Read-only, one-way: the owner's separate 투자 기록보관실 app's `records` collection, same
+   // Firebase project. Mirrors that app's own calendar view exactly — each record on its own
+   // date, each checks[] follow-up on its own date, and study-note reviewAt dates. Bounded
+   // window + limit controls read cost; nothing here is ever written back.
    if(role!=='owner')throw failure(403,'투자 기록은 공간 관리자만 볼 수 있습니다.');
    const cutoff=new Date(Date.now()-400*86400000).toISOString().slice(0,10);
-   const [recordsSnap,todosSnap]=await Promise.all([
-    db.collection('records').where('date','>=',cutoff).orderBy('date','desc').limit(1500).get(),
-    db.collection('records_todos').where('date','>=',cutoff).orderBy('date','desc').limit(500).get(),
-   ]);
+   const recordsSnap=await db.collection('records').where('date','>=',cutoff).orderBy('date','desc').limit(1500).get();
+   const records=recordsSnap.docs.map(d=>({id:d.id,...d.data()}));
    const feed=[
-    ...recordsSnap.docs.map(d=>mapRecordToEvent({id:d.id,...d.data()})),
-    ...todosSnap.docs.map(d=>mapTodoToEvent({id:d.id,...d.data()})),
+    ...records.map(mapRecordToEvent),
+    ...records.flatMap(r=>(r.checks||[]).map((c,i)=>mapCheckToEvent(r,c,i))),
+    ...records.map(mapReviewToEvent),
    ].filter(Boolean);
    res.json({events:feed});return;
   }
