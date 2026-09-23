@@ -11,7 +11,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import webpush from 'web-push';
 import {canRead,canWrite,cleanEvent,validSubscription,canInvite,EMAIL_RE,emailMatches,inviteExpired} from './policy.mjs';
 import {nextReminder} from './schedule.mjs';
-import {mapRecordToEvent,mapCheckToEvent,mapReviewToEvent} from './investment-feed.mjs';
+import {mapRecordToEvent,mapCheckToEvent,mapReviewToEvent,completionMarker} from './investment-feed.mjs';
 import {dueInvestmentItems} from './investment-reminders.mjs';
 import {MAX_PHOTOS,MAX_PHOTO_BYTES,ALLOWED_CONTENT_TYPES,photoPath,photoDownloadUrl} from './photos.mjs';
 import {DateTime} from 'luxon';
@@ -101,6 +101,20 @@ export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',ma
     ...records.map(mapReviewToEvent),
    ].filter(Boolean);
    res.json({events:feed});return;
+  }
+  if(route==='/investment-feed/complete'&&req.method==='POST'){
+   // Marks a checks[] item done the same way records.html itself does — adds a records_todos
+   // completion marker, never touches the record or its checks[] array. Same owner-only gate as
+   // reading the feed, since this data isn't scoped to a dalnim space.
+   if(role!=='owner')throw failure(403,'투자 기록은 공간 관리자만 처리할 수 있습니다.');
+   const recordId=String(req.body?.recordId||''),index=Number(req.body?.index);
+   if(!/^[\w-]{1,160}$/.test(recordId)||!Number.isInteger(index)||index<0)throw failure(400,'확인할 항목을 찾을 수 없습니다.');
+   const recordDoc=await db.collection('records').doc(recordId).get();
+   const check=recordDoc.data()?.checks?.[index];
+   if(!check)throw failure(404,'확인할 항목을 찾을 수 없습니다.');
+   const today=DateTime.now().setZone('Asia/Seoul').toISODate();
+   await db.collection('records_todos').add(completionMarker(recordId,index,check.what||recordDoc.data().title,today));
+   res.json({ok:true});return;
   }
   if(route==='/events'&&req.method==='GET'){
    const snapshot=await root.collection('events').limit(5001).get();
@@ -254,13 +268,15 @@ export const investmentReminderSweep=onSchedule({schedule:'15 10,16 * * *',timeZ
  if(!due.length)return;
  webpush.setVapidDetails(subject.value(),publicKey.value(),privateKey.value());
  const body=due.length===1?due[0].title:due.length+'건의 확인 예정 항목이 있어요';
+ // Only a single due item can be deep-linked unambiguously — a digest of several just opens the app.
+ const payload={title:'달님 · 투자 확인 예정',body};if(due.length===1)payload.investmentItemId=due[0].id;
  const spacesSnap=await db.collection('dalnimSpaces').get();
  for(const spaceDoc of spacesSnap.docs){
   const members=spaceDoc.data()?.members||{},ownerUids=Object.keys(members).filter(uid=>members[uid]==='owner');
   for(const uid of ownerUids){
    const subs=await spaceDoc.ref.collection('members').doc(uid).collection('subscriptions').get();
    for(const sub of subs.docs){
-    try{await webpush.sendNotification(sub.data().subscription,JSON.stringify({title:'달님 · 투자 확인 예정',body}),{TTL:3600,urgency:'high',timeout:12000});}
+    try{await webpush.sendNotification(sub.data().subscription,JSON.stringify(payload),{TTL:3600,urgency:'high',timeout:12000});}
     catch(err){if(err.statusCode===404||err.statusCode===410)await sub.ref.delete();}
    }
   }

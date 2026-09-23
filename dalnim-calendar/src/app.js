@@ -99,10 +99,19 @@ function paintRail(){
  $('[data-rail-settings]').onclick=()=>openSettings();
 }
 const dateInput=s=>{const d=new Date(s);return dayKey(d)+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+function openInvestmentFromQuery(){
+ const id=new URLSearchParams(location.search).get('investment');if(!id)return;
+ const item=investmentEvents.find(e=>e.id===id);if(item)openReadOnlyRecord(item);
+}
 function openReadOnlyRecord(record){
- const d=$('#editor');
- d.innerHTML='<div class="dialog-head"><h2>'+esc(record.title)+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><p class="form-note">'+icon('link')+'투자 기록보관실에서 가져온 읽기 전용 기록입니다. 원본을 고치려면 투자 기록보관실에서 열어 주세요.</p>'+(record.location?'<p><strong>종목</strong> '+esc(record.location)+'</p>':'')+(record.notes?'<p style="white-space:pre-wrap">'+esc(record.notes)+'</p>':'')+'<p class="quiet small">'+new Date(record.start).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})+' · '+(record.status==='done'?'기록됨':'예정')+'</p></div><div class="dialog-actions"><button class="primary" type="button" data-close>닫기</button></div>';
+ const d=$('#editor'),isCheck=record.source?.kind==='check';
+ d.innerHTML='<div class="dialog-head"><h2>'+esc(record.title)+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><p class="form-note">'+icon('link')+'투자 기록보관실에서 가져온 읽기 전용 기록입니다. 원본을 고치려면 투자 기록보관실에서 열어 주세요.</p>'+(record.location?'<p><strong>종목</strong> '+esc(record.location)+'</p>':'')+(record.notes?'<p style="white-space:pre-wrap">'+esc(record.notes)+'</p>':'')+'<p class="quiet small">'+new Date(record.start).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})+' · '+(record.status==='done'?'기록됨':'예정')+'</p>'+(isCheck?'<p class="form-note">완료 처리하면 투자 기록보관실의 "오늘의 체크리스트"에도 완료로 표시됩니다. 이 항목 자체는 날짜가 지나도 계속 캘린더에 남습니다(원본 앱과 동일한 동작입니다).</p>':'')+'</div><div class="dialog-actions">'+(isCheck?'<button class="soft" type="button" id="complete-check">'+icon('check')+'확인 완료 처리</button>':'')+'<button class="primary" type="button" data-close>닫기</button></div>';
  d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close());
+ if(isCheck)$('#complete-check').onclick=async()=>{
+  const btn=$('#complete-check');btn.disabled=true;
+  try{await store.request('/investment-feed/complete','POST',{recordId:record.source.recordId,index:record.source.index});toast('확인 완료로 처리했습니다.');d.close();}
+  catch(err){toast(err.message||'처리하지 못했습니다.');btn.disabled=false;}
+ };
  d.showModal();
 }
 // Basic viewer: pinch/wheel/double-click zoom, drag-to-pan, prev/next, save and share. Save/share
@@ -402,7 +411,7 @@ async function cloudLogin(prefillSpace){
    if(!space)throw Error('공간 ID를 입력해 주세요.');
    if(kind==='google')await live.loginGoogle(space);else {if(!form.email.value||!form.password.value)throw Error('이메일과 비밀번호를 입력해 주세요.');await live.login(form.email.value,form.password.value,space);}
    if(!store){location.reload();return;}
-   store=live;categories=await store.meta('categories',baseCategories);disabled=await store.meta('disabled',[]);await refresh();store.subscribe(refresh);d.close();shell();$('#banner-label').textContent='클라우드 공간 · 실제 계정 데이터';$('[data-action=clear-demo]').hidden=true;toast('내 공간에 연결되었습니다.');await acceptInvite();if(store.isCloud){store.request('/investment-feed').then(r=>{investmentEvents=r.events;paintCategories();refreshCalendar();}).catch(()=>{});}const target=new URLSearchParams(location.search).get('event');if(target)openEditor(target);await acknowledgePush();
+   store=live;categories=await store.meta('categories',baseCategories);disabled=await store.meta('disabled',[]);await refresh();store.subscribe(refresh);d.close();shell();$('#banner-label').textContent='클라우드 공간 · 실제 계정 데이터';$('[data-action=clear-demo]').hidden=true;toast('내 공간에 연결되었습니다.');await acceptInvite();if(store.isCloud){store.request('/investment-feed').then(r=>{investmentEvents=r.events;paintCategories();refreshCalendar();openInvestmentFromQuery();}).catch(()=>{});}const target=new URLSearchParams(location.search).get('event');if(target)openEditor(target);await acknowledgePush();
   }catch(err){d.querySelector('.form-error').textContent=err.code==='auth/popup-closed-by-user'?'로그인 창을 닫았습니다. 다시 눌러 연결할 수 있어요.':err.message;}finally{buttons.forEach(b=>b.disabled=false);}
  }
  form.onsubmit=e=>{e.preventDefault();connect('email');};$('#google-login').onclick=()=>connect('google');d.showModal();
@@ -437,7 +446,7 @@ async function init(){
  if(!store.isCloud&&!await store.meta('seeded',false)){await store.import(demoEvents());await store.setMeta('seeded',true);events=await store.list();}
  shell();if(store.isCloud){$('#banner-label').textContent='클라우드 공간 · 실제 계정 데이터';$('[data-action=clear-demo]').hidden=true;}store.subscribe(refresh);
  await acceptInvite();
- if(store.isCloud){store.request('/investment-feed').then(r=>{investmentEvents=r.events;paintCategories();refreshCalendar();}).catch(()=>{});}
+ if(store.isCloud){store.request('/investment-feed').then(r=>{investmentEvents=r.events;paintCategories();refreshCalendar();openInvestmentFromQuery();}).catch(()=>{});}
  window.addEventListener('unhandledrejection',e=>{console.error(e.reason);toast(e.reason?.message||'처리하지 못했습니다. 다시 시도해 주세요.');});
  document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)||document.querySelector('dialog[open]'))return;if(e.key==='/'){e.preventDefault();$('#search').focus();}if(e.key==='n'||e.key==='N')openEditor();if(e.key==='t'||e.key==='T')calendar?.today();});
  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e;});

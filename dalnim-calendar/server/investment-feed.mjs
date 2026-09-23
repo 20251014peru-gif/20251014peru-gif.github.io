@@ -46,10 +46,20 @@ export function mapCheckToEvent(record, check, index) {
     visibility: 'personal', notes: String(check.action || '').slice(0, 20000),
     location: String(record.title || '').slice(0, 300),
     details: {}, readOnly: true, revision: 1,
-    source: {app: 'investment-archive', recordId: record.id, kind: 'check'},
+    // index is carried separately from id because id prefers check.id when present — the
+    // records_todos completion-marker dueKey the source app itself uses is always index-based
+    // (recordId + '#' + array position), regardless of whether the check has its own id.
+    source: {app: 'investment-archive', recordId: record.id, kind: 'check', index},
   };
 }
 
+// Marks a checks[] item done the exact way the source app itself does: a new records_todos
+// document with a dueKey the source app's own "오늘의 체크리스트" completion lookup recognizes
+// (recordId + '#' + array index — see records.html's dueItems/laterMarkDone). We only ever add
+// this marker document; the checks[] array itself and the record are never modified.
+export function completionMarker(recordId, index, text, todayStr) {
+  return {date: todayStr, done: true, text: String(text || '').slice(0, 200), dueKey: recordId + '#' + index, createdAt: Date.now()};
+}
 // 공부노트(study note) spaced-repetition review date.
 export function mapReviewToEvent(record) {
   if (!isStudyRecord(record) || !isDateStr(record.reviewAt)) return null;
