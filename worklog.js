@@ -4260,7 +4260,7 @@ function _onScanPicked(type,id,data){
            비어 있던 업체를 직접 채운다 — 그래야 이미 있는 「자동 정리」 요약줄에도
            그대로 나타난다 (칸을 고치면 요약줄이 저절로 바뀌는 그 기능). */
         try{
-          if(type === 'receipt' && rec.kind === 'work'){
+          if(type === 'receipt'){
             var amt = Number((data && data.amount) || 0);
             if(amt > 0){
               var sup = Math.round(amt / 1.1);
@@ -4270,9 +4270,30 @@ function _onScanPicked(type,id,data){
             }
             if(data && data.place && !String(rec.workVendor||'').trim()) patch.workVendor = data.place;
           }
+          /* v297 — 🔴 근본 수정 : 지금까지 여기서 채운 건 「내용」(_memo →
+             rec.detail) 이었는데, 달님이 계속 보여준 화면은 그게 아니라
+             노션식 카드 맨 아래 리치텍스트 「본문」(rec.body, pgBodyTx) 이다
+             — 완전히 다른 칸이라 아무리 채워도 거기엔 하나도 안 보였다
+             (달님 : 「아직 본문에 영수증 안들어가」의 진짜 원인).
+             거기다, 「사진 파일 자체가 본문에 들어가게 하라는 거야」 —
+             글줄만이 아니라 사진(<img>)도 본문 HTML 에 직접 넣는다.
+             ▸ v298 — 본문에 넣어도 바로 사라지는 2차 버그가 있었다 : 「본문에서
+             사진 떼어내기」(wlPics, 이 파일의 별도 기능 — 본문 안 <img>를 전부
+             찾아 사진칸으로 옮기고 본문에서 지운다)가 그리기 때마다 돌면서
+             방금 넣은 영수증 사진도 똑같이 떼어 갔다. data-wlreceipt 표시를
+             달아 wlPics 가 이 사진만은 건드리지 않게 한다(사용자가 직접
+             붙여넣는 사진은 여전히 떼어내 정리된다 — 그 기능은 그대로 둔다). */
           var line = scanRefBodyLine(type, data);
-          var body = String(rec.detail || rec.memo || '').trim();
-          if(line && body.indexOf(line) < 0) patch.detail = body ? (body + '\n' + line) : line;
+          var photoUrl = data && data.photoUrl;
+          var bits = [];
+          if(line) bits.push('<div>' + esc(line) + '</div>');
+          if(photoUrl) bits.push('<img src="' + esc(photoUrl) + '" data-wlreceipt="1" style="max-width:100%;border-radius:8px;margin:4px 0">');
+          if(bits.length){
+            var curBody = String(rec.body || '');
+            if(curBody.indexOf(photoUrl || '\u0000__no_url__') < 0 && (!line || curBody.indexOf(esc(line)) < 0)){
+              patch.body = curBody + bits.join('');
+            }
+          }
         }catch(e){ console.warn('[스캔앱] 자동 채우기 실패', e); }
         updateRecord(targetId, patch);
         toast(scanKindOf(type).icon+' '+scanRefTitle(type,data)+' 첨부됨');
@@ -20217,7 +20238,9 @@ async function githubUpload(token){
   function split(){
     if(!isOn()) return;
     var B = document.getElementById('pgBodyTx'); if(!B) return;
-    var imgs = B.querySelectorAll('img'); if(!imgs.length) return;
+    /* v298 — data-wlreceipt 표시가 붙은 사진(스캔앱 영수증)은 본문에 그대로
+       둔다 — 사용자가 직접 붙여넣은 사진만 사진칸으로 옮긴다. */
+    var imgs = B.querySelectorAll('img:not([data-wlreceipt])'); if(!imgs.length) return;
     var rid = ridNow(); if(!rid) return;
     var r = recOf(rid); if(!r) return;
 
@@ -23764,7 +23787,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v297-0923-1503';
+  var JS_BUILD = 'v298-0923-1530';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
