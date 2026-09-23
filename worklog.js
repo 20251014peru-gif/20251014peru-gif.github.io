@@ -6463,6 +6463,7 @@ function renderFieldMgrList(){
       <span style="flex:1;font-size:12px;color:var(--ink-soft)">${cnt}건 사용 중</span>
       <button data-act="up" title="위로">▲</button>
       <button data-act="down" title="아래로">▼</button>
+      <button data-act="ren" title="이름 수정">✏️</button>
       <button class="danger" data-act="del" title="삭제">🗑</button>
     </div>`;
   }).join("");
@@ -6470,6 +6471,39 @@ function renderFieldMgrList(){
     const i = Number(row.dataset.i);
     row.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>{
       const a = b.dataset.act;
+      /* v286 — 달님 : 「목록관리가 있긴 한데 눌러도 수정이 안되」— 추가·삭제·
+            순서만 있고 이름을 고치는 길이 없었다. 고치면 이 이름을 쓰던
+            기록도 같이 바꿔야 데이터가 끊기지 않는다(기본지침 3원칙). */
+      if(a==="ren"){
+        const old = FIELDS[i];
+        const go = (v)=>{
+          if(v===null) return;
+          v = String(v||"").trim();
+          if(!v || v===old) return;
+          if(FIELDS.includes(v)){ toast("이미 있는 분야예요"); return; }
+          FIELDS[i] = v;
+          const cnt2 = entries.filter(e=>(e.kind==="work"||e.kind==="item") && e.field===old).length;
+          if(cnt2>0){
+            entries.forEach(e=>{
+              if((e.kind==="work"||e.kind==="item") && e.field===old){
+                e.field = v;
+                wlQueueSave(e);
+              }
+            });
+            lsSave();
+          }
+          saveFields();
+          renderFieldMgrList();
+          renderAll();
+          toast(`✏️ "${old}" → "${v}"${cnt2>0?` (${cnt2}건도 같이 바뀜)`:""}`);
+        };
+        if(typeof window.wlAskText === "function"){
+          window.wlAskText("이름 수정", old, { ph:"분야 이름", ok:"저장" }).then(go);
+        }else{
+          go(prompt("새 분야 이름", old));
+        }
+        return;
+      }
       if(a==="up" && i>0){
         [FIELDS[i-1], FIELDS[i]] = [FIELDS[i], FIELDS[i-1]];
         saveFields(); renderFieldMgrList();
@@ -18501,6 +18535,18 @@ async function githubUpload(token){
       q = sw.querySelector('.ss-q');
     }
 
+    /* v286 — 달님 : 「목록 관리를 검색 바로 밑에 붙이고 스크롤은 전기·영선부터
+       쭉 내릴 수 있게」— 단추판보다 먼저 놓아 단추판 스크롤이 곧바로
+       첫 항목부터 시작하게 한다. */
+    if(useChips && plan.manage){
+      var mgr = document.createElement('button');
+      mgr.type = 'button';
+      mgr.className = 'qp-mgr';
+      mgr.setAttribute('data-qpmgr', '1');
+      mgr.textContent = '⚙ 목록 관리 (추가·삭제)';
+      box.appendChild(mgr);
+    }
+
     /* ── 단추판 ── */
     var chipVals = [];
     if(useChips){
@@ -18522,15 +18568,6 @@ async function githubUpload(token){
       }).join('')
       + '<button type="button" class="qp-it qp-clr" data-qpv="">비우기</button>';
       box.appendChild(grid);
-      /* v283 — 이 칸에 목록 관리 창이 있으면 단추판 밑에 ⚙ 를 하나 붙인다 */
-      if(plan.manage){
-        var mgr = document.createElement('button');
-        mgr.type = 'button';
-        mgr.className = 'qp-mgr';
-        mgr.setAttribute('data-qpmgr', '1');
-        mgr.textContent = '⚙ 목록 관리 (추가·삭제)';
-        box.appendChild(mgr);
-      }
     }
 
     /* 검색 결과 목록은 버튼판 다음 — 검색어를 넣었을 때만 쓸모 있으니 맨 끝 */
@@ -23655,7 +23692,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v286-0923-1223';
+  var JS_BUILD = 'v287-0923-1233';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
