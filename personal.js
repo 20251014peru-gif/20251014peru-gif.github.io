@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v295-0923-1417';
+window.PERSONAL_BUILD = 'v296-0923-1424';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -5195,7 +5195,7 @@ window.PERSONAL_BUILD = 'v295-0923-1417';
         return ppatch(rec, '_amount', sum2);
       }catch(e){ console.warn('[금액 자동]', e); return null; }
     }
-    function extrasHTML(r){
+    function extrasHTML(r, slim){
       var h2='';
       /* 🔗 업무에서 가져온 기록이면 원본으로 가는 칩을 보여준다 */
       if(r && r.workRef){
@@ -5211,7 +5211,7 @@ window.PERSONAL_BUILD = 'v295-0923-1417';
           + '</div>';
       }
       var tps = (typeof props!=='undefined' ? props : []).filter(function(p){ return p.type==='time'; });
-      if(tps.length>=2){
+      if(tps.length>=2 && !slim){
         h2 += '<div class="pg-div"></div>'
           + '<div class="pg-sec">⏱ 소요 시간 <span>누르면 「'+esc(tps[1].name)+'」 이 저절로 채워집니다</span></div>'
           + '<div class="pg-extra">'
@@ -5221,51 +5221,56 @@ window.PERSONAL_BUILD = 'v295-0923-1417';
           + '<button type="button" class="pg-xb" data-duradd="-10">−10분</button>'
           + '</div>';
       }
-      var mats = esr(r.materials);
-      var mSum = matSum(mats);
-      h2 += '<div class="pg-div"></div>'
-        + '<div class="pg-sec">📦 자재 사용 내역 <span>이 기록에 쓴 자재</span></div>'
-        + '<div class="pg-subs">'
-        + (mats.length ? mats.map(function(m,i){
-            var line = (Number(m.price)||0) * (Number(m.qty)||1);
-            return '<div class="pg-sub"><span class="tt">'+esc(m.name||'')
-              + (m.spec? ' <span style="color:#8ba0b6;font-weight:600">'+esc(m.spec)+'</span>':'')
-              + ' <span style="color:#3f7cb8">× '+(Number(m.qty)||1)+'</span>'
-              + (line? ' <span style="color:#b45309;font-weight:700">'+numFmt(line)+'원</span>':'')
-              + '</span>'
-              + '<button type="button" class="x" data-matdel="'+i+'" title="빼기">✕</button></div>'; }).join('')
-           : '<div class="pg-none">아직 없어요 — 아래에서 추가하세요</div>')
-        + '</div>'
-        /* v118 — 「💰 금액 칸에 넣기」 단추를 없앴다.
-              자재를 넣고 뺄 때마다 합계가 저절로 들어가므로 누를 일이 없다.
-              달님 : 「금액칸도 따로 넣기 말고 자동으로 들어가게 하면 화면이 작아지잔아」 */
-        + (mSum>0 ? '<div class="pg-extra" style="align-items:center">'
-            + '<span style="font-size:13.5px;font-weight:800;color:#b45309">자재 합계 '+numFmt(mSum)+'원</span>'
-            + '<span style="font-size:12px;color:#a8b8c8">합계 칸에 저절로 들어갑니다</span></div>' : '')
-        + '<div class="pg-extra">'
-        +   '<button type="button" id="pgMatPick" class="pg-xb on">📦 자재에서 고르기</button>'
-        +   '<input type="text" id="pgMatN" placeholder="자재명 (직접 입력)" style="flex:2;min-width:120px">'
-        +   '<input type="text" id="pgMatS" placeholder="규격 (선택)" style="flex:1.3;min-width:90px">'
-        +   '<input type="number" id="pgMatQ" placeholder="수량" value="1" min="0" style="flex:0 0 78px">'
-        +   '<input type="number" id="pgMatP" placeholder="단가" min="0" style="flex:0 0 92px">'
-        +   '<button type="button" id="pgMatAdd" class="pg-xb">추가</button>'
-        + '</div>';
-      var atts = esr(r.attachments);
-      h2 += '<div class="pg-div"></div>'
-        + '<div class="pg-sec">📎 파일 · 폴더 링크 <span>내 컴퓨터 경로를 적어두는 곳</span></div>'
-        + '<div class="pg-subs">'
-        + (atts.length ? atts.map(function(a,i){
-            return '<div class="pg-sub"><span class="tt">'+esc(a.label||'(별칭 없음)')
-              + ' <span style="color:#8ba0b6;font-weight:600;font-size:12.5px">'+esc(a.path||'')+'</span></span>'
-              + '<button type="button" class="x" data-attcopy="'+i+'" title="경로 복사">📋</button>'
-              + '<button type="button" class="x" data-attdel="'+i+'" title="빼기">✕</button></div>'; }).join('')
-           : '<div class="pg-none">아직 없어요</div>')
-        + '</div>'
-        + '<div class="pg-extra">'
-        +   '<input type="text" id="pgAttL" placeholder="별칭 (예: 품의서 원본)" style="flex:1.2;min-width:110px">'
-        +   '<input type="text" id="pgAttP" placeholder="C:\\경로\\파일명.확장자" style="flex:2;min-width:150px">'
-        +   '<button type="button" id="pgAttAdd" class="pg-xb on">추가</button>'
-        + '</div>';
+      /* v295 — 달님 : 「지출에만 특화되게 만드는거야」— 자재 사용 내역·
+         파일·폴더 링크는 업무 기록용이라 지출(slim)에선 뺀다. 값은
+         남아 있고(이미 쓴 게 있으면), 카드 화면에서만 안 보인다. */
+      if(!slim){
+        var mats = esr(r.materials);
+        var mSum = matSum(mats);
+        h2 += '<div class="pg-div"></div>'
+          + '<div class="pg-sec">📦 자재 사용 내역 <span>이 기록에 쓴 자재</span></div>'
+          + '<div class="pg-subs">'
+          + (mats.length ? mats.map(function(m,i){
+              var line = (Number(m.price)||0) * (Number(m.qty)||1);
+              return '<div class="pg-sub"><span class="tt">'+esc(m.name||'')
+                + (m.spec? ' <span style="color:#8ba0b6;font-weight:600">'+esc(m.spec)+'</span>':'')
+                + ' <span style="color:#3f7cb8">× '+(Number(m.qty)||1)+'</span>'
+                + (line? ' <span style="color:#b45309;font-weight:700">'+numFmt(line)+'원</span>':'')
+                + '</span>'
+                + '<button type="button" class="x" data-matdel="'+i+'" title="빼기">✕</button></div>'; }).join('')
+             : '<div class="pg-none">아직 없어요 — 아래에서 추가하세요</div>')
+          + '</div>'
+          /* v118 — 「💰 금액 칸에 넣기」 단추를 없앴다.
+                자재를 넣고 뺄 때마다 합계가 저절로 들어가므로 누를 일이 없다.
+                달님 : 「금액칸도 따로 넣기 말고 자동으로 들어가게 하면 화면이 작아지잔아」 */
+          + (mSum>0 ? '<div class="pg-extra" style="align-items:center">'
+              + '<span style="font-size:13.5px;font-weight:800;color:#b45309">자재 합계 '+numFmt(mSum)+'원</span>'
+              + '<span style="font-size:12px;color:#a8b8c8">합계 칸에 저절로 들어갑니다</span></div>' : '')
+          + '<div class="pg-extra">'
+          +   '<button type="button" id="pgMatPick" class="pg-xb on">📦 자재에서 고르기</button>'
+          +   '<input type="text" id="pgMatN" placeholder="자재명 (직접 입력)" style="flex:2;min-width:120px">'
+          +   '<input type="text" id="pgMatS" placeholder="규격 (선택)" style="flex:1.3;min-width:90px">'
+          +   '<input type="number" id="pgMatQ" placeholder="수량" value="1" min="0" style="flex:0 0 78px">'
+          +   '<input type="number" id="pgMatP" placeholder="단가" min="0" style="flex:0 0 92px">'
+          +   '<button type="button" id="pgMatAdd" class="pg-xb">추가</button>'
+          + '</div>';
+        var atts = esr(r.attachments);
+        h2 += '<div class="pg-div"></div>'
+          + '<div class="pg-sec">📎 파일 · 폴더 링크 <span>내 컴퓨터 경로를 적어두는 곳</span></div>'
+          + '<div class="pg-subs">'
+          + (atts.length ? atts.map(function(a,i){
+              return '<div class="pg-sub"><span class="tt">'+esc(a.label||'(별칭 없음)')
+                + ' <span style="color:#8ba0b6;font-weight:600;font-size:12.5px">'+esc(a.path||'')+'</span></span>'
+                + '<button type="button" class="x" data-attcopy="'+i+'" title="경로 복사">📋</button>'
+                + '<button type="button" class="x" data-attdel="'+i+'" title="빼기">✕</button></div>'; }).join('')
+             : '<div class="pg-none">아직 없어요</div>')
+          + '</div>'
+          + '<div class="pg-extra">'
+          +   '<input type="text" id="pgAttL" placeholder="별칭 (예: 품의서 원본)" style="flex:1.2;min-width:110px">'
+          +   '<input type="text" id="pgAttP" placeholder="C:\\경로\\파일명.확장자" style="flex:2;min-width:150px">'
+          +   '<button type="button" id="pgAttAdd" class="pg-xb on">추가</button>'
+          + '</div>';
+      }
       return h2;
     }
 
@@ -5360,8 +5365,12 @@ window.PERSONAL_BUILD = 'v295-0923-1417';
       +       (PGEDIT ? '<button type="button" id="pgTimeUp" class="pg-addp">⏱ 시각 칸을 날짜 뒤로</button>' : '')
       +     '</div>'
       +   '</div>'
-      +   subHTML(rec)
-      +   extrasHTML(rec)
+      +   (rec.kind==='expense' ? '' : subHTML(rec))
+      /* v295 — 달님 : 「밑에것도 지워져 지출에만 특화되게 만드는거야」—
+         하위 항목·자재 사용 내역·파일 링크는 업무 기록용이라 지출에선
+         뺀다(🔗 연결된 업무 칩은 업무에서 만든 지출이면 그대로 보여줘야
+         하니 남긴다). */
+      +   (rec.kind==='expense' ? extrasHTML(rec, true) : extrasHTML(rec))
       +   '<div class="pg-div"></div>'
       +   '<div class="pg-sec">📝 본문 <span>글자를 고르고 서식을 누르세요 · 사진은 끌어다 놓으면 됩니다</span></div>'
       +   pgToolbarHTML()

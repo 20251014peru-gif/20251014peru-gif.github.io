@@ -16777,6 +16777,16 @@ async function githubUpload(token){
         });
     });
 
+    /* v295 — 달님 : 「지출에만 특화되게 만드는거야」— 지출(expense) 기록은
+       본문 정리 단추줄(자동 정리·한 줄로 정리·칸 전부 적기 + 미리보기)이
+       필요 없다. 업무 등 다른 종류는 그대로 둔다. */
+    var rec0 = recOf(rid);
+    var isExpense = !!(rec0 && rec0.kind === 'expense');
+    if(isExpense){
+      var oldWrap = page.querySelector('#pgSumWrap');
+      if(oldWrap) oldWrap.remove();
+      return;
+    }
     /* 본문 옆 단추 두 개 — 한 줄 / 자세히 */
     var B = document.getElementById('pgBodyTx');
     if(B && !page.querySelector('#pgSumWrap')){
@@ -23754,7 +23764,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v295-0923-1417';
+  var JS_BUILD = 'v296-0923-1424';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
