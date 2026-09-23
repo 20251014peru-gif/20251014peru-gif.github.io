@@ -1,14 +1,86 @@
 {
- "updated_at": "2026-09-23T21:23:39.190386+09:00",
+ "updated_at": "2026-09-24T02:32:38.810322+09:00",
  "topics": [
+  {
+   "id": "AI_엔비디아",
+   "name": "AI·엔비디아",
+   "video_count": 16,
+   "channel_count": 10,
+   "total_views": 1414994,
+   "latest": "2026-09-23T21:44:32+09:00",
+   "video_ids": [
+    "N8hjfIoLtV8",
+    "5rd6vHEI82g",
+    "CPi4oGEm1CQ",
+    "T6xvPdwM1Js",
+    "se8gajzHzM4",
+    "8h2rbuHnKs4",
+    "LBp5nKAQldY",
+    "PA-JI5GXm4g",
+    "JR7E3hU3oks",
+    "rKS4pq4uaiY",
+    "DLFLOQ3AdiE",
+    "d2Ml0cX18mA",
+    "LLIxpEHR89M",
+    "0dYwQ9kTmBU",
+    "-NbdYl8HPOg",
+    "TymEoUBCTR0"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
+    "내일은 투자왕 - 김단테",
+    "미주은 (미국주식으로 은퇴하기)",
+    "삼프로TV 3PROTV",
+    "소수몽키",
+    "언더스탠딩",
+    "이효석아카데미",
+    "증시각도기TV",
+    "티타임즈TV"
+   ],
+   "subtopics": [
+    {
+     "word": "대표",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "챗GPT",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "투자처",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "반도체",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "소장",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "주식",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
   {
    "id": "반도체",
    "name": "반도체",
    "video_count": 17,
    "channel_count": 9,
-   "total_views": 439829,
-   "latest": "2026-09-23T20:30:31+09:00",
+   "total_views": 785203,
+   "latest": "2026-09-23T22:30:33+09:00",
    "video_ids": [
+    "PdEeP8-vpZM",
     "5rd6vHEI82g",
     "bNjAsHXAZCc",
     "CPi4oGEm1CQ",
@@ -17,7 +89,6 @@
     "MTfWByxffkU",
     "pYWtNvs2g_g",
     "se8gajzHzM4",
-    "2hKGh8wqlh0",
     "glfpl64D0zg",
     "LBp5nKAQldY",
     "693WjAsh60c",
@@ -41,8 +112,8 @@
    "subtopics": [
     {
      "word": "삼성전자",
-     "videos": 9,
-     "channels": 5
+     "videos": 10,
+     "channels": 6
     },
     {
      "word": "대표",
@@ -50,13 +121,13 @@
      "channels": 4
     },
     {
-     "word": "주식",
+     "word": "SK하이닉스",
      "videos": 4,
      "channels": 3
     },
     {
-     "word": "23일",
-     "videos": 3,
+     "word": "주식",
+     "videos": 4,
      "channels": 3
     },
     {
@@ -65,76 +136,7 @@
      "channels": 3
     },
     {
-     "word": "9월",
-     "videos": 3,
-     "channels": 3
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "AI_엔비디아",
-   "name": "AI·엔비디아",
-   "video_count": 15,
-   "channel_count": 9,
-   "total_views": 1229814,
-   "latest": "2026-09-23T20:30:31+09:00",
-   "video_ids": [
-    "5rd6vHEI82g",
-    "CPi4oGEm1CQ",
-    "T6xvPdwM1Js",
-    "se8gajzHzM4",
-    "8h2rbuHnKs4",
-    "LBp5nKAQldY",
-    "PA-JI5GXm4g",
-    "JR7E3hU3oks",
-    "rKS4pq4uaiY",
-    "DLFLOQ3AdiE",
-    "d2Ml0cX18mA",
-    "LLIxpEHR89M",
-    "0dYwQ9kTmBU",
-    "-NbdYl8HPOg",
-    "TymEoUBCTR0"
-   ],
-   "channels": [
-    "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "내일은 투자왕 - 김단테",
-    "미주은 (미국주식으로 은퇴하기)",
-    "삼프로TV 3PROTV",
-    "언더스탠딩",
-    "이효석아카데미",
-    "증시각도기TV",
-    "티타임즈TV"
-   ],
-   "subtopics": [
-    {
-     "word": "대표",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "챗GPT",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "반도체",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "소장",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "주식",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "전기",
+     "word": "23일",
      "videos": 2,
      "channels": 2
     }
@@ -146,7 +148,7 @@
    "name": "유가·에너지",
    "video_count": 5,
    "channel_count": 4,
-   "total_views": 87595,
+   "total_views": 418128,
    "latest": "2026-09-23T19:58:58+09:00",
    "video_ids": [
     "92qTnyHoEnw",
@@ -180,7 +182,7 @@
    "name": "중국경제",
    "video_count": 5,
    "channel_count": 4,
-   "total_views": 509781,
+   "total_views": 666193,
    "latest": "2026-09-23T18:07:26+09:00",
    "video_ids": [
     "MTfWByxffkU",
@@ -224,7 +226,7 @@
    "name": "미국증시",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 293517,
+   "total_views": 303297,
    "latest": "2026-09-22T21:03:00+09:00",
    "video_ids": [
     "uWZtDWUzO94",
@@ -262,7 +264,7 @@
    "name": "배당·ETF",
    "video_count": 6,
    "channel_count": 3,
-   "total_views": 271292,
+   "total_views": 314168,
    "latest": "2026-09-23T18:02:30+09:00",
    "video_ids": [
     "2oI7j4Kvj9s",
@@ -316,7 +318,7 @@
    "name": "금리·연준",
    "video_count": 5,
    "channel_count": 3,
-   "total_views": 284042,
+   "total_views": 355920,
    "latest": "2026-09-23T19:30:24+09:00",
    "video_ids": [
     "CPi4oGEm1CQ",
@@ -340,37 +342,11 @@
    "active": true
   },
   {
-   "id": "코인",
-   "name": "코인",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 85796,
-   "latest": "2026-09-23T18:30:34+09:00",
-   "video_ids": [
-    "jC2Qk-f0-aE",
-    "4PwpMUr5oLw",
-    "QiuxHr84wNM"
-   ],
-   "channels": [
-    "달란트투자",
-    "삼프로TV 3PROTV",
-    "이효석아카데미"
-   ],
-   "subtopics": [
-    {
-     "word": "비트코인",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "조선_방산",
    "name": "조선·방산",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 149600,
+   "total_views": 274526,
    "latest": "2026-09-23T18:30:10+09:00",
    "video_ids": [
     "FwwRyqJomZ8",
@@ -383,53 +359,7 @@
     "염블리와 함께 (염승환)"
    ],
    "subtopics": [],
-   "active": false
-  },
-  {
-   "id": "국내증시",
-   "name": "국내증시",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 122400,
-   "latest": "2026-09-23T18:00:15+09:00",
-   "video_ids": [
-    "pYWtNvs2g_g",
-    "2hKGh8wqlh0",
-    "wfIUNO4zV7s"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "삼프로TV 3PROTV",
-    "염블리와 함께 (염승환)"
-   ],
-   "subtopics": [
-    {
-     "word": "23일",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "코스피",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "박스권",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "반도체",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "9월",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": false
+   "active": true
   }
  ]
 }
