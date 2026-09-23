@@ -13,7 +13,7 @@ import {canRead,canWrite,cleanEvent,validSubscription,canInvite,EMAIL_RE,emailMa
 import {nextReminder} from './schedule.mjs';
 import {mapRecordToEvent,mapTodoToEvent} from './investment-feed.mjs';
 import {MAX_PHOTOS,MAX_PHOTO_BYTES,ALLOWED_CONTENT_TYPES,photoPath,photoDownloadUrl} from './photos.mjs';
-initializeApp({storageBucket:'my-system-25497.appspot.com'});
+initializeApp({storageBucket:'my-system-25497.firebasestorage.app'});
 const db=getFirestore(),privateKey=defineSecret('DALNIM_VAPID_PRIVATE_KEY'),publicKey=defineString('DALNIM_VAPID_PUBLIC_KEY'),subject=defineString('DALNIM_PUSH_SUBJECT'),allowedOrigins=defineString('DALNIM_ALLOWED_ORIGINS');
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const idOK=s=>typeof s==='string'&&/^[\w.-]{1,80}$/.test(s);
