@@ -31,7 +31,7 @@ export function sanitizeChecklist(input) {
   if (!Array.isArray(input)) return [];
   return input.slice(0, 50)
     .filter(x => x && typeof x.text === 'string' && x.text.trim())
-    .map(x => ({text: x.text.trim().slice(0, 200), done: !!x.done}));
+    .map(x => ({text: x.text.trim().slice(0, 200), done: !!x.done, kind: x.kind === 'bullet' ? 'bullet' : 'check'}));
 }
 // A single-occurrence override, keyed by the occurrence's original (pre-override) start.
 // Editing "this event only" on a repeating event writes here instead of moving the whole series.

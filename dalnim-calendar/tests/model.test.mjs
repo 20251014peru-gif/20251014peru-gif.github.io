@@ -18,9 +18,13 @@ test('deleting one occurrence hides only that date, the series continues',()=>{
 });
 test('sanitizeChecklist keeps real checkboxes only — trims blanks, caps length and count',()=>{
  const out=sanitizeChecklist([{text:'  우유 사기 ',done:false},{text:'',done:true},{text:'x'.repeat(300),done:'yes'},...Array.from({length:60},()=>({text:'항목',done:false}))]);
- assert.equal(out[0].text,'우유 사기');assert.equal(out[0].done,false);
+ assert.equal(out[0].text,'우유 사기');assert.equal(out[0].done,false);assert.equal(out[0].kind,'check');
  assert.equal(out[1].text.length,200);assert.equal(out[1].done,true);
  assert.ok(out.length<=50);
+});
+test('a bullet row keeps its kind but a stray value never becomes anything but check/bullet',()=>{
+ const out=sanitizeChecklist([{text:'참고 사항',kind:'bullet'},{text:'다른 항목',kind:'numbered'}]);
+ assert.equal(out[0].kind,'bullet');assert.equal(out[1].kind,'check');
 });
 test('sanitizeChecklist drops non-array input instead of throwing',()=>{
  assert.deepEqual(sanitizeChecklist(undefined),[]);assert.deepEqual(sanitizeChecklist('- [ ] x'),[]);
