@@ -55,6 +55,7 @@
   .surge .lab{font-size:11.5px;font-weight:800;color:var(--up);white-space:nowrap;display:flex;align-items:center;gap:4px}
   .schip{flex:0 0 auto;background:#FFF1F1;color:var(--up);border:1px solid #FBD7D7;border-radius:999px;padding:6px 11px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
   .schip .pct{font-size:11px;font-weight:800} .schip .plus{opacity:.6;font-weight:800}
+  .schip.sch{background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE} .schip.tr{background:#FFF7ED;color:#C2410C;border-color:#FED7AA}
   .controls{display:flex;gap:8px;align-items:center;margin-bottom:10px;padding:0 2px;flex-wrap:wrap}
   .searchbar{flex:1;min-width:220px;display:flex;gap:7px}
   .searchbar input{flex:1;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 13px;font-size:14px;font-family:inherit;box-shadow:var(--shadow);outline:none}
@@ -252,7 +253,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정">v5.0</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정&#10;· v5.1 급상승: 같은 시간대 비중 비교 · 검색량 · 급상승어 기록">v5.1</span></div>
   </div>
 </header>
 <main>
@@ -648,39 +649,88 @@ function renderTrend(){ var _kws=keywords.filter(function(k){ return NEWS.filter
   document.getElementById("trendRow").innerHTML = _kws.map(function(k){ var t=trends[k]||{n:0,d:"flat",bars:[1,1,1,1,1,1,1]}; var _kt=(typeof KW_ALIAS!=="undefined"&&KW_ALIAS[k])?kwTerms(k).map(function(t){return t.toLowerCase();}):[k.toLowerCase()];
       var cnt=NEWS.filter(function(x){ if(x.kw===k)return true; var hay=((x.title||"")+" "+(x.summary||"")+" "+(x.orig_title||"")+" "+(x.kw||"")).toLowerCase(); return _kt.some(function(t){return t&&hay.indexOf(t)>=0;}); }).length; t={n:cnt,d:t.d,bars:t.bars}; return '<div class="tcard '+(filterKw===k?'on':'')+'" onclick="pickKw(\''+k+'\')"><div class="k"><span>'+k+'</span><span class="v">'+t.n+'건</span></div><div class="v">'+trendMark(t.d)+'</div>'+barsHTML(t)+'</div>'; }).join(""); }
 
-function _countOn(term, dateKey){
+/* 급상승 v2 (2026-09-23)
+   예전: '오늘 하루(진행 중)' 기사 수 vs '어제 하루 전체' 기사 수 → 오늘이 거의 항상 적어 한 번도 안 떴다.
+         또 기사 수는 수집 횟수(키워드당 고정 개수 × 실행 횟수)에 따라 달라져 뉴스량을 뜻하지 않았다.
+   지금: ① 뉴스 — 오늘 0시~지금 vs 어제 같은 시간대, 기사 '수' 대신 그 시간대 전체 기사 중 '비중'을 비교
+         ② 검색 — 네이버 데이터랩 검색량(수집 횟수와 무관): 마지막 완료일 vs 그 전 7일 평균
+         ③ 급상승어 — 수집기가 매번 기록하는 구글 급상승어(trending_log.json) 중 투자 관련, 최근 72시간 */
+var searchSurging = [], trendLog = null, trendRecent = [], trendOther = 0;
+function _escH(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+function _newsWindow(from, to){
+  return NEWS.filter(function(n){ var t=Date.parse(n.date); return !isNaN(t) && t>=from && t<to; });
+}
+function _mentions(list, term){
   var tl=term.toLowerCase();
-  return NEWS.filter(function(n){
-    if(dayKey(n.date)!==dateKey) return false;
-    var hay=((n.title||"")+" "+(n.summary||"")+" "+(n.orig_title||"")+" "+(n.kw||"")).toLowerCase();
-    return hay.indexOf(tl)>=0;
-  }).length;
+  // 수집 키워드(kw)는 빼고 제목·요약만 본다 — kw를 넣으면 '그 키워드로 몇 번 수집했나'를 세게 된다
+  return list.filter(function(n){ return ((n.title||"")+" "+(n.summary||"")+" "+(n.orig_title||"")).toLowerCase().indexOf(tl)>=0; }).length;
+}
+function _trendTerms(hours){
+  if(!trendLog||!trendLog.terms) return [];
+  var cut=new Date(Date.now()+9*3600000-hours*3600000).toISOString().slice(0,16).replace("T"," ");
+  return Object.keys(trendLog.terms).filter(function(k){ var e=trendLog.terms[k]; return e.invest && (e.last||"")>=cut; });
 }
 function computeSurge(){
-  var today=kstToday();
-  var y=new Date(Date.now()+9*3600000-86400000).toISOString().slice(0,10);
+  var now=Date.now(), midnight=Date.parse(kstToday()+"T00:00:00+09:00");
+  var L=Math.max(now-midnight, 3*3600000);           // 새벽엔 최소 3시간 창
+  var T=_newsWindow(now-L, now), Y=_newsWindow(now-86400000-L, now-86400000);
   var terms={}; keywords.forEach(function(k){terms[k]=1;}); stocks.forEach(function(s){terms[s]=1;});
+  _trendTerms(72).forEach(function(k){terms[k]=1;});
   var arr=[];
-  Object.keys(terms).forEach(function(t){
-    var tc=_countOn(t,today), yc=_countOn(t,y);
-    if(tc<3) return;                       // 오늘 최소 3건 이상만(잡음 컷)
-    var pct;
-    if(yc===0){ pct = tc>=5 ? 999 : 0; }   // 어제 0 → 오늘 많으면 신규 급등
-    else { pct = Math.round((tc-yc)/yc*100); }
-    if(pct>=30){ arr.push({k:t, tc:tc, yc:yc, pct:pct}); }  // 30%+ 증가만
-  });
+  if(T.length>=20 && Y.length>=20){
+    Object.keys(terms).forEach(function(t){
+      var tc=_mentions(T,t), yc=_mentions(Y,t);
+      if(tc<5 || tc-yc<3) return;                       // 최소 5건 · 3건 이상 늘어난 것만(4건 vs 3건 같은 잡음 컷)
+      var pct;
+      if(yc===0){ pct = 999; }
+      else { pct = Math.round(((tc/T.length)/(yc/Y.length)-1)*100); }   // 비중 변화
+      if(pct>=30) arr.push({k:t, tc:tc, yc:yc, pct:pct});
+    });
+  }
   arr.sort(function(a,b){ return b.pct-a.pct || b.tc-a.tc; });
   surging = arr.slice(0,6).map(function(x){
-    return { k:x.k, pct: x.pct>=999 ? "NEW" : "+"+x.pct+"%" };
+    return { k:x.k, pct: x.pct>=999 ? "NEW" : "+"+x.pct+"%", tip:"같은 시간대 비교 · 오늘 "+x.tc+"건/"+T.length+" vs 어제 "+x.yc+"건/"+Y.length };
   });
+  // ② 네이버 검색량
+  var today=kstToday(), s=[];
+  Object.keys(trendsData||{}).forEach(function(name){
+    var v=trendsData[name]; if(!v||!v.dates||!v.ratios) return;
+    var idx=-1; for(var i=v.dates.length-1;i>=0;i--){ if(v.dates[i]<today){ idx=i; break; } }
+    if(idx<7) return;
+    var base=0; for(var j=idx-7;j<idx;j++) base+=(+v.ratios[j]||0); base/=7;
+    var last=+v.ratios[idx]||0;
+    if(base>0 && last>=5 && last/base>=1.5) s.push({k:name, pct:Math.round((last/base-1)*100), day:v.dates[idx]});
+  });
+  s.sort(function(a,b){return b.pct-a.pct;});
+  searchSurging = s.slice(0,5);
+  // ③ 구글 급상승어 기록(투자 관련만, 최근 72시간)
+  if(trendLog&&trendLog.terms){
+    var inv=_trendTerms(72);
+    trendRecent = inv.map(function(k){ return {k:k, e:trendLog.terms[k]}; })
+      .sort(function(a,b){ return (b.e.last||"").localeCompare(a.e.last||"") || (b.e.seen||0)-(a.e.seen||0); }).slice(0,8);
+    var cut=new Date(Date.now()+9*3600000-72*3600000).toISOString().slice(0,16).replace("T"," ");
+    trendOther = Object.keys(trendLog.terms).filter(function(k){ var e=trendLog.terms[k]; return !e.invest && (e.last||"")>=cut; }).length;
+  }
 }
 
 function renderSurge(){
   computeSurge();
   var host=document.getElementById("surge");
-  if(!surging.length){ host.innerHTML='<span class="lab">🔥 급상승</span><span style="font-size:11.5px;color:var(--ink-3)">아직 급증 키워드 없음 (수집 쌓이면 표시)</span>'; return; }
-  host.innerHTML='<span class="lab">🔥 급상승</span>'+surging.map(function(s){return '<span class="schip" onclick="pickKw(\''+s.k+'\')" title="오늘 뉴스 급증">'+s.k+'<span class="pct">'+s.pct+'</span></span>';}).join("");
+  var gray='<span style="font-size:11.5px;color:var(--ink-3);white-space:nowrap">';
+  function chip(k, pct, tip, cls){ return '<span class="schip'+(cls||"")+'" data-k="'+_escH(k)+'" onclick="pickKw(this.dataset.k)" title="'+_escH(tip)+'">'+_escH(k)+(pct?'<span class="pct">'+_escH(pct)+'</span>':'')+'</span>'; }
+  var h='<span class="lab">🔥 급상승</span>';
+  h+= surging.length ? surging.map(function(s){ return chip(s.k, s.pct, s.tip); }).join("") : gray+'뉴스 급증 없음</span>';
+  if(searchSurging.length){ h+='<span class="lab" style="margin-left:6px">🔎 검색↑</span>'+searchSurging.map(function(s){ return chip(s.k, "+"+s.pct+"%", "네이버 검색량 "+s.day+" · 직전 7일 평균 대비", " sch"); }).join(""); }
+  if(trendLog){
+    h+='<span class="lab" style="margin-left:6px">📈 급상승어</span>';
+    h+= trendRecent.length ? trendRecent.map(function(x){ return chip(x.k, x.e.seen>1?"×"+x.e.seen:"", "구글 급상승 · 처음 "+(x.e.first||"")+" · 최근 "+(x.e.last||"")+(x.e.news&&x.e.news[0]?"\n"+x.e.news[0]:""), " tr"); }).join("") : gray+'투자 관련 없음</span>';
+    if(trendOther) h+=gray+'(투자 무관 '+trendOther+'개 제외)</span>';
+  }
+  host.innerHTML=h;
 }
+(function(){ // 급상승어 기록은 목록 로딩과 따로 받는다(없어도 나머지는 그대로 동작)
+  try{ fetch("trending_log.json?t="+Date.now(),{cache:"no-store"}).then(function(r){ return r.ok?r.json():null; }).then(function(j){ if(j&&j.terms){ trendLog=j; try{ renderSurge(); }catch(e){} } }).catch(function(){}); }catch(e){}
+})();
 function renderFilters(){ var base=[{k:null,label:"전체"}].concat(keywords.map(function(k){return {k:k,label:k};})); document.getElementById("filters").innerHTML=base.map(function(f){ var cnt=f.k?NEWS.filter(function(n){return n.kw===f.k;}).length:NEWS.length; return '<span class="fchip '+(filterKw===f.k?'on':'')+'" onclick="pickKw('+(f.k?"'"+f.k+"'":'null')+')">'+f.label+'<span class="n">'+cnt+'</span></span>';}).join(""); }
 
 

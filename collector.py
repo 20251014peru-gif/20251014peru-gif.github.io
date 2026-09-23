@@ -97,26 +97,81 @@ def norm_title(t: str) -> str:
     t = re.sub(r"[^0-9a-z가-힣]+", " ", t)
     return re.sub(r"\s+", " ", t).strip()
 
-def fetch_trending(limit=5):
-    """구글 트렌드 대한민국 실시간 급상승 검색어를 가져와 투자 무관 잡음은 걸러 반환."""
+# 급상승어가 투자와 관련 있는지: 검색어 + 구글이 붙여준 관련 기사 제목에 아래 단어가 있으면 투자 관련으로 본다.
+# (예전에는 제외어 목록만 써서 정치인·야구선수 이름이 그대로 섞였다)
+INVEST_HINTS = ["주가", "주식", "증시", "코스피", "코스닥", "나스닥", "뉴욕증시", "상장", "공모", "IPO",
+                "실적", "매출", "영업이익", "순이익", "투자", "금리", "기준금리", "환율", "달러", "채권",
+                "반도체", "배터리", "2차전지", "ETF", "공시", "인수", "합병", "M&A", "수주", "특징주",
+                "급등", "급락", "상한가", "하한가", "시총", "시가총액", "지분", "배당", "유상증자", "관세",
+                "수출", "물가", "인플레", "부동산", "아파트값", "비트코인", "가상자산", "코인", "연준", "Fed",
+                "목표가", "증권", "애널리스트", "경기침체", "무역", "유가", "원자재"]
+TREND_LOG_PATH = "trending_log.json"
+TREND_LOG_DAYS = 14
+
+def _is_invest(term, news_titles):
+    hay = " ".join([term] + list(news_titles or []))
+    return any(h.lower() in hay.lower() for h in INVEST_HINTS)
+
+def fetch_trending_items():
+    """구글 트렌드 대한민국 급상승 검색어 전체를 [{term, traffic, news:[제목], invest}] 로 반환."""
+    import xml.etree.ElementTree as ET
     url = "https://trends.google.com/trending/rss?geo=KR"
+    ns = {"ht": "https://trends.google.com/trending/rss"}
     try:
-        d = feedparser.parse(url)
-        out = []
-        for e in d.entries:
-            t = strip_tags(getattr(e, "title", "")).strip()
-            if not t:
+        r = requests.get(url, headers=HEADERS, timeout=12)
+        r.raise_for_status()
+        root = ET.fromstring(r.content)
+        out, seen = [], set()
+        for it in root.iter("item"):
+            t = strip_tags(it.findtext("title") or "").strip()
+            if not t or t in seen:
                 continue
-            if not _trend_ok(t):
-                continue
-            if t not in out:
-                out.append(t)
-            if len(out) >= limit:
-                break
+            seen.add(t)
+            news = [strip_tags(n.findtext("ht:news_item_title", default="", namespaces=ns))
+                    for n in it.findall("ht:news_item", ns)]
+            news = [x for x in news if x][:3]
+            out.append({"term": t,
+                        "traffic": (it.findtext("ht:approx_traffic", default="", namespaces=ns) or "").strip(),
+                        "news": news,
+                        "invest": _trend_ok(t) and _is_invest(t, news)})
         return out
     except Exception as ex:
         print("  ! 트렌드 수집 실패:", ex)
         return []
+
+def fetch_trending(limit=5, items=None):
+    """급상승어 중 '투자 관련'만 수집 키워드로 쓴다."""
+    items = fetch_trending_items() if items is None else items
+    return [x["term"] for x in items if x["invest"]][:limit]
+
+def save_trending_log(items, now_kst):
+    """급상승어를 매 수집마다 누적 기록(최근 14일). 화면의 '최근 급상승어'가 이 파일을 읽는다."""
+    stamp = now_kst.strftime("%Y-%m-%d %H:%M")
+    try:
+        with open(TREND_LOG_PATH, "r", encoding="utf-8") as f:
+            log = json.load(f)
+        if not isinstance(log, dict) or not isinstance(log.get("terms"), dict):
+            raise ValueError
+    except Exception:
+        log = {"terms": {}}
+    terms = log["terms"]
+    for x in items:
+        e = terms.get(x["term"]) or {"first": stamp, "seen": 0, "hits": []}
+        e["last"] = stamp
+        e["seen"] = int(e.get("seen", 0)) + 1
+        e["hits"] = (list(e.get("hits") or []) + [stamp])[-30:]
+        e["traffic"] = x.get("traffic", "")
+        e["invest"] = bool(x.get("invest")) or bool(e.get("invest"))
+        if x.get("news"):
+            e["news"] = x["news"][:2]
+        terms[x["term"]] = e
+    cutoff = (now_kst - dt.timedelta(days=TREND_LOG_DAYS)).strftime("%Y-%m-%d %H:%M")
+    log["terms"] = {k: v for k, v in terms.items() if (v.get("last") or "") >= cutoff}
+    log["updated"] = stamp
+    with open(TREND_LOG_PATH, "w", encoding="utf-8") as f:
+        json.dump(log, f, ensure_ascii=False, indent=1)
+    inv = sum(1 for v in log["terms"].values() if v.get("invest"))
+    print(f"→ {TREND_LOG_PATH} 저장됨 (이번 {len(items)}개 · 누적 {len(log['terms'])}개, 투자 관련 {inv}개)")
 
 def fetch_datalab(terms, days=14):
     """네이버 데이터랩 검색어 트렌드(일자별 상대지수 0~100)를 종목별로 조회해 dict 반환.
@@ -443,14 +498,22 @@ def save_glossary(gl):
 # ──────────────────────────────────────────────────────────────
 def main():
     core = load_keywords()
-    trending = fetch_trending(TREND_ADD_COUNT)
+    trend_items = fetch_trending_items()
+    trending = fetch_trending(TREND_ADD_COUNT, trend_items)
     # 핵심 고정 + 급상승 자동 추가 (중복 제거, 순서 유지)
     keywords = list(dict.fromkeys(core + trending))
     print("핵심 키워드:", core)
+    if trend_items:
+        print("구글 급상승어 전체:", [x["term"] for x in trend_items])
     if trending:
-        print("🔥 급상승 자동 추가:", trending)
+        print("🔥 급상승(투자 관련) 자동 추가:", trending)
     else:
-        print("(급상승 키워드 없음 — 핵심만 수집)")
+        print("(투자 관련 급상승 키워드 없음 — 핵심만 수집)")
+    try:
+        if trend_items:
+            save_trending_log(trend_items, dt.datetime.utcnow() + dt.timedelta(hours=9))
+    except Exception as e:
+        print("  ! trending_log 저장 건너뜀:", e)
     print("이번 수집 키워드:", keywords)
 
     raw = []
