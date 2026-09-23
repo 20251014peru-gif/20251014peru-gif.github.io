@@ -34,8 +34,8 @@ export function download(name,data,type='application/json'){const a=document.cre
 // module-scoped 주소 always links to Naver Map, 전화번호 always links to tel: — no guessing needed
 // because the fields are already separate, unlike the old combined "장소" field.
 export function addressPhoneFieldsHtml(draft,field){
- return field('주소','<input data-detail="address" maxlength="300" placeholder="주소를 입력하세요" value="'+esc(draft.address??'')+'"><p class="form-note" data-address-link></p>',true)
-  +field('전화번호','<input data-detail="phone" type="tel" maxlength="40" placeholder="010-0000-0000" value="'+esc(draft.phone??'')+'"><p class="form-note" data-phone-link></p>',true);
+ return field('주소','<input data-detail="address" maxlength="300" placeholder="주소를 입력하세요" value="'+esc(draft.address??'')+'"><p class="form-note" data-address-link></p>')
+  +field('전화번호','<input data-detail="phone" type="tel" maxlength="40" placeholder="010-0000-0000" value="'+esc(draft.phone??'')+'"><p class="form-note" data-phone-link></p>');
 }
 export function wireAddressPhoneLinks(host){
  const addr=host.querySelector('[data-detail="address"]'),addrLink=host.querySelector('[data-address-link]');

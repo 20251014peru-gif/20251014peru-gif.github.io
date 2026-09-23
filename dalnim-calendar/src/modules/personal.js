@@ -3,7 +3,7 @@ const KINDS = [['event','일정'],['task','할 일'],['appointment','약속']];
 function renderEditor(host, draft) {
   const field = (label, body, full = false) => '<label class="field' + (full ? ' full' : '') + '"><span>' + label + '</span>' + body + '</label>';
   host.innerHTML = '<div class="form-grid">'
-    + field('종류', '<select data-detail="kind">' + KINDS.map(([v, l]) => '<option value="' + v + '" ' + ((draft.kind || 'event') === v ? 'selected' : '') + '>' + l + '</option>').join('') + '</select>')
+    + field('종류', '<select data-detail="kind">' + KINDS.map(([v, l]) => '<option value="' + v + '" ' + ((draft.kind || 'event') === v ? 'selected' : '') + '>' + l + '</option>').join('') + '</select>', true)
     + addressPhoneFieldsHtml(draft, field)
     + '</div>';
   wireAddressPhoneLinks(host);
