@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v291-0923-1320';
+window.PERSONAL_BUILD = 'v292-0923-1331';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -752,10 +752,13 @@ window.PERSONAL_BUILD = 'v291-0923-1320';
       {k:'supplyAmt',   label:'공급가액 (원)',  type:'number'},
       {k:'taxAmt',      label:'부가세 (원)',    type:'number'},
       {k:'isJeonpyo',   label:'전표',          type:'checkbox'},
-      /* v241 — 업체를 넣으면 연락처에서 저절로 채워질 자리 (비어 있으면 「빈 항목」 안에 숨는다) */
-      {k:'workContact', label:'담당자',        type:'text'},
-      {k:'workRole',    label:'직책',          type:'text'},
-      {k:'workPhone',   label:'전화',          type:'tel'}
+      /* v291 — 달님 : 「담당자 직책은 지워 버리고 차라리 메모를 넣어
+         업체 전화 메모 한줄로 나오게」— 담당자·직책 칸을 없애고 메모를
+         넣는다. 담당자·직책 칸이 없어지면 업체 바로 다음이 전화가 되어
+         wlFieldPair(worklog.js) 가 업체·전화·메모 세 칸을 저절로 한
+         줄로 묶는다(담당자·직책이 남아 있는 업무 쪽은 그대로 2칸만). */
+      {k:'workPhone',   label:'전화',          type:'tel'},
+      {k:'workMemo',    label:'메모',          type:'text'}
     ],
     item: [
       {k:'lastBuyDate', label:'마지막 구매일 (자동)', type:'date'}

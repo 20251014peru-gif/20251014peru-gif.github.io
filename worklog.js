@@ -19968,7 +19968,9 @@ async function githubUpload(token){
   var LS  = 'wl_autosum';
   var TAG = 'wlsum';                 /* 정리 상자 표시 — 이 표시가 붙은 것만 앱이 고친다 */
 
-  function isOn(){ try{ return localStorage.getItem(LS) !== '0'; }catch(e){ return true; } }
+  /* v291 — 달님 : 「이것도 지워」(본문 위 자동 정리 요약줄) — 기본을
+     켬→꺼짐으로 뒤집는다. 다시 쓰고 싶으면 본문 옆 [🧾 자동 정리] 단추. */
+  function isOn(){ try{ return localStorage.getItem(LS) === '1'; }catch(e){ return false; } }
   function setOn(v){
     try{ localStorage.setItem(LS, v?'1':'0'); }catch(e){}
     run();
@@ -22746,23 +22748,28 @@ async function githubUpload(token){
 
 
 /* ============================================================
-   📐 나란히 두 칸 (wlFieldPair)  v285-0923 → v289 여러 짝으로 확장
+   📐 나란히 여러 칸 (wlFieldPair)  v285-0923 → v289 여러 짝 → v291 세 칸까지
 
    달님 : 「내용+완료 2열로 나오게 하지만 완료 상태 가로크기는 좀 줄여서」
         · 「전화 옆으로 업체 메모 넣어서 2열로 나오게 해줘」
+        · 「업체 전화 메모 한줄로 나오게」(지출 — 담당자·직책 없앤 자리)
 
    격자(.pg-props)는 앞에서부터 순서대로 칸을 채우는데, 대상년도·세부처럼
    비어서 접히는 칸이 몇 개냐에 따라 좁은 칸이 짝수/홀수 자리를 오락가락
    해서 옆 칸과 짝이 맞을 때도, 안 맞을 때도 있었다 — 격자 흐름에 기대지
-   않고 두 칸을 직접 한 상자(.pg-statuspair)로 묶어 버린다. PAIRS 목록에
-   적힌 두 칸은 DOM 차례로는 항상 바로 옆칸(형제)이라 — 비어서 숨는 칸이
-   몇 개든 안 변한다. 짝을 더 늘리려면 PAIRS 배열에 한 줄만 추가하면 된다.
+   않고 몇 칸이든 직접 한 상자(.pg-statuspair)로 묶어 버린다. GROUPS 목록에
+   적힌 칸들은 DOM 차례로는 항상 바로 옆칸(형제)이라 — 비어서 숨는 칸이
+   몇 개든 안 변한다(예: 지출은 담당자·직책 칸 자체가 없어 업체 바로
+   다음이 전화라 3칸이 저절로 붙는다 — work 는 담당자·직책이 그 사이에
+   있어 2칸(전화+메모)만 붙는다. 종류를 안 가려도 저절로 맞다).
+   묶음을 더 늘리려면 GROUPS 배열에 한 줄만 추가하면 된다(2칸도 3칸도 됨).
    ============================================================ */
 (function(){
   'use strict';
-  var PAIRS = [
-    ['f:status', '_memo'],          /* 완료 상태 + 내용 (g0 바로 뒤) */
-    ['f:workPhone', 'f:workMemo']   /* 전화 + 업체 메모 (g1 — 업체) */
+  var GROUPS = [
+    ['f:status', '_memo'],                       /* 완료 상태 + 내용 (g0 바로 뒤) */
+    ['_sub', 'f:workPhone', 'f:workMemo'],        /* 업체 + 전화 + 메모 (지출 — 담당자·직책 없음) */
+    ['f:workPhone', 'f:workMemo']                 /* 전화 + 메모 (업무 — 담당자·직책이 앞에 있음) */
   ];
   /* 묶음 발치(.pg-gfoot)·이음줄 같은 표시(꼬리)는 진짜 다음 칸이 아니다 — 건너뛴다 */
   function nextMeaningful(el){
@@ -22781,27 +22788,30 @@ async function githubUpload(token){
       if(!b.children.length) b.remove();
     });
     var host = page.querySelector('.pg-props'); if(!host) return;
-    PAIRS.forEach(function(pair){
-      var a = page.querySelector('[data-prow="' + pair[0] + '"]');
-      var b = page.querySelector('[data-prow="' + pair[1] + '"]');
-      if(!a || !b) return;
-      /* 이미 한 상자 안에 형제로 있다 — 묶음 발치(.pg-gfoot)가 그 사이에
-         끼어들어도(wlGroup 이 매번 새로 만든다) 둘의 짝은 안 변한다. */
-      if(a.parentNode === b.parentNode
-         && a.parentNode.classList && a.parentNode.classList.contains('pg-statuspair')) return;
-      /* 묶기 전 조건 : 앞 칸 다음(묶음 발치는 빼고)이 뒤 칸이어야 한다
-         (둘 다 감춰진 #pgHidden 안이어도 형제 차례는 그대로다).
-         아니면 억지로 묶지 않는다. */
-      if(nextMeaningful(a) !== b) return;
+    GROUPS.forEach(function(ids){
+      var els = ids.map(function(id){ return page.querySelector('[data-prow="' + id + '"]'); });
+      if(els.indexOf(null) >= 0 || els.indexOf(undefined) >= 0) return;   /* 이 종류엔 없는 칸 */
+      /* 이미 한 상자 안에 형제로 나란히 있다 — 묶음 발치가 그 사이에
+         끼어들어도(wlGroup 이 매번 새로 만든다) 짝은 안 변한다. */
+      var same = els[0].parentNode && els[0].parentNode.classList
+              && els[0].parentNode.classList.contains('pg-statuspair')
+              && els.every(function(el){ return el.parentNode === els[0].parentNode; });
+      if(same) return;
+      /* 묶기 전 조건 : 칸마다 바로 다음(묶음 발치는 빼고)이 그다음 칸이어야
+         한다(감춰진 #pgHidden 안이어도 형제 차례는 그대로다). 하나라도
+         안 이어지면(예: work 의 업체+전화 사이엔 담당자·직책이 있다)
+         억지로 묶지 않는다. */
+      for(var i = 0; i < els.length - 1; i++){
+        if(nextMeaningful(els[i]) !== els[i+1]) return;
+      }
       var box = document.createElement('div');
-      box.className = 'pg-statuspair';
-      host.insertBefore(box, a);
-      box.appendChild(a);
-      box.appendChild(b);
+      box.className = 'pg-statuspair pg-statuspair-' + els.length;
+      host.insertBefore(box, els[0]);
+      els.forEach(function(el){ box.appendChild(el); });
     });
   }
-  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:60, n:'나란히 두 칸', f:run });
-  console.log('[나란히 두 칸] v289 준비됨 — ' + PAIRS.length + '쌍');
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:60, n:'나란히 여러 칸', f:run });
+  console.log('[나란히 여러 칸] v291 준비됨 — ' + GROUPS.length + '묶음');
 })();
 
 
@@ -23734,7 +23744,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v291-0923-1320';
+  var JS_BUILD = 'v292-0923-1331';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
