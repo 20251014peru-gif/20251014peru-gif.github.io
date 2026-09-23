@@ -15401,9 +15401,11 @@ async function githubUpload(token){
 
   var LS_ON  = 'wl_group_on';
   var LS_GRP = 'wl_groups';
-  var VER    = 10;                   /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체
+  var VER    = 11;                   /* 묶음 정의가 바뀌면 올린다 → 옛 저장본 자동 교체
                                         v161 : 진행업무 담당자·직책·메모 3칸을 g1 에 넣었다
-                                        v162 : 사고 담당자·직책·메모 3칸도 g1 에 */
+                                        v162 : 사고 담당자·직책·메모 3칸도 g1 에
+                                        v285 : 자재↔비용 차례 바꿈 — 저장된 옛 차례를 버려야
+                                               새 차례가 보인다 */
   var LS_VER = 'wl_groups_ver';
 
   /* ── 2026-08-29 14종 전수 실측 결과로 만든 묶음 ──
@@ -15424,6 +15426,12 @@ async function githubUpload(token){
             비어 있을 때 「(자재명 없음) · 0」 같은 줄이 나와서 오히려 헷갈렸다. */
       { id:'g3', on:1, base:1, icon:'🕐', name:'시각 — 언제부터 언제까지', head:'f:startTime',
         keys:['f:endTime'], even:1, sep:' ~ ', openDefault:1 },   /* 시작·끝은 대등하므로 굵기를 같게 */
+      /* v285 — 달님 : 「자재 지출종류 업체 이런식으로 나와야 지출된 업체가
+            자연스럽게 연결될꺼 같아」— 무엇을 썼는지(자재) → 어떤 지출인지
+            (지출종류) → 누구에게서(업체) 순서로 읽히게 자재를 비용 앞으로. */
+      /* v124 — 달님 : 「자재도 자재 제목 넣어줘 별도로 구분되게」 */
+      { id:'gt', on:1, base:1, icon:'📦', name:'자재 — 무엇을 썼나', head:'f:material',
+        keys:['f:spec','f:qty','f:matCost'], openDefault:1 },   /* v135 — 자재 합계도 자재 묶음 안에 */
       /* v121 — 달님 : 「업체랑 자재가 한 덩어리로 나와. 구분하고 그룹 지어줘」
             용도·구분은 돈 이야기지 업체 이야기가 아니다 → 💰 비용 묶음으로 옮겼다. */
       /* v283 — 달님 : 「하위구분 + 용도 합치기」— 데이터는 그대로 두고 한 줄에
@@ -15433,9 +15441,6 @@ async function githubUpload(token){
       { id:'gc', on:1, base:1, icon:'💰', name:'비용 — 얼마를 어떻게', head:'f:expType',
         keys:['f:supplyAmt','f:taxAmt','_amount','f:expSubType','f:purpose','f:isIssued'],
         openDefault:1 },
-      /* v124 — 달님 : 「자재도 자재 제목 넣어줘 별도로 구분되게」 */
-      { id:'gt', on:1, base:1, icon:'📦', name:'자재 — 무엇을 썼나', head:'f:material',
-        keys:['f:spec','f:qty','f:matCost'], openDefault:1 },   /* v135 — 자재 합계도 자재 묶음 안에 */
       /* ★ v126 — 달님 : 「개인비용 입력하고 접기 하니까 자재·업체·시각 입력 창이 사라졌어」
             원인 : 대표 값이 있으면 **저절로 접히는** 것이 기본이었다.
                    업체·시각처럼 값이 이미 있는 덩어리는 열자마자 접혀 있어서
@@ -23650,7 +23655,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v285-0923-1137';
+  var JS_BUILD = 'v286-0923-1223';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
