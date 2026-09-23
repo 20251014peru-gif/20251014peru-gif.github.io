@@ -4193,6 +4193,19 @@ function scanRefSub(type, d){
   if(type==='photo')   return (d.cat||'') + (d.date ? (d.cat?' · ':'')+d.date : '');
   return d.date || '';
 }
+/* v283 — 달님 : 「영수증 첨부는 본문에 관련 내용 들어가게」
+   scan-app 이 이미 뽑아 둔 장소·날짜·금액 같은 값을 한 줄로 적어 본문(_memo)
+   맨 밑에 붙인다 — 나중에 「필터 후 복사」해도 영수증 내용이 같이 딸려 간다. */
+function scanRefBodyLine(type, d){
+  d = d || {};
+  var k = scanKindOf(type);
+  var title = scanRefTitle(type, d);
+  var sub = scanRefSub(type, d);
+  var bits = [];
+  if(title && title !== k.label) bits.push(title);
+  if(sub) bits.push(sub);
+  return k.icon + ' ' + k.label + (bits.length ? ': ' + bits.join(' · ') : '');
+}
 function renderMScanRefs(){
   const wrap = $("mScanRefs"); if(!wrap) return;
   if(!_mScanRefs.length){ wrap.innerHTML=''; return; }
@@ -4241,7 +4254,13 @@ function _onScanPicked(type,id,data){
       if(rec){
         var refs = Array.isArray(rec.scanRefs) ? rec.scanRefs.slice() : [];
         refs.push({type:type, id:id, data:data||{}});
-        updateRecord(targetId, { scanRefs: refs });
+        var patch = { scanRefs: refs };
+        try{
+          var line = scanRefBodyLine(type, data);
+          var body = String(rec.detail || rec.memo || '').trim();
+          if(line && body.indexOf(line) < 0) patch.detail = body ? (body + '\n' + line) : line;
+        }catch(e){ console.warn('[스캔앱] 본문에 넣기 실패', e); }
+        updateRecord(targetId, patch);
         toast(scanKindOf(type).icon+' '+scanRefTitle(type,data)+' 첨부됨');
         try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(targetId); }catch(e){}
         return;
@@ -15393,8 +15412,12 @@ async function githubUpload(token){
         keys:['f:endTime'], even:1, sep:' ~ ', openDefault:1 },   /* 시작·끝은 대등하므로 굵기를 같게 */
       /* v121 — 달님 : 「업체랑 자재가 한 덩어리로 나와. 구분하고 그룹 지어줘」
             용도·구분은 돈 이야기지 업체 이야기가 아니다 → 💰 비용 묶음으로 옮겼다. */
+      /* v283 — 달님 : 「하위구분 + 용도 합치기」— 데이터는 그대로 두고 한 줄에
+            나란히 보이게. 격자는 (대표값 다음 칸)·(짝수 번째 칸)이 같은 줄이 되는
+            규칙이라, 하위구분·용도를 그 자리(4·5번째)로 보내려면 금액 3칸이
+            앞으로 와야 한다 — f:field·f:fieldSub 때와 같은 요령. */
       { id:'gc', on:1, base:1, icon:'💰', name:'비용 — 얼마를 어떻게', head:'f:expType',
-        keys:['f:expSubType','f:purpose','f:supplyAmt','f:taxAmt','_amount','f:isIssued'],
+        keys:['f:supplyAmt','f:taxAmt','_amount','f:expSubType','f:purpose','f:isIssued'],
         openDefault:1 },
       /* v124 — 달님 : 「자재도 자재 제목 넣어줘 별도로 구분되게」 */
       { id:'gt', on:1, base:1, icon:'📦', name:'자재 — 무엇을 썼나', head:'f:material',
@@ -18321,7 +18344,22 @@ async function githubUpload(token){
     'f:refMonth'  : { chips:'all', search:false, lab:function(v){ return v + '월'; } },
     'f:floor'     : { chips:'all', search:false },
     /* v280 — 달님이 고정으로 넣어 달란 것 (자주 쓴 순위에 안 들어도 항상 보인다) */
-    'f:field'     : { chips:'top', search:true,  cnt:'field', pin:['냉난방','청소반장일일업무'] },
+    /* v283 — 「분야 목록을 카드에서 바로 추가·삭제」— 이미 있던 분야 관리 창
+       (openFieldManager, 옛 입력창에서 쓰던 것)을 그대로 불러 쓴다. */
+    'f:field'     : { chips:'top', search:true,  cnt:'field', pin:['냉난방','청소반장일일업무'],
+                      manage:function(closePicker){
+                        closePicker();
+                        if(typeof window.openFieldManager !== 'function'){
+                          if(typeof toast==='function') toast('분야 관리 창을 못 불러왔어요 — worklog.js 를 올렸는지 확인해 주세요');
+                          return;
+                        }
+                        window.openFieldManager(function(){
+                          try{
+                            var m = String(location.hash||'').match(/^#lp=([^&]+)/);
+                            if(m && typeof window.wlGoPage==='function') window.wlGoPage(decodeURIComponent(m[1]));
+                          }catch(e){ console.warn('[분야 관리] 고친 뒤 새로고침 실패', e); }
+                        });
+                      } },
     /* v283 — 「세부」는 분야와 무관한 자유 글자칸(text)으로 바꿔 wlPick 이 붙지 않는다 —
        분야 목록을 그대로 재활용하니 「제목이 나와야 알수 있는데 이상해」(=분야 이름이
        세부에도 또 나와 헷갈림). PLAN 항목도 필요 없어 지운다. */
@@ -18442,6 +18480,15 @@ async function githubUpload(token){
       }).join('')
       + '<button type="button" class="qp-it qp-clr" data-qpv="">비우기</button>';
       box.appendChild(grid);
+      /* v283 — 이 칸에 목록 관리 창이 있으면 단추판 밑에 ⚙ 를 하나 붙인다 */
+      if(plan.manage){
+        var mgr = document.createElement('button');
+        mgr.type = 'button';
+        mgr.className = 'qp-mgr';
+        mgr.setAttribute('data-qpmgr', '1');
+        mgr.textContent = '⚙ 목록 관리 (추가·삭제)';
+        box.appendChild(mgr);
+      }
     }
 
     /* 검색 결과 목록은 버튼판 다음 — 검색어를 넣었을 때만 쓸모 있으니 맨 끝 */
@@ -18502,6 +18549,12 @@ async function githubUpload(token){
 
     /* 단추·목록은 mousedown 으로 — click 이면 blur 가 먼저 나 창이 닫힌다 */
     box.addEventListener('mousedown', function(ev){
+      var mg = ev.target.closest && ev.target.closest('[data-qpmgr]');
+      if(mg){
+        ev.preventDefault(); ev.stopPropagation();
+        if(plan.manage) plan.manage(giveUp);
+        return;
+      }
       var b = ev.target.closest && ev.target.closest('[data-qpv]');
       if(!b) return;
       ev.preventDefault(); ev.stopPropagation();
@@ -23508,7 +23561,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v283-0923-1017';
+  var JS_BUILD = 'v284-0923-1039';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -24247,8 +24300,12 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
     try{ subs = (typeof window.wlWorkSubs === 'function') ? window.wlWorkSubs(t) : []; }catch(e){}
     if(!t || t === '없음'){ off(); return; }
 
+    /* v283 — 달님 : 「하위구분 + 용도 합치기(같은 줄)」— 이 안내문(.pg-addon)이
+       하위구분 칸에 붙어 있으면 그 줄이 항상 통줄(grid-column:1/-1)이 되어
+       버려 용도와 나란히 놓일 수 없었다. 지출종류 칸에 붙여 하위구분은
+       보통 칸으로 남긴다 (안내 문구 자체는 그대로 「아래에서 고르세요」). */
     window.wlAddOn(
-      ['[data-prow="f:expSubType"] .pg-pv', '[data-prow="f:expType"] .pg-pv'], 'subhint',
+      ['[data-prow="f:expType"] .pg-pv', '[data-prow="f:expSubType"] .pg-pv'], 'subhint',
       function(){
         var d = document.createElement('div');
         d.style.cssText = 'margin-top:6px;font-size:12px;font-weight:700;line-height:1.55';
