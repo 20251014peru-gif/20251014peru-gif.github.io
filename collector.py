@@ -97,23 +97,129 @@ def norm_title(t: str) -> str:
     t = re.sub(r"[^0-9a-z가-힣]+", " ", t)
     return re.sub(r"\s+", " ", t).strip()
 
-# 급상승어가 투자와 관련 있는지: 검색어 + 구글이 붙여준 관련 기사 제목에 아래 단어가 있으면 투자 관련으로 본다.
-# (예전에는 제외어 목록만 써서 정치인·야구선수 이름이 그대로 섞였다)
-INVEST_HINTS = ["주가", "주식", "증시", "코스피", "코스닥", "나스닥", "뉴욕증시", "상장", "공모", "IPO",
-                "실적", "매출", "영업이익", "순이익", "투자", "금리", "기준금리", "환율", "달러", "채권",
-                "반도체", "배터리", "2차전지", "ETF", "공시", "인수", "합병", "M&A", "수주", "특징주",
-                "급등", "급락", "상한가", "하한가", "시총", "시가총액", "지분", "배당", "유상증자", "관세",
-                "수출", "물가", "인플레", "부동산", "아파트값", "비트코인", "가상자산", "코인", "연준", "Fed",
-                "목표가", "증권", "애널리스트", "경기침체", "무역", "유가", "원자재"]
+# ── 급상승어 투자 관련 판정 (v2, 2026-09-23) ──
+# 예전: 관련 기사 제목에 투자 단어가 '하나라도' 있으면 통과 → '두류공원(5천억 투입 돔구장)' 같은 오판.
+# 지금: 세 가지 근거를 점수로 합쳐 3점 이상만 투자 관련으로 본다. 근거(why)는 기록에 남겨 화면에서 확인.
+#   ① 네이버 뉴스 분류: 검색 상위 기사 중 경제면(sid=101) 비율 — 네이버의 기사 분류라 단어 목록보다 객관적
+#   ② 상장 종목명 일치: listed_names.json (KRX 상장사 + 주요 해외 종목)
+#   ③ 단어 가중치: 강한 투자 단어 +2, 약한 단어 +1, 투자 무관 맥락 -2 (단어별 1회, 합계 -4~+4)
+INVEST_STRONG = ["특징주", "상한가", "하한가", "주가", "증시", "공시", "실적", "영업이익", "순이익", "목표가",
+                 "시가총액", "시총", "상장", "유상증자", "무상증자", "코스피", "코스닥", "나스닥", "뉴욕증시",
+                 "기준금리", "환율", "매출", "IPO", "공모주", "자사주", "ETF", "증권가", "애널리스트"]
+INVEST_WEAK = ["투자", "수출", "관세", "금리", "반도체", "배터리", "2차전지", "인수", "합병", "M&A", "수주",
+               "지분", "배당", "유가", "물가", "인플레", "부동산", "비트코인", "가상자산", "코인", "경제",
+               "연준", "Fed", "채권", "달러", "무역", "원자재", "기업", "주주"]
+INVEST_NEG = ["출마", "공천", "선거", "의원", "결혼", "이혼", "열애", "드라마", "예능", "시즌", "감독", "선수",
+              "홈런", "우승", "득점", "콘서트", "앨범", "배우", "가수", "아이돌", "사망", "숨져", "태풍", "날씨",
+              "고백", "신혼", "경찰", "검찰", "재판"]
+INVEST_SCORE_MIN = 3
+LISTED_PATH = "listed_names.json"
 TREND_LOG_PATH = "trending_log.json"
 TREND_LOG_DAYS = 14
+_listed_cache = None
 
-def _is_invest(term, news_titles):
-    hay = " ".join([term] + list(news_titles or []))
-    return any(h.lower() in hay.lower() for h in INVEST_HINTS)
+def load_listed_names():
+    """상장사 이름 집합. 7일 지나면 KRX에서 새로 받아 파일 갱신(실패하면 기존 파일 그대로 사용)."""
+    global _listed_cache
+    if _listed_cache is not None:
+        return _listed_cache
+    data = {}
+    try:
+        with open(LISTED_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        pass
+    try:
+        age = (dt.date.today() - dt.date.fromisoformat(data.get("updated", "2000-01-01"))).days
+    except Exception:
+        age = 999
+    if age >= 7:
+        try:
+            r = requests.get("https://kind.krx.co.kr/corpgeneral/corpList.do?method=download&searchType=13",
+                             headers=HEADERS, timeout=20)
+            t = r.content.decode("euc-kr", errors="replace")
+            names = []
+            for row in re.findall(r"<tr>(.*?)</tr>", t, re.S):
+                tds = re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)
+                if len(tds) >= 3:
+                    n = html.unescape(re.sub(r"<[^>]+>", "", tds[0])).strip()
+                    if n and "스팩" not in n:
+                        names.append(n)
+            if len(names) > 1500:          # 비정상 응답이면 덮어쓰지 않는다
+                data["krx"] = sorted(set(names))
+                data["updated"] = dt.date.today().isoformat()
+                with open(LISTED_PATH, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+                print(f"  · 상장사 목록 갱신: {len(data['krx'])}개")
+        except Exception as e:
+            print("  ! 상장사 목록 갱신 실패(기존 파일 사용):", e)
+    _listed_cache = set(n for n in (data.get("krx") or []) + (data.get("global") or []) if len(n) >= 2)
+    return _listed_cache
+
+def _listed_match(term):
+    names = load_listed_names()
+    t = term.strip()
+    if t in names:
+        return t
+    for w in re.split(r"\s+", t):          # '삼성전자 주가' 처럼 단어 단위로
+        if len(w) >= 3 and w in names:
+            return w
+    return ""
+
+def naver_section_ratio(term):
+    """네이버 뉴스 검색 상위 20건 중 경제면(sid=101) 비율. (경제건수, 분류확인건수, 제목들) 반환."""
+    if not (NAVER_ID and NAVER_SECRET):
+        return 0, 0, []
+    attempts = [
+        ("https://naverapihub.apigw.ntruss.com/search/v1/news",
+         {"X-NCP-APIGW-API-KEY-ID": NAVER_ID, "X-NCP-APIGW-API-KEY": NAVER_SECRET}),
+        ("https://openapi.naver.com/v1/search/news.json",
+         {"X-Naver-Client-Id": NAVER_ID, "X-Naver-Client-Secret": NAVER_SECRET}),
+    ]
+    for url, h in attempts:
+        try:
+            r = requests.get(url, params={"query": term, "display": 20, "sort": "sim"}, headers=h, timeout=8)
+            if r.status_code != 200:
+                continue
+            econ = known = 0
+            titles = []
+            for it in r.json().get("items", []):
+                titles.append(strip_tags(it.get("title", "")))
+                m = re.search(r"[?&]sid=(\d+)", it.get("link", ""))
+                if m:
+                    known += 1
+                    if m.group(1) == "101":
+                        econ += 1
+            return econ, known, titles
+        except Exception:
+            continue
+    return 0, 0, []
+
+def judge_invest(term, google_titles):
+    """점수·근거를 돌려준다: (투자관련 여부, 점수, 근거 목록)"""
+    score, why = 0, []
+    name = _listed_match(term)
+    if name:
+        score += 3; why.append(f"상장사 '{name}'")
+    econ, known, ntitles = naver_section_ratio(term)
+    if known >= 3:
+        r = econ / known
+        pts = 3 if r >= 0.5 else 2 if r >= 0.3 else 1 if r >= 0.15 else (-1 if econ == 0 else 0)
+        score += pts; why.append(f"경제면 {econ}/{known}")
+    hay = " ".join([term] + list(google_titles or []) + ntitles[:10]).lower()
+    wp = 0
+    hits = [w for w in INVEST_STRONG if w.lower() in hay]; wp += 2 * len(hits)
+    weak = [w for w in INVEST_WEAK if w.lower() in hay]; wp += len(weak)
+    neg = [w for w in INVEST_NEG if w.lower() in hay]; wp -= 2 * len(neg)
+    wp = max(-4, min(4, wp))
+    score += wp
+    if hits or weak or neg:
+        why.append("단어 " + ",".join(hits[:3] + weak[:2]) + ((" / 무관 " + ",".join(neg[:3])) if neg else "") + f" ({wp:+d})")
+    ok = _trend_ok(term) and score >= INVEST_SCORE_MIN
+    return ok, score, why
 
 def fetch_trending_items():
-    """구글 트렌드 대한민국 급상승 검색어 전체를 [{term, traffic, news:[제목], invest}] 로 반환."""
+    """구글 트렌드 대한민국 급상승 검색어 전체를 [{term, traffic, news:[제목], invest, score, why}] 로 반환."""
     import xml.etree.ElementTree as ET
     url = "https://trends.google.com/trending/rss?geo=KR"
     ns = {"ht": "https://trends.google.com/trending/rss"}
@@ -130,10 +236,10 @@ def fetch_trending_items():
             news = [strip_tags(n.findtext("ht:news_item_title", default="", namespaces=ns))
                     for n in it.findall("ht:news_item", ns)]
             news = [x for x in news if x][:3]
+            ok, score, why = judge_invest(t, news)
             out.append({"term": t,
                         "traffic": (it.findtext("ht:approx_traffic", default="", namespaces=ns) or "").strip(),
-                        "news": news,
-                        "invest": _trend_ok(t) and _is_invest(t, news)})
+                        "news": news, "invest": ok, "score": score, "why": why})
         return out
     except Exception as ex:
         print("  ! 트렌드 수집 실패:", ex)
@@ -161,7 +267,9 @@ def save_trending_log(items, now_kst):
         e["seen"] = int(e.get("seen", 0)) + 1
         e["hits"] = (list(e.get("hits") or []) + [stamp])[-30:]
         e["traffic"] = x.get("traffic", "")
-        e["invest"] = bool(x.get("invest")) or bool(e.get("invest"))
+        e["invest"] = bool(x.get("invest"))      # 최신 판정(점수·근거와 함께)
+        e["score"] = x.get("score", 0)
+        e["why"] = x.get("why", [])
         if x.get("news"):
             e["news"] = x["news"][:2]
         terms[x["term"]] = e
@@ -504,7 +612,9 @@ def main():
     keywords = list(dict.fromkeys(core + trending))
     print("핵심 키워드:", core)
     if trend_items:
-        print("구글 급상승어 전체:", [x["term"] for x in trend_items])
+        print("구글 급상승어 판정 (3점 이상 = 투자 관련):")
+        for x in trend_items:
+            print(f"   {'✔' if x['invest'] else '·'} {x['term']} {x['score']:+d}점  {' | '.join(x['why'])}")
     if trending:
         print("🔥 급상승(투자 관련) 자동 추가:", trending)
     else:

@@ -253,7 +253,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정&#10;· v5.1 급상승: 같은 시간대 비중 비교 · 검색량 · 급상승어 기록">v5.1</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정&#10;· v5.1 급상승: 같은 시간대 비중 비교 · 검색량 · 급상승어 기록&#10;· v5.2 급상승어 투자 판정: 네이버 경제면 비율 + 상장사명 + 단어 점수">v5.2</span></div>
   </div>
 </header>
 <main>
@@ -723,7 +723,7 @@ function renderSurge(){
   if(searchSurging.length){ h+='<span class="lab" style="margin-left:6px">🔎 검색↑</span>'+searchSurging.map(function(s){ return chip(s.k, "+"+s.pct+"%", "네이버 검색량 "+s.day+" · 직전 7일 평균 대비", " sch"); }).join(""); }
   if(trendLog){
     h+='<span class="lab" style="margin-left:6px">📈 급상승어</span>';
-    h+= trendRecent.length ? trendRecent.map(function(x){ return chip(x.k, x.e.seen>1?"×"+x.e.seen:"", "구글 급상승 · 처음 "+(x.e.first||"")+" · 최근 "+(x.e.last||"")+(x.e.news&&x.e.news[0]?"\n"+x.e.news[0]:""), " tr"); }).join("") : gray+'투자 관련 없음</span>';
+    h+= trendRecent.length ? trendRecent.map(function(x){ return chip(x.k, x.e.seen>1?"×"+x.e.seen:"", "구글 급상승 · 처음 "+(x.e.first||"")+" · 최근 "+(x.e.last||"")+(x.e.why&&x.e.why.length?"\n판정 "+(x.e.score>0?"+":"")+x.e.score+"점: "+x.e.why.join(" · "):"")+(x.e.news&&x.e.news[0]?"\n"+x.e.news[0]:""), " tr"); }).join("") : gray+'투자 관련 없음</span>';
     if(trendOther) h+=gray+'(투자 무관 '+trendOther+'개 제외)</span>';
   }
   host.innerHTML=h;
