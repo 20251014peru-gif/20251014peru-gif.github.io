@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v281-0923-0917';
+window.PERSONAL_BUILD = 'v282-0923-0933';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -717,6 +717,8 @@ window.PERSONAL_BUILD = 'v281-0923-0917';
       {k:'towelOut',  label:'핸드타월 출고', type:'number'}
     ],
     work: [
+      /* v282 — 달님 : 「분야 옆으로 세부항목, 소방-월간점검 이런식으로」 */
+      {k:'fieldSub',    label:'세부',         type:'select'},
       {k:'purpose',     label:'용도',         type:'select',
        opts:(function(){ try{ return JSON.parse(localStorage.getItem('wl_exp_purposes_v44')||'null')
                               || ['자재구매','소모품','식대','폐기물 처리','기타']; }
@@ -839,7 +841,10 @@ window.PERSONAL_BUILD = 'v281-0923-0917';
         return [''].concat(CALLDIR.slice());
       if(k==='vtype' && typeof VTYPES!=='undefined' && VTYPES.length)
         return [''].concat(VTYPES.slice());
-      if(k==='field' && typeof FIELDS!=='undefined' && FIELDS.length){
+      /* v282 — 달님 : 「분야 옆에 세부항목, 소방-월간점검 처럼」 — 세부도 같은
+            분야 목록(FIELDS)에서 고른다. 엄격한 부모·자식 관계는 아니고,
+            그냥 분야 옆 칸에 하나 더 고를 수 있는 것뿐이다. */
+      if((k==='field' || k==='fieldSub') && typeof FIELDS!=='undefined' && FIELDS.length){
         var fd = FIELDS.filter(Boolean).slice();
         (entries||[]).forEach(function(e){
           if(e && e.kind===kind && e[k] && fd.indexOf(String(e[k]))<0) fd.push(String(e[k]));
@@ -3186,7 +3191,8 @@ window.PERSONAL_BUILD = 'v281-0923-0917';
   var EDIT=null;   /* {id, pid} */
   function editorHTML(p, v){
     var t=p.type;
-    if(t==='area') return '<textarea class="lf-ie" rows="3">'+esc(v==null?'':v)+'</textarea>';
+    /* v282 — 달님 : 「여기 내용 입력셀을 줄이고」 — 짧게 쓰는 칸이 많아 3줄은 과했다 */
+    if(t==='area') return '<textarea class="lf-ie" rows="2">'+esc(v==null?'':v)+'</textarea>';
     if(t==='sel'){
       var o=(p.opts||p.o||['']).slice();
       if(o.indexOf('')<0) o=[''].concat(o);
@@ -5192,7 +5198,8 @@ window.PERSONAL_BUILD = 'v281-0923-0917';
           숨김 목록에 들어 있어도 되살린다 — 기본 칸이라 감춰 두면 안 된다. */
     var ALWAYS = { '_date':1, 'f:refYear':1, 'f:refMonth':1, 'f:floor':1, 'f:field':1, 'f:status':1,
                    '_memo':1,     /* v133 — 「내용」은 비어 있어도 기본 바로 밑에 (달님 요청) */
-                   'f:dtype':1, 'f:vtype':1 };   /* v197 — 전달 종류 · 휴가 종류도 늘 보이게 */
+                   'f:dtype':1, 'f:vtype':1,   /* v197 — 전달 종류 · 휴가 종류도 늘 보이게 */
+                   'f:fieldSub':1 };   /* v282 — 분야 옆 세부도 분야처럼 늘 보이게 (WORK_EXTRA 칸이지만 예외) */
     /* ══ v199 — 달님 : 「기존 모달에는 있고 노션식에는 없는 걸 같은 상황으로 만들어줘」 ══
           14종을 전부 재어 보니 **노션식에 빠진 칸은 없었다** (오히려 더 많다).
           진짜 차이는 이것 — 옛 입력창은 빈 칸도 늘 보여 주는데,

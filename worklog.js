@@ -15380,8 +15380,11 @@ async function githubUpload(token){
       /* v117 — 달님 : 「이쪽 목록의 이름을 만들어줘」
             날짜·대상년월·층·분야·상태 = 「언제 · 어디서 · 무엇」 한 덩어리.
             평소에는 펼쳐 두고, 접으면 한 줄로 요약된다. */
+      /* v282 — 달님 : 「분야 옆으로 세부항목, 완료 상태는 내리면 될듯」
+            분야 바로 뒤에 세부를 끼워 같은 줄(3칸)에 나오게 하고, 완료 상태는
+            그만큼 다음 줄로 밀려난다 — 칸을 옮기는 게 아니라 차례만 바꾼다. */
       { id:'g0', on:1, base:1, icon:'📌', name:'기본 — 언제 · 어디서 · 무엇', head:'_date',
-        keys:['f:refYear','f:refMonth','f:floor','f:field','f:status'], openDefault:1 },
+        keys:['f:refYear','f:refMonth','f:floor','f:field','f:fieldSub','f:status'], openDefault:1 },
       /* v121 — 달님 : 「업체랑 자재가 한 덩어리로 나와. 구분하고 그룹 지어줘」
             용도·구분은 돈 이야기지 업체 이야기가 아니다 → 💰 비용 묶음으로 옮겼다. */
       { id:'gc', on:1, base:1, icon:'💰', name:'비용 — 얼마를 어떻게', head:'f:expType',
@@ -18318,6 +18321,8 @@ async function githubUpload(token){
     'f:floor'     : { chips:'all', search:false },
     /* v280 — 달님이 고정으로 넣어 달란 것 (자주 쓴 순위에 안 들어도 항상 보인다) */
     'f:field'     : { chips:'top', search:true,  cnt:'field', pin:['냉난방','청소반장일일업무'] },
+    /* v282 — 분야 옆 세부항목 — 같은 분야 목록에서 고르되, 자주 쓴 것 위주로 */
+    'f:fieldSub'  : { chips:'top', search:true,  cnt:'fieldSub' },
     'f:status'    : { chips:'all', search:false },   /* 완료 상태 */
     'f:expType'   : { chips:'all', search:false,      /* 지출종류 — v185 이름만 통일 */
                       lab:function(v){ return (typeof wlExpTypeLabel==='function') ? wlExpTypeLabel(v, true) : v; } },
@@ -23501,7 +23506,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v281-0923-0917';
+  var JS_BUILD = 'v282-0923-0933';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
