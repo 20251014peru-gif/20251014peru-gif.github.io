@@ -256,7 +256,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span id="aiCostBadge" onclick="openKey()" title="AI 사용 요금 (누적, 이 브라우저 기준) · 탭하면 내역 보기" style="cursor:pointer;font-weight:700;color:#6D28D9"></span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정&#10;· v5.1 급상승: 같은 시간대 비중 비교 · 검색량 · 급상승어 기록&#10;· v5.2 급상승어 투자 판정: 네이버 경제면 비율 + 상장사명 + 단어 점수&#10;· v5.3 급상승 AI 이유분석(Sonnet 5·내 AI키 이용·요금표시) · 이슈·테마에 급상승 투자 키워드 자동추천/정렬&#10;· v5.4 AI 요금 표시(헤더+설정 내역) · 오늘 뉴스에서 AI가 새 투자 키워드 찾기&#10;· v5.5 버그수정: 속보 등 다른 탭에서 급상승/키워드 클릭 시 뉴스가 0건으로 보이던 문제(전체 탭으로 자동 전환)&#10;· v5.6 AI 키워드 찾기 버튼을 설정창에서 이슈/테마 메인 화면으로 이동">v5.6</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span id="aiCostBadge" onclick="openKey()" title="AI 사용 요금 (누적, 이 브라우저 기준) · 탭하면 내역 보기" style="cursor:pointer;font-weight:700;color:#6D28D9"></span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정&#10;· v5.1 급상승: 같은 시간대 비중 비교 · 검색량 · 급상승어 기록&#10;· v5.2 급상승어 투자 판정: 네이버 경제면 비율 + 상장사명 + 단어 점수&#10;· v5.3 급상승 AI 이유분석(Sonnet 5·내 AI키 이용·요금표시) · 이슈·테마에 급상승 투자 키워드 자동추천/정렬&#10;· v5.4 AI 요금 표시(헤더+설정 내역) · 오늘 뉴스에서 AI가 새 투자 키워드 찾기&#10;· v5.5 버그수정: 속보 등 다른 탭에서 급상승/키워드 클릭 시 뉴스가 0건으로 보이던 문제(전체 탭으로 자동 전환)&#10;· v5.6 AI 키워드 찾기 버튼을 설정창에서 이슈/테마 메인 화면으로 이동&#10;· v5.7 AI 키워드 찾기가 급상승/대중관심에 이미 뜬 것까지 겹치던 문제 수정">v5.7</span></div>
   </div>
 </header>
 <main>
@@ -844,11 +844,19 @@ function suggestKeywordsAI(){
   });
   if(titles.length<20){ toast("오늘 뉴스가 아직 적어요(더 쌓인 뒤 시도해보세요)"); return; }
   if(titles.length>220) titles=titles.slice(0,220);          // 토큰 절약(제목만 사용)
-  var known=keywords.concat(stocks).join(", ");
+  // 이미 화면 다른 곳에 떠 있는 건 다시 추천하면 "이미 봤는데 왜 또 나오지" 가 된다.
+  // 고정 키워드·내 종목뿐 아니라, 대중 관심 목록·지금 급상승 줄에 떠 있는 것·자동 추천 카드까지 전부 뺀다.
+  var alreadyShown={};
+  keywords.concat(stocks).concat(popTerms||[]).concat(computeAutoKeywords())
+    .concat(surging.map(function(s){return s.k;}))
+    .concat(searchSurging.map(function(s){return s.k;}))
+    .concat(trendRecent.map(function(x){return x.k;}))
+    .forEach(function(k){ if(k) alreadyShown[k]=1; });
+  var known=Object.keys(alreadyShown).join(", ");
   kwAiBusy=true;
   var btn=document.getElementById("btnKwAI"); if(btn){ btn.disabled=true; btn.textContent="찾는 중…"; }
   var sys="너는 한국 주식투자자를 위한 리서치 보조야. 아래는 오늘 수집된 뉴스 제목 목록이야(중복 제거). "+
-    "이미 추적 중인 키워드/종목은 다음과 같아 — 이것들은 추천하지 마: "+known+". "+
+    "이미 화면에 떠 있는 키워드(추적 중·급상승·대중관심 전부 포함)는 다음과 같아 — 이것들과 같거나 사실상 같은 건 추천하지 마: "+known+". "+
     "제목들에서 반복적으로 등장하는, 아직 추적 안 하는 투자 관련 주제·종목·업종·이슈를 최대 6개 찾아. "+
     "반드시 주어진 제목 안에서만 근거를 잡고 새로운 사실을 지어내지 마. 확신이 약하면 추천하지 마. "+
     "출력은 줄마다 정확히 '키워드: 왜 지금 주목할 만한지(30자 내외)' 형식만, 다른 설명은 넣지 마. 추천할 게 없으면 '없음' 한 줄만 출력해.";
@@ -863,7 +871,7 @@ function suggestKeywordsAI(){
       if(/^없음/.test(line.trim())) return;
       var i=line.indexOf(":"); if(i<0) return;
       var k=line.slice(0,i).trim(), why=line.slice(i+1).trim();
-      if(k && keywords.indexOf(k)<0 && stocks.indexOf(k)<0) map[k]=why;
+      if(k && !alreadyShown[k]) map[k]=why;   // AI가 지시를 놓쳐도 화면에서 한 번 더 걸러낸다
     });
     kwAiSuggestions=map;
     renderKwAiSuggest();
