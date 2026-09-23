@@ -23,7 +23,19 @@ export function validateEvent(input) {
   if (e.source && (!e.source.app || !e.source.recordId)) throw Error('연결 원본 정보가 올바르지 않습니다.');
   e.exceptions = sanitizeExceptions(e.exceptions, e.allDay);
   e.checklist = sanitizeChecklist(e.checklist);
+  e.photos = sanitizePhotos(e.photos);
   return e;
+}
+// Photo metadata only — the bytes live in Firebase Storage (uploaded via a dedicated endpoint, never
+// through this field). `data:image/` is accepted too, but only ever produced by the local/offline demo
+// store (LocalStore), which has no Storage to upload to; the real cloud path always writes a Storage URL.
+export const MAX_PHOTOS = 8;
+export function sanitizePhotos(input) {
+  if (!Array.isArray(input)) return [];
+  return input.slice(0, MAX_PHOTOS)
+    .filter(x => x && typeof x.id === 'string' && typeof x.url === 'string' && x.url.length <= 2000000 &&
+      (x.url.startsWith('https://firebasestorage.googleapis.com/') || x.url.startsWith('data:image/')))
+    .map(x => ({id: x.id.slice(0, 80), url: x.url, createdAt: Number.isFinite(x.createdAt) ? x.createdAt : Date.now()}));
 }
 // A real, structured to-do list — separate from the free-text notes field, so a checkbox is an
 // actual <input type=checkbox> the whole way through, not text inside notes that only looks like one.

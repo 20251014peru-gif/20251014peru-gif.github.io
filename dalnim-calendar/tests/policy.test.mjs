@@ -14,6 +14,10 @@ test('checklist items survive a save as real structured entries, not text',()=>{
  const out=cleanEvent({...e,checklist:[{text:' 자재 확인 ',done:true},{text:'',done:false}]},e,'a');
  assert.deepEqual(out.checklist,[{text:'자재 확인',done:true,kind:'check'}]);
 });
+test('photos already uploaded to Storage survive a normal save, junk URLs do not',()=>{
+ const out=cleanEvent({...e,photos:[{id:'p1',url:'https://firebasestorage.googleapis.com/v0/b/x/o/y?alt=media&token=t'},{id:'p2',url:'https://evil.example.com/x.jpg'}]},e,'a');
+ assert.equal(out.photos.length,1);assert.equal(out.photos[0].id,'p1');
+});
 test('only the space owner can invite, and invites need a real email and a known role',()=>{
  assert.equal(canInvite('owner'),true);assert.equal(canInvite('editor'),false);assert.equal(canInvite('viewer'),false);
  assert.equal(EMAIL_RE.test('family@example.com'),true);assert.equal(EMAIL_RE.test('not-an-email'),false);

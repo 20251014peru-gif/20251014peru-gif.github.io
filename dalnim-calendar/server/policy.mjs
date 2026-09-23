@@ -5,7 +5,7 @@ export const canWrite=(event,uid,role)=>['owner','editor'].includes(role)&&(!eve
 export function cleanEvent(raw,old,uid,worklogRecord){
  const e=validateEvent(raw),details={};
  for(const [k,v]of Object.entries(e.details||{}).slice(0,30)){if(/^[\w-]{1,60}$/.test(k)&&['string','number','boolean'].includes(typeof v))details[k]=typeof v==='string'?v.slice(0,2000):v;}
- const clean={id:e.id,title:e.title,start:e.start,end:e.end,allDay:!!e.allDay,category:e.category,module:e.module,status:e.status,repeat:e.repeat,reminder:e.reminder,visibility:e.visibility,notes:e.notes,location:e.location,timeZone:e.timeZone,details,exceptions:sanitizeExceptions(e.exceptions,e.allDay),checklist:e.checklist,schemaVersion:1,ownerId:old?.ownerId||uid,revision:(old?.revision||0)+1,createdAt:old?.createdAt||Date.now(),updatedAt:Date.now(),deletedAt:e.deletedAt?Date.now():null,demo:false};
+ const clean={id:e.id,title:e.title,start:e.start,end:e.end,allDay:!!e.allDay,category:e.category,module:e.module,status:e.status,repeat:e.repeat,reminder:e.reminder,visibility:e.visibility,notes:e.notes,location:e.location,timeZone:e.timeZone,details,exceptions:sanitizeExceptions(e.exceptions,e.allDay),checklist:e.checklist,photos:e.photos,schemaVersion:1,ownerId:old?.ownerId||uid,revision:(old?.revision||0)+1,createdAt:old?.createdAt||Date.now(),updatedAt:Date.now(),deletedAt:e.deletedAt?Date.now():null,demo:false};
  if(e.source)clean.source={app:String(e.source.app).slice(0,80),recordId:String(e.source.recordId).slice(0,160)};
  return attachWorklog(clean,old,worklogRecord);
 }

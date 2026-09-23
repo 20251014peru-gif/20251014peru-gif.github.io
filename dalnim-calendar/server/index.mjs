@@ -6,12 +6,14 @@ import {defineSecret,defineString} from 'firebase-functions/params';
 import {initializeApp} from 'firebase-admin/app';
 import {getAuth} from 'firebase-admin/auth';
 import {getFirestore,FieldValue} from 'firebase-admin/firestore';
+import {getStorage} from 'firebase-admin/storage';
 import {createHash,randomUUID} from 'node:crypto';
 import webpush from 'web-push';
 import {canRead,canWrite,cleanEvent,validSubscription,canInvite,EMAIL_RE,emailMatches,inviteExpired} from './policy.mjs';
 import {nextReminder} from './schedule.mjs';
 import {mapRecordToEvent,mapTodoToEvent} from './investment-feed.mjs';
-initializeApp();
+import {MAX_PHOTOS,MAX_PHOTO_BYTES,ALLOWED_CONTENT_TYPES,photoPath,photoDownloadUrl} from './photos.mjs';
+initializeApp({storageBucket:'my-system-25497.appspot.com'});
 const db=getFirestore(),privateKey=defineSecret('DALNIM_VAPID_PRIVATE_KEY'),publicKey=defineString('DALNIM_VAPID_PUBLIC_KEY'),subject=defineString('DALNIM_PUSH_SUBJECT'),allowedOrigins=defineString('DALNIM_ALLOWED_ORIGINS');
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const idOK=s=>typeof s==='string'&&/^[\w.-]{1,80}$/.test(s);
@@ -24,7 +26,7 @@ export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',ma
  const origin=req.get('Origin'),allow=allowedOrigins.value().split(',').map(s=>s.trim());
  if(origin&&!allow.includes(origin)){res.status(403).json({error:'허용되지 않은 앱입니다.'});return;}
  if(origin){res.set('Access-Control-Allow-Origin',origin);res.set('Vary','Origin');}
- res.set('Access-Control-Allow-Headers','Authorization,Content-Type,X-Workspace-Id');res.set('Access-Control-Allow-Methods','GET,POST,OPTIONS');res.set('Cache-Control','no-store');
+ res.set('Access-Control-Allow-Headers','Authorization,Content-Type,X-Workspace-Id');res.set('Access-Control-Allow-Methods','GET,POST,DELETE,OPTIONS');res.set('Cache-Control','no-store');
  if(req.method==='OPTIONS'){res.status(204).end();return;}
  try{
   const token=req.get('Authorization')?.replace(/^Bearer /,'');if(!token)throw failure(401,'로그인이 필요합니다.');
@@ -120,6 +122,51 @@ export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',ma
     tx.set(root.collection('my_system_search').doc(e.id),{app:'dalnim-calendar',type:e.module,title:e.title,memo:e.notes,cat:e.category,date:e.start,ownerId:e.ownerId,visibility:e.visibility,deletedAt:e.deletedAt,updatedAt:e.updatedAt});
     addJob(tx,space,e,alarm);return e;
    });res.json(worklogRecord?{record:{...worklogFromEvent(event,event.worklogRecord),calendarId:event.id,calendarRevision:event.revision}}:{event});return;
+  }
+  // Photos are uploaded/deleted through their own routes, not the general /events save above: the
+  // bytes need Storage (not Firestore) and the existing 100KB body cap on /events is sized for text.
+  // The event's `photos` metadata array is updated here directly so the client's next full save
+  // (title/date/etc.) sees the current revision instead of racing it into a 409 conflict.
+  const photoMatch=route.match(/^\/events\/([\w:.-]{1,160})\/photos$/);
+  if(photoMatch&&req.method==='POST'){
+   const eventId=photoMatch[1],{data,contentType}=req.body||{};
+   if(!ALLOWED_CONTENT_TYPES.includes(contentType))throw failure(400,'지원하지 않는 이미지 형식입니다.');
+   if(typeof data!=='string'||!data)throw failure(400,'이미지 데이터가 없습니다.');
+   const buffer=Buffer.from(data,'base64');
+   if(!buffer.length||buffer.length>MAX_PHOTO_BYTES)throw failure(413,'사진 용량이 너무 큽니다. (최대 '+Math.floor(MAX_PHOTO_BYTES/1024/1024)+'MB)');
+   const ref=root.collection('events').doc(eventId),existing=await ref.get(),old=existing.data();
+   if(!old)throw failure(404,'일정을 찾을 수 없습니다.');
+   if(!canWrite(old,uid,role))throw failure(403,'이 일정을 수정할 수 없습니다.');
+   if((old.photos||[]).length>=MAX_PHOTOS)throw failure(400,'사진은 최대 '+MAX_PHOTOS+'장까지 첨부할 수 있습니다.');
+   const photoId=randomUUID(),path=photoPath(space,eventId,photoId),token=randomUUID();
+   await getStorage().bucket().file(path).save(buffer,{metadata:{contentType,metadata:{firebaseStorageDownloadTokens:token}}});
+   const photo={id:photoId,url:photoDownloadUrl(getStorage().bucket().name,path,token),createdAt:Date.now()};
+   let event;
+   try{
+    event=await db.runTransaction(async tx=>{
+     const snap=await tx.get(ref),cur=snap.data();
+     if(!cur)throw failure(404,'일정을 찾을 수 없습니다.');
+     if(!canWrite(cur,uid,role))throw failure(403,'이 일정을 수정할 수 없습니다.');
+     const photos=[...(cur.photos||[]),photo];
+     if(photos.length>MAX_PHOTOS)throw failure(400,'사진은 최대 '+MAX_PHOTOS+'장까지 첨부할 수 있습니다.');
+     const e={...cur,photos,revision:cur.revision+1,updatedAt:Date.now()};tx.set(ref,e);return e;
+    });
+   }catch(err){await getStorage().bucket().file(path).delete().catch(()=>{});throw err;}
+   res.json({event,photo});return;
+  }
+  const photoDelMatch=route.match(/^\/events\/([\w:.-]{1,160})\/photos\/([\w-]{1,80})$/);
+  if(photoDelMatch&&req.method==='DELETE'){
+   const [,eventId,photoId]=photoDelMatch,ref=root.collection('events').doc(eventId);
+   const event=await db.runTransaction(async tx=>{
+    const snap=await tx.get(ref),old=snap.data();
+    if(!old)throw failure(404,'일정을 찾을 수 없습니다.');
+    if(!canWrite(old,uid,role))throw failure(403,'이 일정을 수정할 수 없습니다.');
+    if(!(old.photos||[]).some(p=>p.id===photoId))throw failure(404,'사진을 찾을 수 없습니다.');
+    const photos=(old.photos||[]).filter(p=>p.id!==photoId);
+    const e={...old,photos,revision:old.revision+1,updatedAt:Date.now()};tx.set(ref,e);return e;
+   });
+   await getStorage().bucket().file(photoPath(space,eventId,photoId)).delete().catch(()=>{});
+   res.json({event});return;
   }
   if(route==='/subscriptions'&&req.method==='POST'){
    const sub=req.body?.subscription;if(!validSubscription(sub))throw failure(400,'알림 수신 주소가 올바르지 않습니다.');

@@ -3,7 +3,7 @@ import {bindDayFlow} from './components/day-flow.js';
 import {config} from './config.js';
 import {LocalStore} from './core/store.js';
 import {ModuleRegistry} from './core/registry.js';
-import {dayKey,atDay,shiftDay,newId,expandEvents,safeURL,ZONE} from './core/model.js';
+import {dayKey,atDay,shiftDay,newId,expandEvents,safeURL,ZONE,MAX_PHOTOS} from './core/model.js';
 import {demoEvents} from './demo.js';
 import {esc,icon,button,toast,ask,chooseScope,download} from './ui.js';
 
@@ -90,14 +90,72 @@ function openReadOnlyRecord(record){
  d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close());
  d.showModal();
 }
+// Basic viewer: pinch/wheel/double-click zoom, drag-to-pan, prev/next, save and share. Save/share
+// fetch the image as a blob first (Storage's download endpoint allows cross-origin reads) so a real
+// file can be handed to the OS share sheet or saved with a real filename, falling back to opening
+// the link directly (long-press-to-save works on phones) if that fetch is blocked for any reason.
+function openPhotoViewer(photos,startIndex){
+ const list=photos.filter(p=>p?.url);if(!list.length)return;
+ let idx=Math.max(0,Math.min(startIndex,list.length-1)),scale=1,tx=0,ty=0,dragging=false,lastX=0,lastY=0,touchMode=null,pinchStart=0,pinchScale=1,panX=0,panY=0;
+ const d=$('#photo-viewer');
+ d.innerHTML='<div class="pv-head"><span class="pv-count"></span><div class="pv-actions"><button type="button" class="icon-btn" data-pv-save aria-label="저장">'+icon('download')+'</button><button type="button" class="icon-btn" data-pv-share aria-label="공유">'+icon('upload')+'</button><button type="button" class="icon-btn" data-pv-close aria-label="닫기">'+icon('close')+'</button></div></div><div class="pv-stage"><button type="button" class="pv-nav pv-prev" aria-label="이전">'+icon('chevron')+'</button><img class="pv-img" alt="사진"><button type="button" class="pv-nav pv-next" aria-label="다음">'+icon('chevron')+'</button></div>';
+ const img=d.querySelector('.pv-img'),stage=d.querySelector('.pv-stage');
+ const applyTransform=()=>{img.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')';};
+ const resetZoom=()=>{scale=1;tx=0;ty=0;applyTransform();};
+ function render(){
+  const p=list[idx];img.src=p.url;
+  d.querySelector('.pv-count').textContent=list.length>1?(idx+1)+' / '+list.length:'';
+  d.querySelector('.pv-prev').hidden=d.querySelector('.pv-next').hidden=list.length<2;
+  resetZoom();
+ }
+ d.querySelector('[data-pv-close]').onclick=()=>d.close();
+ d.querySelector('.pv-prev').onclick=()=>{idx=(idx-1+list.length)%list.length;render();};
+ d.querySelector('.pv-next').onclick=()=>{idx=(idx+1)%list.length;render();};
+ stage.addEventListener('wheel',ev=>{ev.preventDefault();scale=Math.min(4,Math.max(1,scale-ev.deltaY*0.0025));if(scale===1){tx=0;ty=0;}applyTransform();},{passive:false});
+ img.addEventListener('dblclick',()=>{scale=scale>1?1:2.4;tx=0;ty=0;applyTransform();});
+ img.addEventListener('mousedown',ev=>{if(scale<=1)return;dragging=true;lastX=ev.clientX;lastY=ev.clientY;});
+ function onMouseMove(ev){if(!dragging)return;tx+=ev.clientX-lastX;ty+=ev.clientY-lastY;lastX=ev.clientX;lastY=ev.clientY;applyTransform();}
+ function onMouseUp(){dragging=false;}
+ window.addEventListener('mousemove',onMouseMove);window.addEventListener('mouseup',onMouseUp);
+ stage.addEventListener('touchstart',ev=>{
+  if(ev.touches.length===2){touchMode='pinch';pinchStart=Math.hypot(ev.touches[0].clientX-ev.touches[1].clientX,ev.touches[0].clientY-ev.touches[1].clientY);pinchScale=scale;}
+  else if(ev.touches.length===1&&scale>1){touchMode='pan';panX=ev.touches[0].clientX-tx;panY=ev.touches[0].clientY-ty;}
+ },{passive:true});
+ stage.addEventListener('touchmove',ev=>{
+  if(touchMode==='pinch'&&ev.touches.length===2){
+   const dist=Math.hypot(ev.touches[0].clientX-ev.touches[1].clientX,ev.touches[0].clientY-ev.touches[1].clientY);
+   scale=Math.min(4,Math.max(1,pinchScale*(dist/pinchStart)));applyTransform();
+  }else if(touchMode==='pan'&&ev.touches.length===1){tx=ev.touches[0].clientX-panX;ty=ev.touches[0].clientY-panY;applyTransform();}
+ },{passive:true});
+ stage.addEventListener('touchend',()=>{touchMode=null;if(scale<1.02)resetZoom();});
+ d.querySelector('[data-pv-save]').onclick=async()=>{
+  const p=list[idx];
+  try{const blob=await(await fetch(p.url)).blob();download('dalnim-photo-'+(idx+1)+'.jpg',blob,blob.type||'image/jpeg');}
+  catch{window.open(p.url,'_blank','noopener');toast('새 탭에서 열었습니다. 길게 눌러 저장해 주세요.');}
+ };
+ d.querySelector('[data-pv-share]').onclick=async()=>{
+  const p=list[idx];
+  try{
+   const blob=await(await fetch(p.url)).blob(),file=new File([blob],'dalnim-photo.jpg',{type:blob.type||'image/jpeg'});
+   if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'사진 공유'});return;}
+   throw Error('file-share-unsupported');
+  }catch(err){
+   if(err?.name==='AbortError')return;
+   try{await navigator.share({url:p.url,title:'사진 공유'});return;}catch(err2){if(err2?.name==='AbortError')return;}
+   try{await navigator.clipboard.writeText(p.url);toast('사진 주소를 복사했습니다.');}catch{toast('공유하지 못했습니다.');}
+  }
+ };
+ d.addEventListener('close',()=>{window.removeEventListener('mousemove',onMouseMove);window.removeEventListener('mouseup',onMouseUp);},{once:true});
+ render();d.showModal();
+}
 function openEditor(id,patch={},anchor=null){
  const old=id?events.find(e=>e.id===id):null;if(id&&!old)return;
  selectedId=id;
  const perOccurrence=Boolean(old&&old.repeat!=='none'&&anchor);
  const start=atDay(dayKey(selectedDate),9);
- const e=old||{id:newId(),title:'',start:start.toISOString(),end:new Date(+start+3600000).toISOString(),allDay:false,category:'personal',module:'personal',status:'done',visibility:'personal',reminder:10,repeat:'none',notes:'',location:'',details:{},checklist:[],...patch};
+ const e=old||{id:newId(),title:'',start:start.toISOString(),end:new Date(+start+3600000).toISOString(),allDay:false,category:'personal',module:'personal',status:'done',visibility:'personal',reminder:10,repeat:'none',notes:'',location:'',details:{},checklist:[],photos:[],...patch};
  const d=$('#editor'),field=(label,body,full=false,attrs='')=>'<label class="field'+(full?' full':'')+'"'+(attrs?' '+attrs:'')+'><span>'+label+'</span>'+body+'</label>';
- d.innerHTML='<form id="event-form"><div class="dialog-head"><h2 id="editor-title">'+(old?'일정 살펴보기':'새로운 일정')+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><input class="editor-name" name="title" placeholder="어떤 하루를 계획하나요?" aria-label="일정 이름" maxlength="160" required value="'+esc(e.title)+'"><div class="form-grid">'+field('캘린더','<select name="category">'+(categories.some(c=>c.id===e.category)?categories:[...categories,{id:e.category,label:'보관된 분류'}]).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===e.category?'selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select>')+field('진행 상태','<select name="status">'+[['planned','예정'],['progress','진행 중'],['done','완료']].map(([v,l])=>'<option value="'+v+'" '+(e.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select>',false,'id="status-field"')+'</div><div id="extra-fields"></div><div class="form-grid">'+dateTimeField('start','시작',e.allDay?e.start:dateInput(e.start),e.allDay)+dateTimeField('end',e.allDay?'마지막 날짜':'종료',e.allDay?dayKey(shiftDay(atDay(e.end),-1)):dateInput(e.end),e.allDay)+'</div><div class="form-grid tri">'+field('반복','<select name="repeat">'+[['none','반복 안 함'],['daily','매일'],['weekly','매주'],['monthly','매월 같은 날짜'],['yearly','매년 같은 날짜']].map(([v,l])=>'<option value="'+v+'" '+(e.repeat===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+field('미리 알림','<select name="reminder">'+[[-1,'알림 없음'],[0,'시작할 때'],[10,'10분 전'],[30,'30분 전'],[60,'1시간 전'],[1440,'하루 전']].map(([v,l])=>'<option value="'+v+'" '+(e.reminder===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+'<label class="form-check compact allday"><input type="checkbox" name="allDay"'+(e.allDay?'checked':'')+'><span class="allday-label">종일<br>일정</span></label></div><div class="field full"><div class="memo-head"><span id="notes-label">메모</span><div class="memo-actions"><button type="button" class="soft" id="checklist-add">'+icon('plus')+'체크박스</button><button type="button" class="soft" id="bullet-add">'+icon('plus')+'목록</button></div></div><div class="memo-box"><textarea name="notes" style="min-height:170px" placeholder="기억할 내용이나 준비할 것을 남겨 주세요.">'+esc(e.notes)+'</textarea><div id="checklist-rows"></div></div></div><p class="form-note">'+(perOccurrence?'저장하거나 삭제할 때 이 날짜만 바꿀지, 전체 반복을 바꿀지 선택할 수 있어요. ':e.repeat!=='none'?'반복 일정의 수정·삭제는 전체 반복에 적용됩니다. ':'')+(store.isCloud?'':'체험 공간의 알림은 설정만 저장됩니다. 휴대폰으로 발송되지 않습니다.')+(e.worklogRecord?'<br>연결 기록의 기본 항목을 함께 저장합니다. 기존 업무일지와의 자동 동기화는 아직 연결 전입니다.':e.source?'<br>가져온 원본: '+esc(e.source.app)+' · 원본 수정은 아직 반영하지 않습니다.':'')+'</p><p class="form-error" role="alert"></p></div><div class="dialog-actions"><div class="actions-left">'+(old?'<button type="button" class="danger" id="delete-event">'+icon('trash')+'삭제</button>':'')+(store.isCloud?'<select name="visibility" class="compact-select" aria-label="공개 범위"><option value="personal" '+(e.visibility==='personal'?'selected':'')+'>나만 보기</option><option value="family" '+(e.visibility==='family'?'selected':'')+'>가족과 공유</option></select>':'')+'</div><button type="button" data-close class="soft">닫기</button><button type="submit" class="primary">'+icon('check')+'저장하기</button></div></form>';
+ d.innerHTML='<form id="event-form"><div class="dialog-head"><h2 id="editor-title">'+(old?'일정 살펴보기':'새로운 일정')+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><input class="editor-name" name="title" placeholder="어떤 하루를 계획하나요?" aria-label="일정 이름" maxlength="160" required value="'+esc(e.title)+'"><div class="form-grid">'+field('캘린더','<select name="category">'+(categories.some(c=>c.id===e.category)?categories:[...categories,{id:e.category,label:'보관된 분류'}]).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===e.category?'selected':'')+'>'+esc(c.label)+'</option>').join('')+'</select>')+field('진행 상태','<select name="status">'+[['planned','예정'],['progress','진행 중'],['done','완료']].map(([v,l])=>'<option value="'+v+'" '+(e.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select>',false,'id="status-field"')+'</div><div id="extra-fields"></div><div class="form-grid">'+dateTimeField('start','시작',e.allDay?e.start:dateInput(e.start),e.allDay)+dateTimeField('end',e.allDay?'마지막 날짜':'종료',e.allDay?dayKey(shiftDay(atDay(e.end),-1)):dateInput(e.end),e.allDay)+'</div><div class="form-grid tri">'+field('반복','<select name="repeat">'+[['none','반복 안 함'],['daily','매일'],['weekly','매주'],['monthly','매월 같은 날짜'],['yearly','매년 같은 날짜']].map(([v,l])=>'<option value="'+v+'" '+(e.repeat===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+field('미리 알림','<select name="reminder">'+[[-1,'알림 없음'],[0,'시작할 때'],[10,'10분 전'],[30,'30분 전'],[60,'1시간 전'],[1440,'하루 전']].map(([v,l])=>'<option value="'+v+'" '+(e.reminder===v?'selected':'')+'>'+l+'</option>').join('')+'</select>')+'<label class="form-check compact allday"><input type="checkbox" name="allDay"'+(e.allDay?'checked':'')+'><span class="allday-label">종일<br>일정</span></label></div><div class="field full"><div class="memo-head"><span id="notes-label">메모</span><div class="memo-actions"><button type="button" class="soft" id="checklist-add">'+icon('plus')+'체크박스</button><button type="button" class="soft" id="bullet-add">'+icon('plus')+'목록</button></div></div><div class="memo-box"><textarea name="notes" style="min-height:170px" placeholder="기억할 내용이나 준비할 것을 남겨 주세요.">'+esc(e.notes)+'</textarea><div id="checklist-rows"></div></div></div><div class="field full" id="photo-field"><div class="memo-head"><span>사진</span><div class="memo-actions"><button type="button" class="soft" id="photo-add">'+icon('plus')+'사진 추가</button></div></div><input type="file" id="photo-input" accept="image/*" multiple hidden><div id="photo-grid" class="photo-grid"></div><p class="form-note" id="photo-hint" hidden>일정을 저장한 뒤 사진을 추가할 수 있어요.</p></div><p class="form-note">'+(perOccurrence?'저장하거나 삭제할 때 이 날짜만 바꿀지, 전체 반복을 바꿀지 선택할 수 있어요. ':e.repeat!=='none'?'반복 일정의 수정·삭제는 전체 반복에 적용됩니다. ':'')+(store.isCloud?'':'체험 공간의 알림은 설정만 저장됩니다. 휴대폰으로 발송되지 않습니다.')+(e.worklogRecord?'<br>연결 기록의 기본 항목을 함께 저장합니다. 기존 업무일지와의 자동 동기화는 아직 연결 전입니다.':e.source?'<br>가져온 원본: '+esc(e.source.app)+' · 원본 수정은 아직 반영하지 않습니다.':'')+'</p><p class="form-error" role="alert"></p></div><div class="dialog-actions"><div class="actions-left">'+(old?'<button type="button" class="danger" id="delete-event">'+icon('trash')+'삭제</button>':'')+(store.isCloud?'<select name="visibility" class="compact-select" aria-label="공개 범위"><option value="personal" '+(e.visibility==='personal'?'selected':'')+'>나만 보기</option><option value="family" '+(e.visibility==='family'?'selected':'')+'>가족과 공유</option></select>':'')+'</div><button type="button" data-close class="soft">닫기</button><button type="submit" class="primary">'+icon('check')+'저장하기</button></div></form>';
  const form=$('#event-form');let draftDetails={...(e.details||{})};
  function extras(){
   form.querySelectorAll('[data-detail]').forEach(x=>draftDetails[x.dataset.detail]=x.value);
@@ -105,6 +163,7 @@ function openEditor(id,patch={},anchor=null){
   $('#notes-label').textContent=form.category.value==='worklog'?'상세내용':'메모';
   form.elements.namedItem('title').placeholder=form.category.value==='worklog'?'무엇을 했나요?':'어떤 하루를 계획하나요?';
   const statusField=$('#status-field');if(statusField)statusField.style.display=form.category.value==='family'?'none':'';
+  const photoField=$('#photo-field');if(photoField)photoField.style.display=form.category.value==='worklog'?'none':'';
   if(active&&module.renderEditor){module.renderEditor($('#extra-fields'),draftDetails,e.worklogRecord||{});return;}
   const fields=active?module.fields:[];
   $('#extra-fields').innerHTML=fields.length?'<div class="extra-fields"><div class="extra-label">'+icon(module.icon)+esc(module.label)+' 상세</div><div class="form-grid">'+fields.map(f=>field(esc(f.label),'<input data-detail="'+esc(f.key)+'" type="'+(f.type||'text')+'" '+(f.type==='number'?'min="0"':'')+' placeholder="'+esc(f.placeholder||'')+'" value="'+esc(draftDetails[f.key]??'')+'">')).join('')+'</div></div>':'';
@@ -125,6 +184,70 @@ function openEditor(id,patch={},anchor=null){
  const addChecklistRow=kind=>{draftChecklist.push({text:'',done:false,kind});renderChecklistRows();const inputs=document.querySelectorAll('[data-check-text]');inputs[inputs.length-1]?.focus();};
  $('#checklist-add').onclick=()=>addChecklistRow('check');
  $('#bullet-add').onclick=()=>addChecklistRow('bullet');
+ // Photos upload/delete immediately against the server (not deferred to 저장하기), so a new event
+ // must be saved once before photos can attach to it — there is no event doc yet to attach to.
+ let draftPhotos=(e.photos||[]).map(x=>({...x}));
+ let currentRevision=old?.revision||0;
+ const canAddPhotos=()=>!store.isCloud||Boolean(old);
+ function compressImageFile(file){
+  return new Promise((resolve,reject)=>{
+   const img=new Image(),reader=new FileReader();
+   reader.onerror=()=>reject(Error('이미지를 읽지 못했습니다.'));
+   reader.onload=()=>{
+    img.onerror=()=>reject(Error('이미지를 열지 못했습니다.'));
+    img.onload=()=>{
+     const maxDim=1600;let w=img.width,h=img.height;
+     if(w>maxDim||h>maxDim){if(w>h){h=Math.round(h*maxDim/w);w=maxDim;}else{w=Math.round(w*maxDim/h);h=maxDim;}}
+     const c=document.createElement('canvas');c.width=w;c.height=h;
+     c.getContext('2d').drawImage(img,0,0,w,h);
+     resolve(c.toDataURL('image/jpeg',0.82));
+    };
+    img.src=reader.result;
+   };
+   reader.readAsDataURL(file);
+  });
+ }
+ function renderPhotoGrid(){
+  const host=$('#photo-grid');if(!host)return;
+  host.innerHTML=draftPhotos.map((p,i)=>'<div class="photo-tile"><img src="'+esc(p.url)+'" alt="사진" data-photo-open="'+i+'">'+(p.uploading?'<span class="photo-spin" aria-hidden="true"></span>':'<button type="button" class="photo-del" data-photo-del="'+esc(p.id)+'" aria-label="삭제">'+icon('close')+'</button>')+'</div>').join('');
+  host.querySelectorAll('[data-photo-open]').forEach(img=>img.onclick=()=>openPhotoViewer(draftPhotos,Number(img.dataset.photoOpen)));
+  host.querySelectorAll('[data-photo-del]').forEach(b=>b.onclick=()=>removePhoto(b.dataset.photoDel));
+  const addBtn=$('#photo-add'),hint=$('#photo-hint');
+  if(addBtn)addBtn.hidden=!canAddPhotos()||draftPhotos.length>=MAX_PHOTOS;
+  if(hint)hint.hidden=canAddPhotos();
+ }
+ async function addPhotoFiles(files){
+  const room=MAX_PHOTOS-draftPhotos.length;
+  if(room<=0){toast('사진은 최대 '+MAX_PHOTOS+'장까지 첨부할 수 있습니다.');return;}
+  for(const file of files.slice(0,room)){
+   if(!file.type.startsWith('image/')){toast('이미지 파일만 추가할 수 있어요.');continue;}
+   if(file.size>20*1024*1024){toast('사진 용량이 너무 큽니다. (최대 20MB)');continue;}
+   let dataUrl;try{dataUrl=await compressImageFile(file);}catch(err){toast(err.message);continue;}
+   if(!store.isCloud){draftPhotos.push({id:newId(),url:dataUrl,createdAt:Date.now()});renderPhotoGrid();continue;}
+   const tempId='pending:'+newId();
+   draftPhotos.push({id:tempId,url:dataUrl,createdAt:Date.now(),uploading:true});renderPhotoGrid();
+   try{
+    const base64=dataUrl.slice(dataUrl.indexOf(',')+1);
+    const {event,photo}=await store.uploadPhoto(old.id,base64,'image/jpeg');
+    currentRevision=event.revision;
+    const idx=draftPhotos.findIndex(p=>p.id===tempId);if(idx>-1)draftPhotos[idx]={...photo};
+   }catch(err){
+    draftPhotos=draftPhotos.filter(p=>p.id!==tempId);
+    toast(err.message||'사진을 올리지 못했습니다.');
+   }
+   renderPhotoGrid();
+  }
+ }
+ async function removePhoto(photoId){
+  if(photoId.startsWith('pending:'))return;
+  const before=draftPhotos;draftPhotos=draftPhotos.filter(p=>p.id!==photoId);renderPhotoGrid();
+  if(!store.isCloud||!old)return;
+  try{const {event}=await store.deletePhoto(old.id,photoId);currentRevision=event.revision;}
+  catch(err){draftPhotos=before;renderPhotoGrid();toast(err.message||'사진을 지우지 못했습니다.');}
+ }
+ $('#photo-add').onclick=()=>$('#photo-input').click();
+ $('#photo-input').onchange=ev=>{const files=[...ev.target.files];ev.target.value='';if(files.length)addPhotoFiles(files);};
+ renderPhotoGrid();
  d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close());
  if(old)$('#delete-event').onclick=async()=>{
   let scope='all';
@@ -135,8 +258,8 @@ function openEditor(id,patch={},anchor=null){
    return;
   }
   try{
-   if(scope==='one'){await store.save({...old,exceptions:{...(old.exceptions||{}),[anchor]:{deletedAt:Date.now()}}},old.revision);}
-   else await store.remove(old);
+   if(scope==='one'){await store.save({...old,exceptions:{...(old.exceptions||{}),[anchor]:{deletedAt:Date.now()}}},currentRevision);}
+   else await store.remove({...old,revision:currentRevision});
    d.close();toast(scope==='one'?'이 날짜만 휴지통으로 옮겼습니다. 다른 날짜의 반복은 유지됩니다.':'일정을 휴지통으로 옮겼습니다.');
   }catch(err){if(err.queued){d.close();toast(err.message);}else $('.form-error').textContent=err.message;}
  };
@@ -145,7 +268,7 @@ function openEditor(id,patch={},anchor=null){
   try{
    form.querySelectorAll('[data-detail]').forEach(x=>draftDetails[x.dataset.detail]=x.value);
    const allDay=form.allDay.checked;
-   const fields={title:form.elements.namedItem('title').value,category:form.category.value,module:form.category.value===e.category?e.module:(registry.get(form.category.value)?form.category.value:'personal'),status:form.status.value,repeat:form.repeat.value,reminder:Number(form.reminder.value),allDay,start:allDay?form.start.value:new Date(form.start.value).toISOString(),end:allDay?dayKey(shiftDay(atDay(form.end.value),1)):new Date(form.end.value).toISOString(),notes:form.notes.value,location:e.location||'',details:draftDetails,checklist:draftChecklist.filter(x=>x.text.trim()).map(x=>({text:x.text.trim(),done:!!x.done,kind:x.kind})),visibility:store.isCloud?form.visibility.value:'personal'};
+   const fields={title:form.elements.namedItem('title').value,category:form.category.value,module:form.category.value===e.category?e.module:(registry.get(form.category.value)?form.category.value:'personal'),status:form.status.value,repeat:form.repeat.value,reminder:Number(form.reminder.value),allDay,start:allDay?form.start.value:new Date(form.start.value).toISOString(),end:allDay?dayKey(shiftDay(atDay(form.end.value),1)):new Date(form.end.value).toISOString(),notes:form.notes.value,location:e.location||'',details:draftDetails,checklist:draftChecklist.filter(x=>x.text.trim()).map(x=>({text:x.text.trim(),done:!!x.done,kind:x.kind})),photos:draftPhotos.filter(p=>!p.uploading).map(p=>({id:p.id,url:p.url,createdAt:p.createdAt})),visibility:store.isCloud?form.visibility.value:'personal'};
    let scope='all';
    if(perOccurrence){
     scope=await chooseScope('저장 범위를 선택해 주세요.','반복 일정 중 이 날짜만 바꿀지, 전체 반복을 바꿀지 골라 주세요.',[{value:'one',label:'이 날짜만'},{value:'all',label:'전체 반복'}]);
@@ -154,8 +277,8 @@ function openEditor(id,patch={},anchor=null){
    let saved;
    // A single-occurrence edit only overrides content (title/notes/location/status/reminder), not
    // the time — moving one instance of a series is a later refinement (see docs).
-   if(scope==='one'){saved=await store.save({...old,exceptions:{...(old.exceptions||{}),[anchor]:{title:fields.title,notes:fields.notes,location:fields.location,status:fields.status,reminder:fields.reminder}}},old.revision);}
-   else saved=await store.save({...e,...fields,demo:old?.demo||false},old?.revision||0);
+   if(scope==='one'){saved=await store.save({...old,exceptions:{...(old.exceptions||{}),[anchor]:{title:fields.title,notes:fields.notes,location:fields.location,status:fields.status,reminder:fields.reminder}}},currentRevision);}
+   else saved=await store.save({...e,...fields,demo:old?.demo||false},currentRevision);
    d.close();toast(saved?.pendingSync?'오프라인 상태입니다. 온라인이 되면 자동으로 저장됩니다.':scope==='one'?'이 날짜만 저장했습니다.':'일정을 저장했습니다.');
   }catch(err){if(err.queued){d.close();toast(err.message);}else $('.form-error').textContent=err.message;}
   finally{submit.disabled=false;}

@@ -83,6 +83,10 @@ export class CloudStore{
  subscribe(fn){this.listeners.add(fn);return()=>this.listeners.delete(fn);}
  async remove(event){return this.save({...event,deletedAt:Date.now()},event.revision);}
  async import(events){let n=0;for(const e of events){if(this.cache.some(x=>x.id===e.id))continue;try{await this.save(e,0);}catch(err){if(!err.queued)throw err;}n++;}return n;}
+ // Photos upload/delete immediately (independent of the surrounding form's 저장하기), so a later
+ // main save uses the resulting revision as its expectedRevision instead of racing it into a conflict.
+ async uploadPhoto(eventId,base64,contentType){return this.request('/events/'+eventId+'/photos','POST',{data:base64,contentType});}
+ async deletePhoto(eventId,photoId){return this.request('/events/'+eventId+'/photos/'+photoId,'DELETE');}
  async meta(k,f){if(!this.preferences)this.preferences=await this.request("/preferences");return this.preferences[k]??f;}
  async setMeta(k,v){await this.request("/preferences","POST",{key:k,value:v});this.preferences={...this.preferences,[k]:v};}
  close(){clearInterval(this.timer);this.token=null;this.refreshToken=null;sessionStorage.removeItem("dalnim-session");}
