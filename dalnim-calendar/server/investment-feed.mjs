@@ -22,7 +22,7 @@ export function mapRecordToEvent(doc) {
   const label = KIND_LABEL[doc.kind] || '기록';
   return {
     id: 'investment-record:' + doc.id,
-    title: String(doc.title || doc.oneLiner || label + ' 기록').slice(0, 160),
+    title: ('📁 ' + String(doc.title || doc.oneLiner || label + ' 기록')).slice(0, 160),
     start: doc.date, end: dayAfter(doc.date), allDay: true, timeZone: 'Asia/Seoul',
     category: 'investment', module: 'investment', status: 'done', repeat: 'none', reminder: -1,
     visibility: 'personal', notes: String(doc.body || doc.oneLiner || '').slice(0, 20000),
@@ -40,7 +40,7 @@ export function mapCheckToEvent(record, check, index) {
   const label = FOLLOWUP_LABEL[check.followUpType] || '확인할 것';
   return {
     id: 'investment-check:' + record.id + ':' + (check.id || index),
-    title: String(check.what || label).slice(0, 160),
+    title: ('🔔 ' + String(check.what || label)).slice(0, 160),
     start: check.date, end: dayAfter(check.date), allDay: true, timeZone: 'Asia/Seoul',
     category: 'investment', module: 'investment', status: 'planned', repeat: 'none', reminder: -1,
     visibility: 'personal', notes: String(check.action || '').slice(0, 20000),
@@ -55,7 +55,7 @@ export function mapReviewToEvent(record) {
   if (!isStudyRecord(record) || !isDateStr(record.reviewAt)) return null;
   return {
     id: 'investment-review:' + record.id,
-    title: '재검토: ' + String(record.title || '기록').slice(0, 140),
+    title: ('🔁 재검토: ' + String(record.title || '기록')).slice(0, 140),
     start: record.reviewAt, end: dayAfter(record.reviewAt), allDay: true, timeZone: 'Asia/Seoul',
     category: 'investment', module: 'investment', status: 'planned', repeat: 'none', reminder: -1,
     visibility: 'personal', notes: '', location: '',
