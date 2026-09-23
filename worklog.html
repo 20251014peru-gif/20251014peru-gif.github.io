@@ -158,7 +158,7 @@
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v292-0923-1331";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v293-0923-1344";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -3271,7 +3271,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=292-20260923t1331"></script>
+<script src="worklog.js?v=293-20260923t1344"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -20577,9 +20577,10 @@ body.lf-resizing{ cursor:col-resize !important; user-select:none !important }
 .pg-statuspair{ grid-column:1 / -1; display:grid; grid-template-columns:1fr 2.2fr; gap:2px 22px; align-items:start }
 .pg-statuspair .pg-prow{ padding:4px 0 }
 @media (max-width:640px){ .pg-statuspair{ grid-template-columns:1fr 1.6fr; gap:0 10px } }
-/* v291 — 「업체 전화 메모 한줄로」— 세 칸 짝은 고르게 3등분 */
-.pg-statuspair-3{ grid-template-columns:1fr 1fr 1fr }
-@media (max-width:640px){ .pg-statuspair-3{ grid-template-columns:1fr 1fr 1fr } }
+/* v291 — 「업체 전화 메모 한줄로」
+   v292 — 달님 : 「업체 전화는 칸을 줄이고 메모는 좀 늘려 그만큼」 */
+.pg-statuspair-3{ grid-template-columns:0.85fr 0.85fr 1.3fr }
+@media (max-width:640px){ .pg-statuspair-3{ grid-template-columns:0.8fr 0.8fr 1.4fr; gap:0 8px } }
 .pg-pk{ flex:0 0 148px; font-size:13px; font-weight:700; color:#8ba0b6; padding:7px 4px 7px 0;
   border-radius:7px; display:flex; align-items:center; gap:4px; min-width:0 }
 .pg-pnm{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
@@ -20875,7 +20876,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=292-20260923t1331"></script>
+<script src="personal.js?v=293-20260923t1344"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    ☰ 노션 보기 — 각 업무 탭에서 📊 데이터 화면으로 한 번에
