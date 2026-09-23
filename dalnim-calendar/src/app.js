@@ -57,9 +57,24 @@ function renderCalendar(){
  calendar=new FullCalendar.Calendar($('#calendar'),{
   initialView:page==='agenda'?'listMonth':view,initialDate:selectedDate,locale:'ko',firstDay:0,headerToolbar:false,nowIndicator:true,allDayText:'종일',noEventsText:'표시할 일정이 없습니다.',buttonText:{today:'오늘'},height:'auto',expandRows:true,slotMinTime:'07:00:00',slotMaxTime:'22:00:00',scrollTime:'08:00:00',slotDuration:'00:30:00',snapDuration:'00:05:00',slotLabelInterval:'01:00:00',slotLabelFormat:{hour:'2-digit',minute:'2-digit',hour12:false},eventTimeFormat:{hour:'2-digit',minute:'2-digit',hour12:false},selectable:true,editable:true,eventDurationEditable:true,longPressDelay:350,selectMirror:true,dayMaxEvents:false,navLinks:true,slotEventOverlap:false,
   dayHeaderContent:arg=>{if(arg.view.type==='listMonth')return arg.text;return {html:'<span class="day-name">'+['일','월','화','수','목','금','토'][arg.date.getDay()]+'</span><span class="day-number">'+arg.date.getDate()+'</span>'};},
-  events:(info,success)=>success(expandEvents(visible(),info.start,info.end).map(e=>({id:e.occurrenceId,title:e.title,start:e.start,end:e.end,allDay:e.allDay,backgroundColor:color(e)+'1b',borderColor:color(e),extendedProps:{record:e},editable:e.repeat==='none'&&!e.readOnly}))),
+  events:(info,success)=>{
+   const mapped=expandEvents(visible(),info.start,info.end).map(e=>({id:e.occurrenceId,title:e.title,start:e.start,end:e.end,allDay:e.allDay,backgroundColor:color(e)+'1b',borderColor:color(e),extendedProps:{record:e},editable:e.repeat==='none'&&!e.readOnly}));
+   // Read-only investment items all share one category color, so several on the same day blur
+   // together — alternate two colors by their order within that day instead.
+   const READONLY_ALT=['#ce4b59','#c99a1e'],dayCount={};
+   mapped.filter(m=>m.extendedProps.record.readOnly).forEach(m=>{
+    const day=String(m.start).slice(0,10),i=dayCount[day]=(dayCount[day]||0)+1,c=READONLY_ALT[(i-1)%2];
+    m.borderColor=c;m.backgroundColor=c+'1b';
+   });
+   success(mapped);
+  },
   eventContent:arg=>{const e=arg.event.extendedProps.record;if(arg.view.type==='listMonth')return {html:esc(e.title)};return {html:'<div class="'+(e.status==='done'?'event-done':'')+'">'+(!e.allDay&&arg.view.type.startsWith('timeGrid')?'<div class="event-time">'+esc(timeLabel(e))+'</div>':'')+'<div class="event-title">'+(e.readOnly?icon('link','tiny')+' ':'')+esc(e.title)+'</div>'+((e.location&&arg.view.type.startsWith('timeGrid'))?'<div class="event-place">'+esc(e.location)+'</div>':'')+'</div>'};},
-  eventDidMount:arg=>{arg.el.style.setProperty('--event-color',color(arg.event.extendedProps.record));arg.el.title=arg.event.title;},
+  eventDidMount:arg=>{
+   const r=arg.event.extendedProps.record,c=r.readOnly?arg.event.borderColor:color(r);
+   arg.el.style.setProperty('--event-color',c);
+   const t=arg.el.querySelector('.event-title');if(t&&r.readOnly)t.style.color=c;
+   arg.el.title=arg.event.title;
+  },
   select:arg=>{openEditor(null,{start:arg.allDay?dayKey(arg.start):arg.start.toISOString(),end:arg.allDay?dayKey(arg.end):arg.end.toISOString(),allDay:arg.allDay});calendar.unselect();},
   eventClick:arg=>{const r=arg.event.extendedProps.record;if(r.readOnly)openReadOnlyRecord(r);else openEditor(r.id,{},occurrenceAnchor(r.occurrenceId));},
   eventDrop:moveEvent,eventResize:moveEvent,
