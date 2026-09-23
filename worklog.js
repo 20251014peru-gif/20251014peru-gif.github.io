@@ -4255,11 +4255,25 @@ function _onScanPicked(type,id,data){
         var refs = Array.isArray(rec.scanRefs) ? rec.scanRefs.slice() : [];
         refs.push({type:type, id:id, data:data||{}});
         var patch = { scanRefs: refs };
+        /* v285 — 달님 : 「스캔앱에서 가져오면 내용을 효율적으로 가져오는건 아닌거 같아」
+           글 한 줄만 덧붙이는 대신, 영수증이면 금액 칸(공급가액·부가세·합계)과
+           비어 있던 업체를 직접 채운다 — 그래야 이미 있는 「자동 정리」 요약줄에도
+           그대로 나타난다 (칸을 고치면 요약줄이 저절로 바뀌는 그 기능). */
         try{
+          if(type === 'receipt' && rec.kind === 'work'){
+            var amt = Number((data && data.amount) || 0);
+            if(amt > 0){
+              var sup = Math.round(amt / 1.1);
+              patch.supplyAmt = sup;
+              patch.taxAmt = amt - sup;
+              patch.cost = amt;
+            }
+            if(data && data.place && !String(rec.workVendor||'').trim()) patch.workVendor = data.place;
+          }
           var line = scanRefBodyLine(type, data);
           var body = String(rec.detail || rec.memo || '').trim();
           if(line && body.indexOf(line) < 0) patch.detail = body ? (body + '\n' + line) : line;
-        }catch(e){ console.warn('[스캔앱] 본문에 넣기 실패', e); }
+        }catch(e){ console.warn('[스캔앱] 자동 채우기 실패', e); }
         updateRecord(targetId, patch);
         toast(scanKindOf(type).icon+' '+scanRefTitle(type,data)+' 첨부됨');
         try{ if(typeof window.wlGoPage === 'function') window.wlGoPage(targetId); }catch(e){}
@@ -15740,13 +15754,29 @@ async function githubUpload(token){
           wasHidden = !!ph;
           if(ph) hiddenOpen = (ph.style.display === 'contents');
         }catch(e){}
-        if(r.el.previousElementSibling !== prev) putAfter(r.el, prev);
-        prev = r.el;
+        /* v285 — 「완료 상태」가 wlStatusMemoPair 상자(.pg-statuspair) 안에
+              내용과 짝지어 있으면, 그 칸만 빼내지 않고 상자째로 움직인다 —
+              안 그러면 이 묶음 재배치가 매번 상자를 도로 풀어 버렸다. */
+        var pgWrap = (r.el.parentNode && r.el.parentNode.classList
+                      && r.el.parentNode.classList.contains('pg-statuspair')) ? r.el.parentNode : null;
+        if(pgWrap){
+          if(pgWrap.previousElementSibling !== prev) putAfter(pgWrap, prev);
+          prev = pgWrap;
+        }else{
+          if(r.el.previousElementSibling !== prev) putAfter(r.el, prev);
+          prev = r.el;
+        }
         /* v279 — 「합계」(_amount) 는 이 길로도 숨을 수 있었다. wlEye(칸 숨기기)
               쪽만 못 숨기게 막아 뒀지, 여기(빈 칸이라 묶음 안에 조용히 숨기는 길)는
               그대로였다 — 「빈 항목」을 한 번도 편 적 없는 기기·계정에서는
-              공급가액·부가세·자동등록이 처음부터 막혀 있었다는 뜻. */
-        if(wasHidden && !hiddenOpen && r.k !== '_amount'){ r.el.style.display = 'none'; r.el._gEmpty = 1; }
+              공급가액·부가세·자동등록이 처음부터 막혀 있었다는 뜻.
+           v285 — 위 주석이 예고한 그 공급가액·부가세가 실제로 이 길로 숨어
+              있었다 (달님 : 「공급가액없이 부가세 합계만 나와」). 스캔앱으로
+              방금 채워도 옛 스냅샷(#pgHidden 소속)만 보고 도로 숨겼던 것 —
+              합계와 같은 한 세트라 함께 막는다. r._ruleKeep(모드 칸이 방금
+              살려 둔 표시)이 있으면 그 무엇도 다시 숨기지 않는다. */
+        if(wasHidden && !hiddenOpen && !r.el._ruleKeep
+           && ['_amount','f:supplyAmt','f:taxAmt'].indexOf(r.k) < 0){ r.el.style.display = 'none'; r.el._gEmpty = 1; }
         else if(r.el._gEmpty){ r.el.style.display = ''; r.el._gEmpty = 0; }
       });
 
@@ -16921,10 +16951,13 @@ async function githubUpload(token){
                       hint:'＋ 로 골라 담으면 합계가 저절로 들어갑니다 (지출 기록은 안 만듭니다)' },
         /* v119 — 지출 등록 창을 안 열고 여기서 끝낸다.
               합계를 넣으면 공급가액·부가세가 거꾸로 계산된다. */
+        /* v285 — 하위구분을 용도 앞으로 옮겨 짝지어지게 한다 (전표·후불청구와 같은 차례).
+              예전 차례(용도 다음 공급가액)는 이 칸들을 지출종류 뒤로 다시 늘어세우는
+              통에 baseGroups() 에서 맞춰 둔 「하위구분+용도 나란히」·「공급가액 보이게」가
+              깨졌었다 — 여기가 나중에 실행돼 이기기 때문. */
         '개인비용': { secs:{ mat:false, pics:true,  att:false, sub:false, time:false },
-                      props:['_sub','f:purpose','f:supplyAmt','f:taxAmt','_amount'],
-                      pick:'mats', exp:'개인지출',
-                      hint:'합계만 넣어도 공급가액·부가세가 저절로 나뉩니다 · 영수증은 📎 스캔앱' },
+                      props:['_sub','f:expSubType','f:purpose','f:supplyAmt','f:taxAmt','_amount'],
+                      pick:'mats', exp:'개인지출' },   /* v285 — 달님 : 「다섯번째 사진 문구는 빼도돼」 */
         '전표':     { secs:{ mat:false, pics:true,  att:false, sub:false, time:false },
                       props:['_sub','f:expSubType','f:purpose','_amount'], exp:'전표',
                       hint:'전표 구분(전기·수도…)과 용도를 고르세요' },
@@ -18128,8 +18161,12 @@ async function githubUpload(token){
       if(!key || key === '_date') return;                 /* 날짜는 못 숨긴다 */
       /* v276 — 합계(_amount)를 숨기면 공급가액·부가세 자동분리와 지출 자동등록이
             통째로 멈춘다(칸 자체가 안 보이니 입력을 못 한다). 그래서 못 숨긴다.
-            예전에 실수로 숨긴 적이 있으면 여기서 되살린다. */
-      if(key === '_amount'){
+            예전에 실수로 숨긴 적이 있으면 여기서 되살린다.
+         v285 — 달님 : 「공급가액없이 부가세 합계만 나와」 — 실제 원인을 찾아보니
+            이 칸(공급가액)이 예전에 👁 로 숨겨져 있었다. 합계와 한 세트로 자동
+            계산·영수증 자동 채움을 받는 칸이라 부가세도 같이 — 같은 이유로
+            못 숨기게 막고, 이미 숨겨져 있던 것도 되살린다. */
+      if(key === '_amount' || key === 'f:supplyAmt' || key === 'f:taxAmt'){
         if(u.get('fld', key) === 0) u.set('fld', key, null);
         if(row._userHid){ row.style.display = ''; row._userHid = 0; }
         return;
@@ -22633,6 +22670,58 @@ async function githubUpload(token){
 
 
 /* ============================================================
+   📐 완료 상태 + 내용 나란히 (wlStatusMemoPair)  v285-0923
+
+   달님 : 「내용+완료 2열로 나오게 하지만 완료 상태 가로크기는 좀 줄여서」
+
+   격자(.pg-props)는 앞에서부터 순서대로 칸을 채우는데, 대상년도·세부처럼
+   비어서 접히는 칸이 몇 개냐에 따라 완료 상태가 짝수/홀수 자리를 오락가락
+   해서 「내용」과 짝이 맞을 때도, 안 맞을 때도 있었다 — 격자 흐름에 기대지
+   않고 두 칸을 직접 한 상자(.pg-statuspair)로 묶어 버린다. 완료 상태·내용은
+   DOM 차례로는 항상 바로 옆칸(형제)이라 — 비어서 숨는 칸이 몇 개든 안 변한다.
+   ============================================================ */
+(function(){
+  'use strict';
+  /* 묶음 발치(.pg-gfoot)·이음줄 같은 표시(꼬리)는 진짜 다음 칸이 아니다 — 건너뛴다 */
+  function nextMeaningful(el){
+    var n = el.nextElementSibling;
+    while(n && n.classList && (n.classList.contains('pg-gfoot') || n.classList.contains('pg-gtail')
+          || n.classList.contains('pg-ghead') || n.classList.contains('pg-grow'))){
+      n = n.nextElementSibling;
+    }
+    return n;
+  }
+  function run(){
+    var page = document.querySelector('.lf-page'); if(!page) return;
+    /* 빈 상자 청소 — 무언가 다른 손길로 안의 칸이 빠져나가면 껍데기만
+       남는다. 매번 검사해 치운다. */
+    [].forEach.call(page.querySelectorAll('.pg-statuspair'), function(b){
+      if(!b.children.length) b.remove();
+    });
+    var status = page.querySelector('[data-prow="f:status"]');
+    var memo   = page.querySelector('[data-prow="_memo"]');
+    if(!status || !memo) return;
+    /* 이미 한 상자 안에 형제로 있다 — 묶음 발치(.pg-gfoot)가 그 사이에
+       끼어들어도(wlGroup 이 매번 새로 만든다) 둘의 짝은 안 변한다. */
+    if(status.parentNode === memo.parentNode
+       && status.parentNode.classList && status.parentNode.classList.contains('pg-statuspair')) return;
+    /* v285 — 묶기 전 조건 : 완료 상태 다음(묶음 발치는 빼고)이 내용이어야
+       한다(둘 다 감춰진 #pgHidden 안이어도 형제 차례는 그대로다).
+       아니면 억지로 묶지 않는다. */
+    if(nextMeaningful(status) !== memo) return;
+    var host = page.querySelector('.pg-props'); if(!host) return;
+    var box = document.createElement('div');
+    box.className = 'pg-statuspair';
+    host.insertBefore(box, status);
+    box.appendChild(status);
+    box.appendChild(memo);
+  }
+  (window.__wlPaintQ = window.__wlPaintQ || []).push({ o:60, n:'완료+내용 나란히', f:run });
+  console.log('[완료+내용 나란히] v285 준비됨');
+})();
+
+
+/* ============================================================
    🧱 중괄호 짝 자동 검사 (wlBrace)  v157-0830-2230
 
    2026-08-26 : style 블록의 중괄호 **1개**가 빠져 뒤 규칙 52개가 통째로 죽었다.
@@ -23561,7 +23650,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v284-0923-1039';
+  var JS_BUILD = 'v285-0923-1137';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */

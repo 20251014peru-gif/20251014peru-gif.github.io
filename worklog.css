@@ -976,6 +976,12 @@ tr.wk-checked td{background:#e8f3fd !important}
   font-family:inherit; white-space:nowrap;
 }
 .pg-undo:hover{ background:#fff3d6 }
+/* v285 — 달님 : 「셀틀 배치를 이쁘게」— 컴팩트에서는 값 칸이 통째로 넓어
+   단추가 밑으로 떨어지는데, 그때는 왼쪽에 붙던 여백(margin-left)이 그대로
+   남아 입력칸에 바짝 눌려 보였다. 줄바꿈 때는 위쪽 여백으로, 작고 옅게. */
+.lf-page.is-compact .pg-undo{
+  margin-left:0; margin-top:7px; height:25px; padding:0 9px; font-size:11px;
+}
 #pgSumBody{ display:inline-flex; align-items:center }
 
 /* 📝 본문 정리 단추 줄 미리보기 (v113) */
@@ -1593,6 +1599,11 @@ tr.settle-add:hover .settle-addhint{ color:#3f7cb8; font-weight:800 }
 .lf-page.is-compact .pg-ghead{ grid-column:1 / -1; margin:10px 0 2px; padding:8px 12px; border-top:none;
   background:linear-gradient(90deg,#eef5fd,#f8fbff); border-left:4px solid #2563a8; border-radius:0 9px 9px 0;
   flex-direction:row; align-items:center }
+/* v285 — 달님 : 「접어도 제목이 안 나오고 아이콘만 나와」
+   컴팩트 모드는 모든 줄을 세로로 쌓는데(위 ①), 접힌 묶음 요약줄(.pg-grow)도
+   똑같이 쌓여 아이콘 혼자 한 줄, 제목이 그 밑 줄로 떨어져 「아이콘만 있다」로
+   보였다 — .pg-ghead 처럼 한 줄로 되돌린다. */
+.lf-page.is-compact .pg-grow{ flex-direction:row !important; align-items:center }
 .lf-page.is-compact .pg-sechd .pg-sect{ font-size:13px; font-weight:900; color:#1d4f86 }
 .lf-page.is-compact .pg-gtail{ display:none }
 .lf-page.is-compact .pg-foot{ margin-top:8px }
