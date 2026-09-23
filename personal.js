@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v293-0923-1344';
+window.PERSONAL_BUILD = 'v294-0923-1411';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -751,7 +751,9 @@ window.PERSONAL_BUILD = 'v293-0923-1344';
        get opts(){ try{ return (window.wlExpSubs ? window.wlExpSubs.all() : []); }catch(e){ return []; } } },
       {k:'supplyAmt',   label:'공급가액 (원)',  type:'number'},
       {k:'taxAmt',      label:'부가세 (원)',    type:'number'},
-      {k:'isJeonpyo',   label:'전표',          type:'checkbox'},
+      /* v294 — 달님 : 「전표는 지워도 될듯」— 이 체크칸(isJeonpyo)을 없앤다.
+         값은 그대로 남아 있고(지출종류 「전표」 칩으로 이미 구분된다),
+         카드 화면에서만 안 보인다. */
       /* v291 — 달님 : 「담당자 직책은 지워 버리고 차라리 메모를 넣어
          업체 전화 메모 한줄로 나오게」— 담당자·직책 칸을 없애고 메모를
          넣는다. 담당자·직책 칸이 없어지면 업체 바로 다음이 전화가 되어
