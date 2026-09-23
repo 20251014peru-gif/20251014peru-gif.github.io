@@ -218,16 +218,36 @@ def judge_invest(term, google_titles):
     ok = _trend_ok(term) and score >= INVEST_SCORE_MIN
     return ok, score, why
 
+def fetch_signal_items():
+    """시그널(signal.bz) 실시간 검색어 top10. 공식 API 아님(비공식, 문서 없음) — 네이버 실검 폐지 후
+    이를 대신하는 서비스로 널리 쓰인다. 구글 트렌드(하루 1번 갱신되는 10개)와 달리 실시간으로 바뀌어서,
+    수집이 하루 여러 번 도는 우리 구조에서 매번 다른 스냅샷을 잡을 수 있어 표본이 더 풍부하다."""
+    try:
+        r = requests.get("https://api.signal.bz/news/realtime",
+                          headers={**HEADERS, "Referer": "https://www.signal.bz/"}, timeout=10)
+        r.raise_for_status()
+        d = r.json()
+        out = []
+        for x in d.get("top10") or []:
+            t = strip_tags(str(x.get("keyword") or "")).strip()
+            if t:
+                out.append(t)
+        return out
+    except Exception as ex:
+        print("  ! 시그널 실시간검색어 수집 실패:", ex)
+        return []
+
 def fetch_trending_items():
-    """구글 트렌드 대한민국 급상승 검색어 전체를 [{term, traffic, news:[제목], invest, score, why}] 로 반환."""
+    """구글 트렌드 + 시그널(signal.bz) 실시간 검색어를 합쳐 [{term, traffic, news, invest, score, why, src}] 로 반환.
+    두 소스 다 하루 10개 안팎이라 투자 관련은 드물지만, 소스를 늘리고 시그널은 실시간이라 표본이 늘어난다."""
     import xml.etree.ElementTree as ET
     url = "https://trends.google.com/trending/rss?geo=KR"
     ns = {"ht": "https://trends.google.com/trending/rss"}
+    out, seen = [], set()
     try:
         r = requests.get(url, headers=HEADERS, timeout=12)
         r.raise_for_status()
         root = ET.fromstring(r.content)
-        out, seen = [], set()
         for it in root.iter("item"):
             t = strip_tags(it.findtext("title") or "").strip()
             if not t or t in seen:
@@ -239,11 +259,16 @@ def fetch_trending_items():
             ok, score, why = judge_invest(t, news)
             out.append({"term": t,
                         "traffic": (it.findtext("ht:approx_traffic", default="", namespaces=ns) or "").strip(),
-                        "news": news, "invest": ok, "score": score, "why": why})
-        return out
+                        "news": news, "invest": ok, "score": score, "why": why, "src": "google"})
     except Exception as ex:
-        print("  ! 트렌드 수집 실패:", ex)
-        return []
+        print("  ! 구글 트렌드 수집 실패:", ex)
+    for t in fetch_signal_items():
+        if not t or t in seen:
+            continue
+        seen.add(t)
+        ok, score, why = judge_invest(t, [])   # 시그널은 관련 기사 제목을 안 줘서 검색어 자체+단어 판정만
+        out.append({"term": t, "traffic": "", "news": [], "invest": ok, "score": score, "why": why, "src": "signal"})
+    return out
 
 def fetch_trending(limit=5, items=None):
     """급상승어 중 '투자 관련'만 수집 키워드로 쓴다."""
@@ -270,6 +295,7 @@ def save_trending_log(items, now_kst):
         e["invest"] = bool(x.get("invest"))      # 최신 판정(점수·근거와 함께)
         e["score"] = x.get("score", 0)
         e["why"] = x.get("why", [])
+        e["src"] = x.get("src", e.get("src", ""))
         if x.get("news"):
             e["news"] = x["news"][:2]
         terms[x["term"]] = e
@@ -663,9 +689,9 @@ def main():
     keywords = list(dict.fromkeys(core + trending))
     print("핵심 키워드:", core)
     if trend_items:
-        print("구글 급상승어 판정 (3점 이상 = 투자 관련):")
+        print("급상승어 판정(구글+시그널, 3점 이상 = 투자 관련):")
         for x in trend_items:
-            print(f"   {'✔' if x['invest'] else '·'} {x['term']} {x['score']:+d}점  {' | '.join(x['why'])}")
+            print(f"   {'✔' if x['invest'] else '·'} [{x.get('src','?')}] {x['term']} {x['score']:+d}점  {' | '.join(x['why'])}")
     if trending:
         print("🔥 급상승(투자 관련) 자동 추가:", trending)
     else:
