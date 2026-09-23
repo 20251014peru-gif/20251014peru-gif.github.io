@@ -256,7 +256,7 @@
 <header>
   <div class="brand">
     <h1><span class="radar-dot"></span>뉴스레이더</h1>
-    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span id="aiCostBadge" onclick="openKey()" title="AI 사용 요금 (누적, 이 브라우저 기준) · 탭하면 내역 보기" style="cursor:pointer;font-weight:700;color:#6D28D9"></span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정&#10;· v5.1 급상승: 같은 시간대 비중 비교 · 검색량 · 급상승어 기록&#10;· v5.2 급상승어 투자 판정: 네이버 경제면 비율 + 상장사명 + 단어 점수&#10;· v5.3 급상승 AI 이유분석(Sonnet 5·내 AI키 이용·요금표시) · 이슈·테마에 급상승 투자 키워드 자동추천/정렬&#10;· v5.4 AI 요금 표시(헤더+설정 내역) · 오늘 뉴스에서 AI가 새 투자 키워드 찾기">v5.4</span></div>
+    <div class="hmeta"><span class="live" id="nextRun" title="1시간마다 자동 수집됩니다">● 다음 수집 --:--</span> · <span id="hdrStat">오늘 -건</span> · <span id="syncBadge" style="font-size:10px;color:var(--good);opacity:0;transition:opacity .3s">☁️</span> · <span id="aiCostBadge" onclick="openKey()" title="AI 사용 요금 (누적, 이 브라우저 기준) · 탭하면 내역 보기" style="cursor:pointer;font-weight:700;color:#6D28D9"></span> · <span style="color:var(--ink-3);cursor:help" title="v1.7 (2026-08-21)&#10;· 보드 3탭: 관심 키워드/주요 종목/검색 관심(네이버 데이터랩)&#10;· 종목 7일 뉴스 건수 추세 + 종목 관리(관심 탭)&#10;· AI로 뉴스검색(구글+네이버 즉시)&#10;· 원문 링크(표·읽기창)&#10;· 검색 강화(제목·본문·요약·키워드, 날짜 자동해제)&#10;· 용어집 전문용어만 + 관리(검색·정렬·별표)&#10;· 0건 키워드 숨김 · 외신 오분류 보정 · AI 키 설정&#10;· v5.1 급상승: 같은 시간대 비중 비교 · 검색량 · 급상승어 기록&#10;· v5.2 급상승어 투자 판정: 네이버 경제면 비율 + 상장사명 + 단어 점수&#10;· v5.3 급상승 AI 이유분석(Sonnet 5·내 AI키 이용·요금표시) · 이슈·테마에 급상승 투자 키워드 자동추천/정렬&#10;· v5.4 AI 요금 표시(헤더+설정 내역) · 오늘 뉴스에서 AI가 새 투자 키워드 찾기&#10;· v5.5 버그수정: 속보 등 다른 탭에서 급상승/키워드 클릭 시 뉴스가 0건으로 보이던 문제(전체 탭으로 자동 전환)">v5.5</span></div>
   </div>
 </header>
 <main>
@@ -1070,7 +1070,15 @@ function setView(v){ groupFilter=null; rowLimit=300;
 }
 function toggleChkCol(){ var show=selMode; document.getElementById("colChk").style.display=show?"":"none"; document.querySelector(".thChk").style.display=show?"":"none"; }
 function setSort(s){ sort=s; var b=document.querySelectorAll(".seg button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.sort===s); renderRows(); }
-function pickKw(k){ rowLimit=300; filterKw=filterKw===k?null:k; if(filterKw)groupFilter=null; renderBoard(); renderFilters(); renderRows(); }
+// 키워드(카드·급상승 칩)를 누르면 그 키워드의 뉴스를 보여주는 게 목적이다.
+// 그런데 켜면 자동으로 '속보' 탭으로 이동하는데(있음), 속보 탭에서 고르면 '속보 표시가 붙은 것'만 남아
+// 대부분 0건으로 보였다(급상승은 되는데 눌러도 안 나온다는 문제). 눌렀을 때는 항상 전체 탭으로 옮겨서 보여준다.
+function pickKw(k){
+  var was=filterKw===k;
+  if(view!=="all") setView("all");   // filterKw를 초기화하므로 이 다음에 다시 설정한다
+  rowLimit=300; filterKw=was?null:k; if(filterKw)groupFilter=null;
+  renderBoard(); renderFilters(); renderRows();
+}
 function toggleRead(id){ var i=readIds.indexOf(id); if(i>=0)readIds.splice(i,1); else readIds.push(id); lsSet("nr_read",readIds); renderRows(); }
 function runSearch(){ rowLimit=300; liveMode=false; search=document.getElementById("q").value.trim(); view="all"; filterKw=null; dateFilter="all"; var ds=document.getElementById("dateSel"); if(ds)ds.value="all"; var b=document.querySelectorAll(".tabbar button"); for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.view==="all"); setView("all"); document.getElementById("q").value=search; }
 function addSurge(k){ if(keywords.indexOf(k)<0){ keywords.push(k); trends[k]={n:0,d:"up",bars:[1,2,3,5,8,13,20]}; lsSet("nr_keywords",keywords);} filterKw=k; renderAll(); }
