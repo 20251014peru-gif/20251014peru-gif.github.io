@@ -2596,7 +2596,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.1</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38743,8 +38743,16 @@ window.markflowBootError=function(items,detail){
     if(raw){ try{ var d=JSON.parse(raw); if(d&&Array.isArray(d.docs)&&d.docs.length){ state.docs=d.docs; state.currentId=d.currentId||d.docs[0].id; state.theme=d.theme||"light"; state.folders=d.folders||null; state.collapsed=d.collapsed||[]; state.savedAt=d.savedAt||0; } }catch(e){} }
     if(!state.docs){ bootDefault=true; var id=uid(); state.docs=[{id:id,content:DEFAULT,updated:Date.now(),folder:""}]; state.currentId=id; }
     migrate();
+    if(!bootDefault) openBlankOnBoot();
     if(!state.docs.some(function(x){return x.id===state.currentId;})) state.currentId=state.docs[0].id;
   })();
+  // 앱을 열 때는 항상 빈 문서로 시작(마지막 문서 복원 안 함). 이미 빈 문서가 있으면 재사용해 빈 문서가 쌓이지 않게 한다.
+  function isBlankDoc(d){ var c=(d.content||"").trim(); return c===""||c==="# 무제"; }
+  function openBlankOnBoot(){
+    var b=state.docs.find(isBlankDoc);
+    if(!b){ b={id:uid(),content:"",updated:Date.now(),folder:""}; state.docs.unshift(b); }
+    state.currentId=b.id;
+  }
   function current(){ return state.docs.find(function(d){return d.id===state.currentId;})||state.docs[0]; }
 
   var saveTimer=null, loading=false, saveErrShown=null, saveSeq=0, changeGen=0, saveRetry=null;
@@ -38816,7 +38824,9 @@ window.markflowBootError=function(items,detail){
     idbGet().then(function(full){ if(!full) return; var d; try{ d=JSON.parse(full); }catch(e){ return; }
       if(!d||!Array.isArray(d.docs)||!d.docs.length) return;
       if((d.savedAt||0) < (state.savedAt||0)) return; // 로컬 사본이 더 최신이면 유지
-      state.docs=d.docs; state.currentId=d.currentId||state.currentId; state.theme=d.theme||state.theme;
+      // 부팅 때 연 문서(빈 문서)를 유지: 아직 저장 전이라 IndexedDB에 없으면 함께 옮긴다
+      var keep=current(); if(keep&&!d.docs.some(function(x){return x.id===keep.id;})) d.docs.unshift(keep);
+      state.docs=d.docs; state.theme=d.theme||state.theme;
       state.folders=Array.isArray(d.folders)?d.folders:state.folders; state.collapsed=Array.isArray(d.collapsed)?d.collapsed:state.collapsed;
       state.savedAt=d.savedAt||state.savedAt; if(typeof d.numHeadings!=="undefined") state.numHeadings=d.numHeadings; if(d.seedCleared) state.seedCleared=true;
       migrate();
