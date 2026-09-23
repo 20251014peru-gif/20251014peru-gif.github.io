@@ -19969,7 +19969,17 @@ async function githubUpload(token){
   var TAG = 'wlsum';                 /* 정리 상자 표시 — 이 표시가 붙은 것만 앱이 고친다 */
 
   /* v291 — 달님 : 「이것도 지워」(본문 위 자동 정리 요약줄) — 기본을
-     켬→꺼짐으로 뒤집는다. 다시 쓰고 싶으면 본문 옆 [🧾 자동 정리] 단추. */
+     켬→꺼짐으로 뒤집었다. 그런데 이 기기처럼 예전에 실제로 켜져 있던
+     적이 있는 기기는 localStorage 에 이미 '1' 이 박혀 있어서, 기본값을
+     바꿔도 그 기기에는 전혀 안 먹혔다(달님 : 「294 버전인데 아직 있어」
+     — 진짜 원인, 버전 지연이 아니었다). 한 번만 강제로 꺼 준다. */
+  var MIG = 'wl_autosum_mig_v294';
+  try{
+    if(localStorage.getItem(MIG) !== '1'){
+      localStorage.setItem(LS, '0');
+      localStorage.setItem(MIG, '1');
+    }
+  }catch(e){}
   function isOn(){ try{ return localStorage.getItem(LS) === '1'; }catch(e){ return false; } }
   function setOn(v){
     try{ localStorage.setItem(LS, v?'1':'0'); }catch(e){}
@@ -23744,7 +23754,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v294-0923-1411';
+  var JS_BUILD = 'v295-0923-1417';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
@@ -24544,7 +24554,18 @@ try{ window.openCleaningEditor = openCleaningEditor; }catch(e){}
   var LS_AUTO = 'wl_exp_items_auto';   /* 금액 저절로 반영 (기본 끔) */
 
   /* v290 — 달님 : 「지출 모달인데 이부분은 없어도돼 간단히 가자」— 기본을
-     켬→꺼짐으로 뒤집는다. 다시 쓰고 싶으면 콘솔에서 wlExpItems.on(). */
+     켬→꺼짐으로 뒤집는다. 다시 쓰고 싶으면 콘솔에서 wlExpItems.on().
+     v294 — wlAutoSum 에서 같은 종류의 문제(예전에 실제로 '1' 이 박혀
+     있던 기기엔 기본값을 바꿔도 안 먹힘)가 실제로 있었다 — 여기도
+     한 번만 강제로 꺼 준다(예방 차원, 눈에 보이는 켜고 끄는 단추가
+     없어 실제로 '1' 이 박힌 기기는 드물겠지만 확실히 해 둔다). */
+  var MIG = 'wl_exp_items_mig_v294';
+  try{
+    if(localStorage.getItem(MIG) !== '1'){
+      localStorage.setItem(LS, '0');
+      localStorage.setItem(MIG, '1');
+    }
+  }catch(e){}
   function on(){     try{ return localStorage.getItem(LS)      === '1'; }catch(e){ return false; } }
   function canEdit(){try{ return localStorage.getItem(LS_EDIT) !== '0'; }catch(e){ return true;  } }
   function autoOn(){ try{ return localStorage.getItem(LS_AUTO) === '1'; }catch(e){ return false; } }
