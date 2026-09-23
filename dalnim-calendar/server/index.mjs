@@ -245,7 +245,7 @@ async function dispatch(ref,now){
 // separate, read-only digest instead: twice a day, find what's due today and push one summary
 // notification to each space's owner (investment data is owner-only, same as the /investment-feed
 // route). No per-item acknowledgement or follow-up chain — just "here's what's due, go check".
-export const investmentReminderSweep=onSchedule({schedule:'0 9,18 * * *',timeZone:'Asia/Seoul',region:'asia-northeast3',maxInstances:1,timeoutSeconds:120,secrets:[privateKey]},async()=>{
+export const investmentReminderSweep=onSchedule({schedule:'15 10,16 * * *',timeZone:'Asia/Seoul',region:'asia-northeast3',maxInstances:1,timeoutSeconds:120,secrets:[privateKey]},async()=>{
  const today=DateTime.now().setZone('Asia/Seoul').toISODate();
  const cutoff=new Date(Date.now()-400*86400000).toISOString().slice(0,10);
  const recordsSnap=await db.collection('records').where('date','>=',cutoff).orderBy('date','desc').limit(1500).get();
