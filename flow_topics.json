@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-09-25T21:23:35.546686+09:00",
+ "updated_at": "2026-09-26T02:37:11.102849+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 11,
-   "channel_count": 7,
-   "total_views": 915108,
-   "latest": "2026-09-25T18:05:12+09:00",
+   "channel_count": 6,
+   "total_views": 849193,
+   "latest": "2026-09-26T00:28:02+09:00",
    "video_ids": [
+    "14eXWET5JWM",
     "Cl6GOKqmOBo",
     "tfEtMqqbi4c",
     "G7X-z_3ZzYw",
@@ -18,15 +19,13 @@
     "NWHVnYw-NMY",
     "B7Xip6epo2E",
     "9doQm9RT9WE",
-    "C3r1bSmy3WA",
-    "N8hjfIoLtV8"
+    "C3r1bSmy3WA"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
     "내일은 투자왕 - 김단테",
     "삼프로TV 3PROTV",
-    "소수몽키",
     "이효석아카데미",
     "증시각도기TV"
    ],
@@ -39,6 +38,11 @@
     {
      "word": "대표",
      "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "있습니다",
+     "videos": 2,
      "channels": 2
     },
     {
@@ -64,7 +68,7 @@
    "name": "반도체",
    "video_count": 10,
    "channel_count": 5,
-   "total_views": 451471,
+   "total_views": 501664,
    "latest": "2026-09-25T11:00:26+09:00",
    "video_ids": [
     "Ys6BzhfURXQ",
@@ -122,9 +126,9 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 7,
+   "video_count": 6,
    "channel_count": 5,
-   "total_views": 365260,
+   "total_views": 380183,
    "latest": "2026-09-25T17:30:31+09:00",
    "video_ids": [
     "duwKzv-l9w8",
@@ -132,8 +136,7 @@
     "Ys6BzhfURXQ",
     "NWHVnYw-NMY",
     "9d-XSdpCZFc",
-    "AJtr0VeAFao",
-    "Z6Qae1B4Dv0"
+    "AJtr0VeAFao"
    ],
    "channels": [
     "815머니톡",
@@ -143,11 +146,6 @@
     "이효석아카데미"
    ],
    "subtopics": [
-    {
-     "word": "주식",
-     "videos": 3,
-     "channels": 2
-    },
     {
      "word": "반도체",
      "videos": 2,
@@ -159,14 +157,9 @@
      "channels": 2
     },
     {
-     "word": "하워드막스",
+     "word": "주식",
      "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "말라고",
-     "videos": 2,
-     "channels": 1
+     "channels": 2
     },
     {
      "word": "급등",
@@ -181,7 +174,7 @@
    "name": "채권·크레딧",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 627195,
+   "total_views": 686621,
    "latest": "2026-09-25T11:16:01+09:00",
    "video_ids": [
     "GYk-s8Zj4Hs",
@@ -213,7 +206,7 @@
    "name": "부동산",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 314450,
+   "total_views": 330251,
    "latest": "2026-09-24T20:55:29+09:00",
    "video_ids": [
     "9MLT5ibKsgs",
@@ -260,7 +253,7 @@
    "name": "정책·정치",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 77113,
+   "total_views": 89320,
    "latest": "2026-09-25T14:00:11+09:00",
    "video_ids": [
     "SITMtWeSljA",
@@ -280,7 +273,7 @@
    "name": "중국경제",
    "video_count": 4,
    "channel_count": 2,
-   "total_views": 210705,
+   "total_views": 220613,
    "latest": "2026-09-25T09:00:09+09:00",
    "video_ids": [
     "rNNa67WtGoU",
@@ -331,7 +324,7 @@
    "name": "배당·ETF",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 67370,
+   "total_views": 69997,
    "latest": "2026-09-25T06:05:27+09:00",
    "video_ids": [
     "w3fG-vzBZAI",
