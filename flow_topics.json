@@ -1,12 +1,12 @@
 {
- "updated_at": "2026-09-27T01:49:35.605880+09:00",
+ "updated_at": "2026-09-27T06:41:15.082338+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 11,
-   "channel_count": 7,
-   "total_views": 1096797,
+   "video_count": 10,
+   "channel_count": 6,
+   "total_views": 788377,
    "latest": "2026-09-26T18:05:12+09:00",
    "video_ids": [
     "cBTK75UkdGM",
@@ -18,13 +18,11 @@
     "Cl6GOKqmOBo",
     "tfEtMqqbi4c",
     "G7X-z_3ZzYw",
-    "zdTN6BmbjFI",
-    "B7Xip6epo2E"
+    "zdTN6BmbjFI"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "내일은 투자왕 - 김단테",
     "삼프로TV 3PROTV",
     "이효석아카데미",
     "증시각도기TV",
@@ -32,12 +30,17 @@
    ],
    "subtopics": [
     {
-     "word": "사람",
+     "word": "시대",
      "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "앞으",
+     "videos": 2,
      "channels": 2
     },
     {
-     "word": "시대",
+     "word": "있다",
      "videos": 2,
      "channels": 2
     },
@@ -55,11 +58,6 @@
      "word": "별주부전",
      "videos": 2,
      "channels": 1
-    },
-    {
-     "word": "원본인간",
-     "videos": 2,
-     "channels": 1
     }
    ],
    "active": true
@@ -67,23 +65,21 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 6,
-   "channel_count": 5,
-   "total_views": 361220,
+   "video_count": 5,
+   "channel_count": 4,
+   "total_views": 313283,
    "latest": "2026-09-26T12:00:20+09:00",
    "video_ids": [
     "8R4ZAkNeZ5k",
     "1aOIxYAtQjE",
     "YmMuVXTSbZc",
     "PPxcDdxMAUA",
-    "-X0pmBy6gHg",
-    "W0EVmxvAS8Y"
+    "-X0pmBy6gHg"
    ],
    "channels": [
     "815머니톡",
     "삼프로TV 3PROTV",
     "염블리와 함께 (염승환)",
-    "체슬리TV (박세익)",
     "티타임즈TV"
    ],
    "subtopics": [
@@ -105,7 +101,7 @@
    "name": "중국경제",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 588968,
+   "total_views": 719720,
    "latest": "2026-09-26T20:55:26+09:00",
    "video_ids": [
     "M1Pia49zf_8",
@@ -157,7 +153,7 @@
    "name": "미국증시",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 328497,
+   "total_views": 403124,
    "latest": "2026-09-26T20:00:38+09:00",
    "video_ids": [
     "r0iyuMrexWI",
@@ -177,7 +173,7 @@
    "name": "정책·정치",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 284950,
+   "total_views": 318968,
    "latest": "2026-09-26T14:42:10+09:00",
    "video_ids": [
     "CAs3xXSzY98",
@@ -203,13 +199,13 @@
    "name": "금리·연준",
    "video_count": 4,
    "channel_count": 2,
-   "total_views": 245704,
-   "latest": "2026-09-26T23:20:32+09:00",
+   "total_views": 250489,
+   "latest": "2026-09-27T06:05:29+09:00",
    "video_ids": [
+    "IVC4t7YKVrQ",
     "kR9ZZoaY2AM",
     "r0iyuMrexWI",
-    "duwKzv-l9w8",
-    "Ee2o9XWk3FY"
+    "duwKzv-l9w8"
    ],
    "channels": [
     "815머니톡",
@@ -232,17 +228,17 @@
      "channels": 1
     },
     {
+     "word": "노딜",
+     "videos": 2,
+     "channels": 1
+    },
+    {
      "word": "한국",
      "videos": 2,
      "channels": 1
     },
     {
      "word": "증시",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "대표",
      "videos": 2,
      "channels": 1
     }
@@ -254,12 +250,12 @@
    "name": "관세·무역",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 181448,
-   "latest": "2026-09-26T23:20:32+09:00",
+   "total_views": 132883,
+   "latest": "2026-09-27T06:05:29+09:00",
    "video_ids": [
+    "IVC4t7YKVrQ",
     "kR9ZZoaY2AM",
-    "cxCYQnWT4qM",
-    "Ee2o9XWk3FY"
+    "cxCYQnWT4qM"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
@@ -280,6 +276,11 @@
      "word": "미중",
      "videos": 2,
      "channels": 1
+    },
+    {
+     "word": "노딜",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -289,12 +290,12 @@
    "name": "채권·크레딧",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 479629,
-   "latest": "2026-09-26T23:20:32+09:00",
+   "total_views": 431678,
+   "latest": "2026-09-27T06:05:29+09:00",
    "video_ids": [
+    "IVC4t7YKVrQ",
     "kR9ZZoaY2AM",
-    "GYk-s8Zj4Hs",
-    "Ee2o9XWk3FY"
+    "GYk-s8Zj4Hs"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
@@ -313,6 +314,11 @@
     },
     {
      "word": "미중",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "노딜",
      "videos": 2,
      "channels": 1
     }
