@@ -2596,7 +2596,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.8</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.9</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38720,7 +38720,7 @@ window.markflowBootError=function(items,detail){
   // localStorage에는 사진 데이터를 뺀 '가벼운 사본'만 저장 → 문서 목록·본문 글자는 절대 사라지지 않음(사진은 IndexedDB에 별도 보관)
   var IMG_PH="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
   function stripImages(md){ return (md||"").replace(/(!\[[^\]]*\]\()data:[^)\s]+(\))/g, "$1"+IMG_PH+"$2"); }
-  function slimState(){ var s={docs:[],currentId:state.currentId,theme:state.theme,folders:state.folders,collapsed:state.collapsed,savedAt:state.savedAt,numHeadings:state.numHeadings,seedCleared:state.seedCleared};
+  function slimState(){ var s={docs:[],currentId:state.currentId,theme:state.theme,folders:state.folders,collapsed:state.collapsed,savedAt:state.savedAt,numHeadings:state.numHeadings,seedCleared:state.seedCleared,deleted:state.deleted};
     s.docs=state.docs.map(function(d){ var c={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) c[k]=d[k]; } c.content=stripImages(d.content||""); return c; });
     return s; }
   function uid(){ return "d"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -38737,7 +38737,7 @@ window.markflowBootError=function(items,detail){
   }
 
   // ---- state ----
-  var state = { docs:null, currentId:null, theme:"light", folders:null, collapsed:[], savedAt:0 };
+  var state = { docs:null, currentId:null, theme:"light", folders:null, collapsed:[], savedAt:0, deleted:{} };
   function migrate(){
     if(!Array.isArray(state.folders)) state.folders=[];
     if(!Array.isArray(state.collapsed)) state.collapsed=[];
@@ -38747,13 +38747,21 @@ window.markflowBootError=function(items,detail){
       state.folders=state.folders.filter(function(f){ if(defs.indexOf(f)>=0){ return state.docs.some(function(d){return d.folder===f;}); } return true; });
     }
   }
+  // ---- 삭제 무덤(tombstone): 지운 문서가 동기화·복원으로 되살아나지 않게 한다 ----
+  function tombstones(){ if(!state.deleted||typeof state.deleted!=="object"||Array.isArray(state.deleted)) state.deleted={}; return state.deleted; }
+  function recordTombstone(id){ if(!id) return; tombstones()[id]=Date.now(); }
+  function mergeTombstones(src){ if(!src||typeof src!=="object") return; var t=tombstones(); for(var k in src){ if(Object.prototype.hasOwnProperty.call(src,k)){ var v=+src[k]||0; if(v&&(!t[k]||v>t[k])) t[k]=v; } } }
+  function pruneTombstones(){ var t=tombstones(); var cut=Date.now()-150*24*3600*1000; for(var k in t){ if((+t[k]||0)<cut) delete t[k]; } }
+  // 무덤에 있는 id는 목록에서 제거한다. 단, 문서가 삭제 시각보다 나중에 수정됐다면(다른 기기에서 되살려 편집) 무덤을 풀고 남긴다.
+  function applyTombstones(docs){ if(!Array.isArray(docs)) return docs; var t=tombstones(); return docs.filter(function(d){ if(!d||!d.id) return true; var ts=+t[d.id]||0; if(!ts) return true; if((+d.updated||0)>ts){ delete t[d.id]; return true; } return false; }); }
   // 저장 보류: 저장된 데이터를 읽지 못해 기본 문서로 시작했거나 부팅이 실패하면 기존 데이터를 덮어쓰지 않는다.
   var saveHold=false, bootDefault=false;
   (function load(){
     var raw=photoRecovery.state?JSON.stringify(photoRecovery.state):sget(SKEY);
-    if(raw){ try{ var d=JSON.parse(raw); if(d&&Array.isArray(d.docs)&&d.docs.length){ state.docs=d.docs; state.currentId=d.currentId||d.docs[0].id; state.theme=d.theme||"light"; state.folders=d.folders||null; state.collapsed=d.collapsed||[]; state.savedAt=d.savedAt||0; } }catch(e){} }
+    if(raw){ try{ var d=JSON.parse(raw); if(d&&Array.isArray(d.docs)&&d.docs.length){ state.docs=d.docs; state.currentId=d.currentId||d.docs[0].id; state.theme=d.theme||"light"; state.folders=d.folders||null; state.collapsed=d.collapsed||[]; state.savedAt=d.savedAt||0; if(d.deleted&&typeof d.deleted==="object"&&!Array.isArray(d.deleted)) state.deleted=d.deleted; } }catch(e){} }
     if(!state.docs){ bootDefault=true; var id=uid(); state.docs=[{id:id,content:DEFAULT,updated:Date.now(),folder:""}]; state.currentId=id; }
     migrate();
+    if(!bootDefault){ pruneTombstones(); state.docs=applyTombstones(state.docs); }
     if(!bootDefault) openBlankOnBoot();
     if(!state.docs.some(function(x){return x.id===state.currentId;})) state.currentId=state.docs[0].id;
   })();
@@ -38837,6 +38845,7 @@ window.markflowBootError=function(items,detail){
       if((d.savedAt||0) < (state.savedAt||0)) return; // 로컬 사본이 더 최신이면 유지
       // 부팅 때 연 문서(빈 문서)를 유지: 아직 저장 전이라 IndexedDB에 없으면 함께 옮긴다
       var keep=current(); if(keep&&!d.docs.some(function(x){return x.id===keep.id;})) d.docs.unshift(keep);
+      mergeTombstones(d.deleted); d.docs=applyTombstones(d.docs);
       state.docs=d.docs; state.theme=d.theme||state.theme;
       state.folders=Array.isArray(d.folders)?d.folders:state.folders; state.collapsed=Array.isArray(d.collapsed)?d.collapsed:state.collapsed;
       state.savedAt=d.savedAt||state.savedAt; if(typeof d.numHeadings!=="undefined") state.numHeadings=d.numHeadings; if(d.seedCleared) state.seedCleared=true;
@@ -39108,6 +39117,7 @@ window.markflowBootError=function(items,detail){
     setTimeout(function(){ document.addEventListener("mousedown",closeTplOutside); },0);
   }
   function delDoc(id){
+    recordTombstone(id);
     state.docs=state.docs.filter(function(x){return x.id!==id;});
     if(!state.docs.length){ var nd={id:uid(),content:"# 무제\n\n",updated:Date.now()}; state.docs=[nd]; state.currentId=nd.id; }
     else if(id===state.currentId){ state.currentId=state.docs[0].id; }
@@ -40529,7 +40539,7 @@ window.markflowBootError=function(items,detail){
     if(btn){ btn.classList.toggle("sync-on", kind==="ok"||kind==="syncing"); }
     if(lbl){ lbl.textContent = GH.token? (kind==="syncing"?"동기화…":"동기화됨") : "동기화"; }
   }
-  function syncPayload(){ return JSON.stringify({docs:state.docs,folders:state.folders,collapsed:state.collapsed,theme:state.theme,currentId:state.currentId,savedAt:state.savedAt}); }
+  function syncPayload(){ return JSON.stringify({docs:state.docs,folders:state.folders,collapsed:state.collapsed,theme:state.theme,currentId:state.currentId,savedAt:state.savedAt,deleted:state.deleted}); }
   function gistBody(){ return JSON.stringify({description:"MarkFlow data (do not delete)",public:false,files:{"markflow-data.json":{content:syncPayload()}}}); }
   function findGist(){
     return fetch("https://api.github.com/gists?per_page=100",{headers:ghHeaders()}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }).then(function(arr){
@@ -40556,7 +40566,9 @@ window.markflowBootError=function(items,detail){
   function applyMerged(remote){
     remote=window.markflowPhotos.repair(remote).state;
     var cur=current();
+    mergeTombstones(remote.deleted);
     var m=window.markflowSyncMerge.merge({docs:state.docs,folders:state.folders},{docs:remote.docs,folders:remote.folders},loadSyncBase());
+    pruneTombstones(); m.docs=applyTombstones(m.docs);
     var changed=m.docs.length!==state.docs.length||m.docs.some(function(d,i){ return d!==state.docs[i]; })||m.folders.join("\n")!==state.folders.join("\n");
     if(changed){
       state.docs=m.docs; state.folders=m.folders; migrate();
