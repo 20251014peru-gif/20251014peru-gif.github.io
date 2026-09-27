@@ -10,4 +10,4 @@ function renderEditor(host, draft) {
     + '</div>'
     + (draft.link ? '<p class="form-note"><a href="' + esc(draft.link) + '" target="_blank" rel="noopener">' + esc(draft.link) + ' 열기 ↗</a></p>' : '');
 }
-export default {id:'investment', label:'투자 노트', description:'종목과 확인할 근거를 일정에 연결합니다. 시세 자동 수집·사진 첨부는 별도 연결이 필요합니다.', icon:'chart', color:'#378e86', fields, renderEditor};
+export default {id:'investment', label:'투자 노트', description:'투자 노트와 기록보관실의 확인 예정·재검토를 함께 봅니다.', icon:'chart', color:'#378e86', fields, renderEditor, readFeed:store=>store.request('/investment-feed')};
