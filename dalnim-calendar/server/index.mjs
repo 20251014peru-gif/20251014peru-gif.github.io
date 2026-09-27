@@ -11,12 +11,14 @@ import {createHash,randomUUID} from 'node:crypto';
 import webpush from 'web-push';
 import {canRead,canWrite,cleanEvent,validSubscription,canInvite,EMAIL_RE,emailMatches,inviteExpired} from './policy.mjs';
 import {nextReminder} from './schedule.mjs';
-import {mapRecordToEvent,mapCheckToEvent,mapReviewToEvent,completionMarker} from './investment-feed.mjs';
-import {dueInvestmentItems} from './investment-reminders.mjs';
+import {createInvestmentRepository,reminderMatches,writeCancellation} from './linked-investments/repository.mjs';
+import {actionable,dueItems,digestItems} from './linked-investments/items.mjs';
+import {isInvestmentReminder,activeInvestmentReminder} from '../src/core/investment-snooze.js';
 import {MAX_PHOTOS,MAX_PHOTO_BYTES,ALLOWED_CONTENT_TYPES,photoPath,photoDownloadUrl} from './photos.mjs';
 import {DateTime} from 'luxon';
 initializeApp({storageBucket:'my-system-25497.firebasestorage.app'});
 const db=getFirestore(),privateKey=defineSecret('DALNIM_VAPID_PRIVATE_KEY'),publicKey=defineString('DALNIM_VAPID_PUBLIC_KEY'),subject=defineString('DALNIM_PUSH_SUBJECT'),allowedOrigins=defineString('DALNIM_ALLOWED_ORIGINS');
+const investments=createInvestmentRepository(db);
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const idOK=s=>typeof s==='string'&&/^[\w.-]{1,80}$/.test(s);
 const failure=(status,message)=>Object.assign(Error(message),{status});
@@ -87,34 +89,25 @@ export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',ma
    await root.collection('preferences').doc(uid).set({[key]:value},{merge:true});res.json({ok:true});return;
   }
   if(route==='/investment-feed'&&req.method==='GET'){
-   // Read-only, one-way: the owner's separate 투자 기록보관실 app's `records` collection, same
-   // Firebase project. Mirrors that app's own calendar view exactly — each record on its own
-   // date, each checks[] follow-up on its own date, and study-note reviewAt dates. Bounded
-   // window + limit controls read cost; nothing here is ever written back.
    if(role!=='owner')throw failure(403,'투자 기록은 공간 관리자만 볼 수 있습니다.');
-   const cutoff=new Date(Date.now()-400*86400000).toISOString().slice(0,10);
-   const recordsSnap=await db.collection('records').where('date','>=',cutoff).orderBy('date','desc').limit(1500).get();
-   const records=recordsSnap.docs.map(d=>({id:d.id,...d.data()}));
-   const feed=[
-    ...records.map(mapRecordToEvent),
-    ...records.flatMap(r=>(r.checks||[]).map((c,i)=>mapCheckToEvent(r,c,i))),
-    ...records.map(mapReviewToEvent),
-   ].filter(Boolean);
-   res.json({events:feed});return;
+   res.json(await investments.investmentFeed());return;
+  }
+  if(route==='/prediction-feed'&&req.method==='GET'){
+   if(role!=='owner')throw failure(403,'예측은 공간 관리자만 볼 수 있습니다.');
+   res.json(await investments.predictionFeed());return;
+  }
+  if(route==='/investment-items/resolve'&&req.method==='POST'){
+   if(role!=='owner')throw failure(403,'연결 항목은 공간 관리자만 볼 수 있습니다.');
+   res.json({event:await investments.resolve(req.body?.id,{fresh:true})});return;
+  }
+  if(route==='/investment-items/save'&&req.method==='POST'){
+   if(role!=='owner')throw failure(403,'연결 항목은 공간 관리자만 수정할 수 있습니다.');
+   if(Buffer.byteLength(JSON.stringify(req.body||{}))>100000)throw failure(413,'입력 내용이 너무 큽니다.');
+   res.json(await investments.save(root,uid,req.body||{}));return;
   }
   if(route==='/investment-feed/complete'&&req.method==='POST'){
-   // Marks a checks[] item done the same way records.html itself does — adds a records_todos
-   // completion marker, never touches the record or its checks[] array. Same owner-only gate as
-   // reading the feed, since this data isn't scoped to a dalnim space.
    if(role!=='owner')throw failure(403,'투자 기록은 공간 관리자만 처리할 수 있습니다.');
-   const recordId=String(req.body?.recordId||''),index=Number(req.body?.index);
-   if(!/^[\w-]{1,160}$/.test(recordId)||!Number.isInteger(index)||index<0)throw failure(400,'확인할 항목을 찾을 수 없습니다.');
-   const recordDoc=await db.collection('records').doc(recordId).get();
-   const check=recordDoc.data()?.checks?.[index];
-   if(!check)throw failure(404,'확인할 항목을 찾을 수 없습니다.');
-   const today=DateTime.now().setZone('Asia/Seoul').toISODate();
-   await db.collection('records_todos').add(completionMarker(recordId,index,check.what||recordDoc.data().title,today));
-   res.json({ok:true});return;
+   throw failure(409,'확인·복기 연결이 업데이트되었습니다. 캘린더를 새로고침하고 결과를 남겨 주세요.');
   }
   if(route==='/events'&&req.method==='GET'){
    const snapshot=await root.collection('events').limit(5001).get();
@@ -126,17 +119,30 @@ export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',ma
    let raw=req.body?.event;const worklogRecord=route==='/worklog'?req.body?.record:null;
    if(worklogRecord){try{raw=eventFromWorklog(worklogRecord);}catch(err){throw failure(400,err.message);}}
    if(!raw?.id||!/^[\w:.-]{1,160}$/.test(raw.id))throw failure(400,'일정 ID가 올바르지 않습니다.');
+   let reminderItem=null;
+   if(activeInvestmentReminder(raw)){
+    if(role!=='owner')throw failure(403,'투자 알림은 공간 관리자만 예약할 수 있습니다.');
+    reminderItem=await investments.resolve(raw.details.investmentItemId,{fresh:true});
+    if(!reminderItem||!actionable(reminderItem))throw failure(409,'완료·보류되었거나 삭제된 항목입니다. 최신 상태를 다시 열어 주세요.');
+   }
    const ref=root.collection('events').doc(raw.id),expected=req.body.expectedRevision;
    const event=await db.runTransaction(async tx=>{
     const snap=await tx.get(ref),old=snap.data();
     if(!canWrite(old,uid,role))throw failure(403,'이 일정을 수정할 수 없습니다.');
     if((old?.revision||0)!==expected)throw failure(409,'다른 화면에서 수정되었습니다. 최신 내용을 다시 열어 주세요.');
+    let duplicates=null;
+    if(reminderItem){
+     const source=investments.reference(reminderItem.id);
+     if(source){const s=await tx.get(source.ref);if(!s.exists||!actionable(source.map({...s.data(),id:s.id})))throw failure(409,'원본 상태가 변경되어 알림을 예약하지 않았습니다.');}
+     duplicates=await tx.get(root.collection('events').where('source.app','==','dalnim-investment-reminder'));
+    }
     let e;try{e=cleanEvent(worklogRecord?eventFromWorklog(worklogRecord,old):raw,old,uid,worklogRecord);}catch(err){throw failure(400,err.message);}
     const alarm=nextReminder(e);
     tx.set(ref,e);
     tx.set(ref.collection('history').doc(String(e.revision)),{...e,changedBy:uid});
     // Private search index: never write personal content to the legacy public index.
     tx.set(root.collection('my_system_search').doc(e.id),{app:'dalnim-calendar',type:e.module,title:e.title,memo:e.notes,cat:e.category,date:e.start,ownerId:e.ownerId,visibility:e.visibility,deletedAt:e.deletedAt,updatedAt:e.updatedAt});
+    for(const d of duplicates?.docs||[]){const other=d.data();if(other.id!==e.id&&activeInvestmentReminder(other)&&reminderMatches(other,reminderItem))writeCancellation(tx,root,d,other,'rescheduled');}
     addJob(tx,space,e,alarm);return e;
    });res.json(worklogRecord?{record:{...worklogFromEvent(event,event.worklogRecord),calendarId:event.id,calendarRevision:event.revision}}:{event});return;
   }
@@ -199,6 +205,7 @@ export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',ma
 // Push transport acceptance is NOT user acknowledgement.
 export const calendarReminderSweep=onSchedule({schedule:'every 1 minutes',region:'asia-northeast3',maxInstances:1,timeoutSeconds:120,secrets:[privateKey]},async()=>{
  webpush.setVapidDetails(subject.value(),publicKey.value(),privateKey.value());
+ await investments.reconcile().catch(err=>console.error('investment reconciliation',err.message));
  const now=Date.now(),jobs=await db.collection('dalnimReminderJobs').where('dueAt','<=',now).limit(100).get();
  await Promise.allSettled(jobs.docs.map(doc=>dispatch(doc.ref,now)));
 });
@@ -209,6 +216,9 @@ async function dispatch(ref,now){
  try{
   const root=db.collection('dalnimSpaces').doc(job.space),[eventDoc,spaceDoc]=await Promise.all([root.collection('events').doc(job.eventId).get(),root.get()]),e=eventDoc.data(),members=spaceDoc.data()?.members||{};
   if(!e||e.deletedAt||e.status==='done'||e.revision!==job.revision||!members[e.ownerId]){await ref.update({dueAt:FieldValue.delete(),state:'cancelled',leaseUntil:0});return;}
+  if(isInvestmentReminder(e)){
+   if(await investments.cancelIfInactive(root,eventDoc)){await ref.update({dueAt:FieldValue.delete(),state:'cancelled',leaseUntil:0});return;}
+  }
   if(now-job.dueAt>86400000){await finish('expired');return;}
   // Stable across an initial send and its follow-ups, so opening any one of them marks the same
   // notification read and the /notifications history does not fork into duplicate rows.
@@ -226,7 +236,7 @@ async function dispatch(ref,now){
    const subs=await root.collection('members').doc(uid).collection('subscriptions').get();
    for(const sub of subs.docs){targets++;const key=uid+':'+sub.id;if(delivered.has(key)){accepted++;continue;}
     // Recheck event revision just before sending; cancelled jobs do not survive edits.
-    const current=(await eventDoc.ref.get()).data();if(!current||current.deletedAt||current.revision!==job.revision){await ref.update({dueAt:FieldValue.delete(),state:'cancelled',leaseUntil:0});return;}
+    const currentDoc=await eventDoc.ref.get(),current=currentDoc.data();if(!current||current.deletedAt||current.status==='done'||current.revision!==job.revision||(isInvestmentReminder(current)&&await investments.cancelIfInactive(root,currentDoc))){await ref.update({dueAt:FieldValue.delete(),state:'cancelled',leaseUntil:0});return;}
     try{await webpush.sendNotification(sub.data().subscription,JSON.stringify({title:'달님 · '+(job.isFollowup?'다시 확인해 주세요':'일정 알림'),body:e.title,eventId:e.id,deliveryId}),{TTL:3600,urgency:'high',timeout:12000});accepted++;delivered.add(key);await ref.update({delivered:FieldValue.arrayUnion(key)});}
     catch(err){if(err.statusCode===404||err.statusCode===410)await sub.ref.delete();else {failures++;deviceFailures++;}}
    }
@@ -254,24 +264,20 @@ async function dispatch(ref,now){
   }
  }catch(error){console.error('calendar reminder',ref.id,error.message);await ref.update({leaseUntil:0,dueAt:Date.now()+300000,lastError:String(error.message).slice(0,300),attempts:(job.attempts||0)+1});}
 }
-// Investment archive checks[]/reviewAt items are never stored as real calendar events (see
-// investment-feed.mjs), so the per-event reminder sweep above can never see them. This is a
-// separate, read-only digest instead: twice a day, find what's due today and push one summary
-// notification to each space's owner (investment data is owner-only, same as the /investment-feed
-// route). No per-item acknowledgement or follow-up chain — just "here's what's due, go check".
+// Twice-daily digest uses the same current followup/prediction states as the UI.
+// Explicit future snoozes take precedence over this general daily summary.
 export const investmentReminderSweep=onSchedule({schedule:'15 10,16 * * *',timeZone:'Asia/Seoul',region:'asia-northeast3',maxInstances:1,timeoutSeconds:120,secrets:[privateKey]},async()=>{
  const today=DateTime.now().setZone('Asia/Seoul').toISODate();
- const cutoff=new Date(Date.now()-400*86400000).toISOString().slice(0,10);
- const recordsSnap=await db.collection('records').where('date','>=',cutoff).orderBy('date','desc').limit(1500).get();
- const records=recordsSnap.docs.map(d=>({id:d.id,...d.data()}));
- const due=dueInvestmentItems(records,today);
+ const feeds=await Promise.allSettled([investments.investmentFeed(),investments.predictionFeed()]);
+ const due=dueItems(feeds.flatMap(r=>r.status==='fulfilled'?r.value.events:[]),today);
  if(!due.length)return;
  webpush.setVapidDetails(subject.value(),publicKey.value(),privateKey.value());
- const body=due.length===1?due[0].title:due.length+'건의 확인 예정 항목이 있어요';
- // Only a single due item can be deep-linked unambiguously — a digest of several just opens the app.
- const payload={title:'달님 · 투자 확인 예정',body};if(due.length===1)payload.investmentItemId=due[0].id;
  const spacesSnap=await db.collection('dalnimSpaces').get();
  for(const spaceDoc of spacesSnap.docs){
+  const reservations=await spaceDoc.ref.collection('events').where('source.app','==','dalnim-investment-reminder').get();
+  const items=digestItems(due,today,reservations.docs.map(d=>d.data()));if(!items.length)continue;
+  const body=items.length===1?items[0].title:items.length+'건의 확인 예정 항목이 있어요';
+  const payload={title:'달님 · 투자 확인 예정',body};if(items.length===1)payload.investmentItemId=items[0].id;
   const members=spaceDoc.data()?.members||{},ownerUids=Object.keys(members).filter(uid=>members[uid]==='owner');
   for(const uid of ownerUids){
    const subs=await spaceDoc.ref.collection('members').doc(uid).collection('subscriptions').get();

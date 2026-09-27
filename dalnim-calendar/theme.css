@@ -336,3 +336,18 @@ dialog::backdrop { background: #3a30463d; backdrop-filter: blur(5px); }
 .investment-actions button{min-height:44px}
 .investment-actions #remind-later-toggle{margin-right:auto;background:var(--rose-soft);color:#87516f}
 @media(max-width:480px){.investment-actions{gap:7px;padding:13px 17px}.investment-actions #remind-later-toggle{width:100%;margin:0}.remind-options{padding:12px}.remind-presets{grid-template-columns:repeat(2,1fr)}}
+
+/* Connected investment details: source context before the editable review. */
+.integration-label{display:block;color:var(--muted,#80788f);font-size:12px;margin-bottom:7px}
+.investment-context,.investment-result{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.75;padding:16px;border-radius:16px;background:#faf7fc;margin:14px 0 20px}
+.investment-source{font-weight:650;color:#4d536b}
+.investment-detail-form textarea{min-height:115px}
+#editor:has(.investment-detail-form)[open]{display:flex;flex-direction:column;overflow:hidden}
+#editor .investment-detail-form{height:auto;display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
+.investment-detail-form .dialog-body{min-height:0;overflow-y:auto;max-height:none}
+.investment-detail-form .dialog-actions{flex:none}
+.integration-conflict{background:#fff4e7;border:1px solid #edcb9f;padding:16px;border-radius:14px;margin:16px 0}
+.integration-conflict pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px}
+.investment-actions{flex-wrap:wrap;gap:8px}
+.investment-actions .archive-link{padding:11px 14px;min-height:44px}
+@media(max-width:600px){.investment-actions>*{flex:1 1 42%;justify-content:center}.investment-detail-form .form-grid{grid-template-columns:1fr}.investment-context{padding:12px}}

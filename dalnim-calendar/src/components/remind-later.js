@@ -1,7 +1,7 @@
 import {esc,icon} from '../ui.js';
 import {dayKey} from '../core/model.js';
 import {openTimeDial} from './time-dial.js';
-import {getInvestmentReminder,activeInvestmentReminder,scheduleInvestmentReminder,cancelInvestmentReminder} from '../core/investment-snooze.js';
+import {getInvestmentReminder,activeInvestmentReminder,scheduleInvestmentReminder,cancelInvestmentReminder,canRemindInvestment} from '../core/investment-snooze.js';
 
 const format=at=>new Date(at).toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
 export function mountRemindLater({host,button,store,record,onChange=()=>{},onBusy=()=>{},onSettings=()=>{}}){
@@ -16,7 +16,8 @@ export function mountRemindLater({host,button,store,record,onChange=()=>{},onBus
   const active=activeInvestmentReminder(reminder);
   status.textContent=active?(+new Date(reminder.start)>Date.now()?'다시 알림 예약 · ':'마지막 다시 알림 시간 · ')+format(reminder.start)+(store.isCloud?'':' · 체험 저장'):message;
   cancel.hidden=!active;panel.hidden=!expanded;button.setAttribute('aria-expanded',String(expanded));
-  button.disabled=busy;host.querySelectorAll('button,input').forEach(b=>b.disabled=busy);onBusy(busy);
+  button.disabled=busy||!canRemindInvestment(record);host.querySelectorAll('button,input').forEach(b=>b.disabled=busy);onBusy(busy);
+  if(!canRemindInvestment(record)){panel.hidden=true;status.textContent='완료·보류된 항목의 다시 알림은 자동 취소됩니다.';}
  }
  async function run(work,success){
   if(busy)return;generation++;busy=true;message='';error.textContent='';paint();

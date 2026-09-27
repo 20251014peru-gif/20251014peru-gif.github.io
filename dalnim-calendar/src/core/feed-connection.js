@@ -11,7 +11,7 @@ export class FeedConnection {
    const result=await reader(store);
    if(generation!==this.generation)return;
    if(!Array.isArray(result?.events))throw Error('기록 목록을 읽지 못했습니다.');
-   this.events=result.events;this.state.updatedAt=Date.now();this.publish('ready');
+   this.events=[...result.events,...this.events.filter(e=>(result.unavailableKinds||[]).includes(e.source?.kind))];this.state.updatedAt=Date.now();this.publish(result.warnings?.length?'partial':'ready',(result.warnings||[]).join(' · '));
   }catch(err){if(generation!==this.generation)return;this.publish('error',err.message||'연결을 확인해 주세요.');}
  }
 }
