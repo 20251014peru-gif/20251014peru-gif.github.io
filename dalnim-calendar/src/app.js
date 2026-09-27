@@ -1,3 +1,4 @@
+import {linkedCalendars,calendarId,displayCalendars,matchesCalendar,readViewPreferences} from './core/calendar-views.js';
 import {dateTimeField,bindDateTimes} from './components/time-dial.js';
 import {bindDayFlow} from './components/day-flow.js';
 import {defaultCategories,isArchivedEvent,scopeCategories,mergeCategories,calendarBackupRecords} from './core/calendar-scope.js';
@@ -14,7 +15,13 @@ import {esc,icon,button,toast,ask,chooseScope,download} from './ui.js';
 const $=s=>document.querySelector(s);
 const registry=new ModuleRegistry();
 let store,calendar,events=[],disabled=[],hidden=new Set(),categories=[],selectedDate=new Date(),page='calendar',view=innerWidth<761?'timeGridDay':'timeGridWeek',query='',selectedId=null,installEvent;
-let investmentEvents=[];
+let investmentEvents=[],hideDone=false;
+const viewKey=()=> 'dalnim-calendar-view-v1:'+ (store?.isCloud?config.apiBase+':'+store.workspaceId:'local');
+function restoreView(){({hidden,hideDone}=readViewPreferences(localStorage,viewKey()));}
+function rememberView(){try{localStorage.setItem(viewKey(),JSON.stringify({hidden:[...hidden],hideDone}));}catch{toast('보기 설정을 이 기기에 저장하지 못했어요.');}}
+const calendars=()=>displayCalendars(categories);
+const eventCalendar=e=>calendars().find(c=>c.id===calendarId(e,investmentEvents));
+const available=()=>[...events,...investmentEvents].filter(e=>!isArchivedEvent(e)&&!e.deletedAt&&e.calendarVisible!==false);
 const findAnyEvent=id=>events.find(e=>e.id===id)||investmentEvents.find(e=>e.id===id||e.aliases?.includes(id));
 const baseCategories=defaultCategories;
 let savedCategories=[],feedTimer;
@@ -23,14 +30,15 @@ const investmentFeed=new FeedConnection(feedChanged),predictionFeed=new FeedConn
 function setCategories(saved){savedCategories=saved;categories=scopeCategories(saved);}
 async function persistCategories(){savedCategories=mergeCategories(savedCategories,categories);await store.setMeta('categories',savedCategories);}
 const archivedEvents=()=>events.filter(isArchivedEvent);
-const color=e=>categories.find(c=>c.id===e.category)?.color||'#8795ad';
-const catName=e=>categories.find(c=>c.id===e.category)?.label||'보관된 일정';
+const color=e=>eventCalendar(e)?.color||'#8795ad';
+const catName=e=>eventCalendar(e)?.label||'보관된 일정';
 const timeLabel=e=>e.allDay?'종일':new Date(e.start).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false})+' – '+new Date(e.end).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
 const enabled=id=>id==='personal'||!disabled.includes(id);
-const visible=()=>[...events,...investmentEvents].filter(e=>!isArchivedEvent(e)&&!e.deletedAt&&e.calendarVisible!==false&&!hidden.has(e.category)&&(!query||[e.title,e.notes,e.location,...Object.values(e.details||{})].join(' ').toLowerCase().includes(query.toLowerCase())));
+const visible=()=>available().filter(e=>matchesCalendar(e,{hidden,hideDone,sources:investmentEvents})&&(!query||[e.title,e.notes,e.location,...Object.values(e.details||{})].join(' ').toLowerCase().includes(query.toLowerCase())));
 const stateLabel=()=>store?.isCloud?(store.pendingCount?'오프라인 저장 대기 · '+store.pendingCount+'건':store.lastError?'연결 확인 필요':'클라우드 연결됨'):'이 기기에 저장';
 const occurrenceAnchor=id=>id&&id.includes('@')?id.slice(id.indexOf('@')+1):null;
 function shell(){
+ restoreView();
  $('#app').innerHTML='<div class="shell"><aside class="sidebar"><div class="brand"><img src="./icon.svg" alt=""><div><strong>달님</strong><small>MY CONNECTED DAYS</small></div></div><button class="space-btn" data-action="settings"><span class="avatar">나</span><span>나의 공간</span>'+icon('chevron')+'</button><label class="search sidebar-search">'+icon('search')+'<input type="search" id="search" placeholder="일정 검색" aria-label="일정 검색"><span class="kbd">/</span></label><nav class="navigation">'+nav('calendar','캘린더','calendar')+nav('agenda','일정 모아보기','list')+nav('inbox','알림함','bell')+nav('blocks','데이터 연결','blocks')+'</nav><div id="mini"></div><div><div class="side-heading"><span>내 캘린더</span><button data-action="categories" aria-label="캘린더 관리">'+icon('plus')+'</button></div><div id="categories"></div></div><div id="feed-state" class="feed-state" aria-live="polite"></div><div class="sidebar-footer"><div class="footer-status"><span class="mode-badge" id="store-state">'+icon('check')+stateLabel()+'</span><button data-action="inbox" aria-label="알림함">'+icon('bell')+'</button><span class="avatar">나</span></div>'+button('settings','설정','settings','nav')+button('export','백업 내보내기','download','nav')+'<a class="backlink" href="'+esc(config.systemHomeUrl)+'" target="_top" id="home-link">'+icon('home')+'나의 시스템 홈</a><span>달님 캘린더 · '+config.version+'</span></div></aside><main class="main"><header class="topbar"><button class="mobile-menu" data-action="menu" aria-label="메뉴 열기">'+icon('menu')+'</button></header><section class="page-head"><div><a class="system-home-link" href="'+esc(config.systemHomeUrl)+'" target="_top" aria-label="나의 시스템 · 인생 6대축 홈" title="나의 시스템 · 인생 6대축으로 이동">'+icon('home')+'<span>6대축 홈</span></a><h1 id="page-title"></h1><p class="head-description" id="page-description"></p></div><div class="page-actions"><a class="archive-link soft" href="'+esc(config.investmentArchiveUrl)+'" target="_blank" rel="noopener">'+icon('chart')+'<span>기록보관실</span></a><button class="primary" data-action="add">'+icon('plus')+'<span>새 기록</span></button></div></section><div id="content"></div><div class="banner"><span id="banner-label">체험 공간 · 투자와 기록을 살펴보는 예시입니다.</span><button data-action="clear-demo">예시 지우기</button></div></main></div><nav class="mobile-bottom">'+nav('calendar','캘린더','calendar')+nav('agenda','모아보기','list')+nav('inbox','알림함','bell')+nav('blocks','연결','blocks')+'</nav><input type="file" id="import-file" accept=".json,application/json" hidden>';
  $('#search').value=query;
  $('#search').addEventListener('input',e=>{query=e.target.value;if(page==='calendar'||page==='agenda')refreshCalendar();else navigate('agenda');});
@@ -41,8 +49,23 @@ function shell(){
 }
 function nav(id,label,ico){return '<button class="nav'+(page===id?' active':'')+'" data-action="'+id+'">'+icon(ico)+'<span>'+label+'</span></button>';}
 function paintCategories(){
- $('#categories').innerHTML=categories.map(c=>'<label class="cat-row" style="--cat:'+c.color+'"><input type="checkbox" data-category="'+esc(c.id)+'" '+(!hidden.has(c.id)?'checked':'')+'><span>'+esc(c.label)+'</span><span class="count">'+[...events,...investmentEvents].filter(e=>!isArchivedEvent(e)&&!e.deletedAt&&e.category===c.id).length+'</span></label>').join('');
- $('#categories').querySelectorAll('input').forEach(el=>el.addEventListener('change',()=>{el.checked?hidden.delete(el.dataset.category):hidden.add(el.dataset.category);refreshCalendar();}));
+ const all=calendars(),rows=available();
+ const focusedCategory=$('#categories')?.contains(document.activeElement)?document.activeElement.dataset.category:null;
+ $('#categories').innerHTML=all.map((c,i)=>(i===0?'<p class="calendar-group-label">연결된 확인 일정</p>':i===linkedCalendars.length?'<p class="calendar-group-label">남겨 둔 기록</p>':'')+'<label class="cat-row" style="--cat:'+c.color+'" title="'+esc(c.description||c.label)+'"><input type="checkbox" data-category="'+esc(c.id)+'" aria-label="'+esc(c.label)+' 표시" '+(!hidden.has(c.id)?'checked':'')+'><span>'+esc(c.label)+'</span><span class="count" title="불러온 전체 기간의 항목 수">'+rows.filter(e=>calendarId(e,investmentEvents)===c.id).length+'</span></label>').join('');
+ $('#categories').querySelectorAll('input').forEach(el=>el.addEventListener('change',()=>{el.checked?hidden.delete(el.dataset.category):hidden.add(el.dataset.category);rememberView();refreshCalendar();}));
+ if(focusedCategory)[...$('#categories').querySelectorAll('input')].find(el=>el.dataset.category===focusedCategory)?.focus({preventScroll:true});
+ paintCalendarViews();
+}
+function paintCalendarViews(){
+ const host=$('#calendar-views');if(!host)return;
+ const focused=host.contains(document.activeElement)?document.activeElement:null;
+ const focusedCalendar=focused?.dataset.onlyCalendar,focusedCompleted=focused?.id==='hide-completed';
+ const all=calendars(),active=all.filter(c=>!hidden.has(c.id));
+ host.innerHTML='<div class="calendar-view-head"><span>보고 싶은 캘린더</span><label class="hide-completed"><input type="checkbox" id="hide-completed" '+(hideDone?'checked':'')+'>완료 숨김</label></div><div class="calendar-chips" role="group" aria-label="캘린더 하나만 보기"><button data-only-calendar="all" aria-pressed="'+(active.length===all.length)+'" class="calendar-chip">전체</button>'+all.map(c=>'<button data-only-calendar="'+esc(c.id)+'" class="calendar-chip" style="--cat:'+c.color+'" aria-pressed="'+(active.length===1&&active[0].id===c.id)+'" title="'+esc(c.description||c.label)+'"><span class="calendar-chip-dot"></span>'+esc(c.short||c.label)+'</button>').join('')+'</div><p class="calendar-view-note">'+esc(active.length===all.length?'모든 캘린더를 함께 보고 있어요.':active.length===0?'선택한 캘린더가 없어요.':active.map(c=>c.label).join(' · ')+' 보는 중')+' <span>여러 개를 함께 보려면 왼쪽 캘린더를 체크하세요.</span></p>';
+ host.querySelectorAll('[data-only-calendar]').forEach(b=>b.onclick=()=>{hidden=new Set(b.dataset.onlyCalendar==='all'?[]:all.filter(c=>c.id!==b.dataset.onlyCalendar).map(c=>c.id));rememberView();paintCategories();refreshCalendar();});
+ $('#hide-completed').onchange=e=>{hideDone=e.target.checked;rememberView();refreshCalendar();};
+ if(focusedCompleted)$('#hide-completed').focus({preventScroll:true});
+ else if(focusedCalendar)[...host.querySelectorAll('[data-only-calendar]')].find(b=>b.dataset.onlyCalendar===focusedCalendar)?.focus({preventScroll:true});
 }
 function paintMini(){
  const d=calendar?.getDate()||selectedDate,year=d.getFullYear(),month=d.getMonth(),first=new Date(year,month,1),start=shiftDay(first,-first.getDay());
@@ -60,29 +83,23 @@ function navigate(next){page=next;calendar?.destroy();calendar=null;$('.sidebar'
  if(next==='calendar'||next==='agenda')renderCalendar();else if(next==='blocks')renderBlocks();else renderInbox();
 }
 function renderCalendar(){
- $('#content').innerHTML='<div class="workspace"><div class="calendar-wrap"><div class="toolbar"><div class="date-nav"><button class="today-btn" data-cal="today">오늘</button><button data-cal="prev" aria-label="이전 기간">'+icon('chevron','rotated')+'</button><button data-cal="next" aria-label="다음 기간">'+icon('chevron')+'</button><span id="range-label" class="quiet small"></span></div><div class="toolbar-end"><div class="day-flow"><button class="flow-trigger" aria-expanded="false" aria-controls="rail">'+icon('clock')+'<span>하루 흐름</span></button><div class="flow-panel" inert><aside class="right-rail" id="rail" aria-label="하루의 흐름"></aside></div></div><div class="view-switch">'+[['timeGridDay','일'],['timeGridWeek','주'],['dayGridMonth','월'],['multiMonthYear','연']].map(([v,l])=>'<button data-view="'+v+'" class="'+(v===view?'active':'')+'">'+l+'</button>').join('')+'</div></div></div><div id="calendar"></div><div class="calendar-foot"><span>'+icon('info')+'빈 시간을 선택해 추가 · 일정을 끌어서 이동</span><span>'+esc(ZONE)+' · '+(store.isCloud?'클라우드 동기화':'내 기기 체험')+'</span></div></div></div>';
- bindDayFlow($('.day-flow'));
+ $('#content').innerHTML='<div class="workspace"><div class="calendar-wrap"><div class="toolbar"><div class="date-nav"><button class="today-btn" data-cal="today">오늘</button><button data-cal="prev" aria-label="이전 기간">'+icon('chevron','rotated')+'</button><button data-cal="next" aria-label="다음 기간">'+icon('chevron')+'</button><span id="range-label" class="quiet small"></span></div><div class="toolbar-end"><div class="day-flow"><button class="flow-trigger" aria-expanded="false" aria-controls="rail">'+icon('clock')+'<span>하루 흐름</span></button><div class="flow-panel" inert><aside class="right-rail" id="rail" aria-label="하루의 흐름"></aside></div></div><div class="view-switch">'+[['timeGridDay','일'],['timeGridWeek','주'],['dayGridMonth','월'],['multiMonthYear','연']].map(([v,l])=>'<button data-view="'+v+'" class="'+(v===view?'active':'')+'">'+l+'</button>').join('')+'</div></div></div><section id="calendar-views" class="calendar-views" aria-label="캘린더 보기 선택"></section><div id="calendar"></div><div class="calendar-foot"><span>'+icon('info')+'빈 시간을 선택해 추가 · 일정을 끌어서 이동</span><span>'+esc(ZONE)+' · '+(store.isCloud?'클라우드 동기화':'내 기기 체험')+'</span></div></div></div>';
+ bindDayFlow($('.day-flow'));paintCalendarViews();
  if(!window.FullCalendar){$('#calendar').innerHTML='<div class="empty">캘린더 화면을 불러오지 못했습니다.<br>다른 블록과 백업 기능은 계속 사용할 수 있습니다.</div>';return;}
  calendar=new FullCalendar.Calendar($('#calendar'),{
   initialView:page==='agenda'?'listMonth':view,initialDate:selectedDate,locale:'ko',firstDay:0,headerToolbar:false,nowIndicator:true,allDayText:'종일',noEventsText:'표시할 일정이 없습니다.',buttonText:{today:'오늘'},height:'auto',expandRows:true,slotMinTime:'07:00:00',slotMaxTime:'22:00:00',scrollTime:'08:00:00',slotDuration:'00:30:00',snapDuration:'00:05:00',slotLabelInterval:'01:00:00',slotLabelFormat:{hour:'2-digit',minute:'2-digit',hour12:false},eventTimeFormat:{hour:'2-digit',minute:'2-digit',hour12:false},selectable:true,editable:true,eventDurationEditable:true,longPressDelay:350,selectMirror:true,dayMaxEvents:false,navLinks:true,slotEventOverlap:false,
-  dayHeaderContent:arg=>{if(arg.view.type==='listMonth')return arg.text;return {html:'<span class="day-name">'+['일','월','화','수','목','금','토'][arg.date.getDay()]+'</span><span class="day-number">'+arg.date.getDate()+'</span>'};},
+  dayHeaderContent:arg=>{if(!['timeGridDay','timeGridWeek'].includes(arg.view.type))return arg.text;return {html:'<span class="day-name">'+['일','월','화','수','목','금','토'][arg.date.getDay()]+'</span><span class="day-number">'+arg.date.getDate()+'</span>'};},
   events:(info,success)=>{
    const mapped=expandEvents(visible(),info.start,info.end).map(e=>({id:e.occurrenceId,title:e.title,start:e.start,end:e.end,allDay:e.allDay,backgroundColor:color(e)+'1b',borderColor:color(e),extendedProps:{record:e},editable:e.repeat==='none'&&!e.readOnly&&!isInvestmentReminder(e)}));
-   // Read-only investment items all share one category color, so several on the same day blur
-   // together — alternate two colors by their order within that day instead.
-   const READONLY_ALT=['#1e3f78','#e2760f'],dayCount={};
-   mapped.filter(m=>m.extendedProps.record.readOnly).forEach(m=>{
-    const day=String(m.start).slice(0,10),i=dayCount[day]=(dayCount[day]||0)+1,c=READONLY_ALT[(i-1)%2];
-    m.borderColor=c;m.backgroundColor=c+'1b';
-   });
    success(mapped);
   },
   eventContent:arg=>{const e=arg.event.extendedProps.record;if(arg.view.type==='listMonth')return {html:esc(e.title)};return {html:'<div class="'+(e.status==='done'?'event-done':'')+'">'+(!e.allDay&&arg.view.type.startsWith('timeGrid')?'<div class="event-time">'+esc(timeLabel(e))+'</div>':'')+'<div class="event-title">'+(e.readOnly?icon('link','tiny')+' ':'')+esc(e.title)+'</div>'+((e.location&&arg.view.type.startsWith('timeGrid'))?'<div class="event-place">'+esc(e.location)+'</div>':'')+'</div>'};},
   eventDidMount:arg=>{
-   const r=arg.event.extendedProps.record,c=r.readOnly?arg.event.borderColor:color(r);
+   const r=arg.event.extendedProps.record,c=color(r);
+   arg.el.dataset.calendarId=calendarId(r,investmentEvents);
    arg.el.style.setProperty('--event-color',c);
    const t=arg.el.querySelector('.event-title');if(t&&r.readOnly)t.style.color=c;
-   arg.el.title=arg.event.title;
+   arg.el.title=catName(r)+' · '+arg.event.title;
   },
   select:arg=>{openEditor(null,{start:arg.allDay?dayKey(arg.start):arg.start.toISOString(),end:arg.allDay?dayKey(arg.end):arg.end.toISOString(),allDay:arg.allDay});calendar.unselect();},
   eventClick:arg=>{const r=arg.event.extendedProps.record;if(r.readOnly)openReadOnlyRecord(r);else openEditor(r.id,{},occurrenceAnchor(r.occurrenceId));},
@@ -99,7 +116,7 @@ async function moveEvent(arg){
  try{await store.save({...old,start:old.allDay?dayKey(arg.event.start):arg.event.start.toISOString(),end:old.allDay?dayKey(arg.event.end):arg.event.end.toISOString()},old.revision);toast('일정 시간이 변경되었습니다.');}
  catch(err){if(err.queued)toast(err.message);else{arg.revert();toast(err.message);}}
 }
-function refreshCalendar(){calendar?.refetchEvents();paintRail();}
+function refreshCalendar(){calendar?.refetchEvents();paintRail();paintCalendarViews();}
 function paintRail(){
  if(!$('#rail'))return;
  const daily=expandEvents(visible(),atDay(dayKey(selectedDate),0),atDay(dayKey(shiftDay(selectedDate,1)),0)).sort((a,b)=>a.start.localeCompare(b.start)),next=daily.find(e=>e.status!=='done'),done=daily.filter(e=>e.status==='done').length;
@@ -388,7 +405,7 @@ function openSettings(){
  d.showModal();
 }
 function manageCategories(){
- const d=$('#settings');d.innerHTML='<div class="dialog-head"><h2 id="settings-title">내 캘린더 관리</h2><button data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body">'+categories.map(c=>'<div class="settings-row"><input data-cat-name="'+esc(c.id)+'" aria-label="캘린더 이름" value="'+esc(c.label)+'" maxlength="30"><input type="color" data-cat-color="'+esc(c.id)+'" aria-label="색상" value="'+c.color+'" style="width:52px;height:40px;padding:5px"><button class="danger" data-cat-delete="'+esc(c.id)+'" aria-label="'+esc(c.label)+' 삭제">'+icon('trash')+'</button></div>').join('')+'<button class="soft" id="add-category" style="margin-top:17px">'+icon('plus')+'캘린더 추가</button><p class="form-note">일정이 있는 캘린더는 먼저 일정을 다른 캘린더로 옮겨 주세요.</p></div><div class="dialog-actions"><button class="primary" id="save-categories">저장</button></div>';
+ const d=$('#settings');d.innerHTML='<div class="dialog-head"><h2 id="settings-title">내 캘린더 관리</h2><button data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body">'+categories.map(c=>'<div class="settings-row"><input data-cat-name="'+esc(c.id)+'" aria-label="캘린더 이름" value="'+esc(c.label)+'" maxlength="30"><input type="color" data-cat-color="'+esc(c.id)+'" aria-label="색상" value="'+c.color+'" style="width:52px;height:40px;padding:5px"><button class="danger" data-cat-delete="'+esc(c.id)+'" aria-label="'+esc(c.label)+' 삭제">'+icon('trash')+'</button></div>').join('')+'<button class="soft" id="add-category" style="margin-top:17px">'+icon('plus')+'캘린더 추가</button><p class="form-note">연결된 확인 일정은 원본의 표시와 종류에 따라 자동으로 나뉩니다. 이곳에서는 직접 남기는 기록의 이름과 색을 관리합니다.</p></div><div class="dialog-actions"><button class="primary" id="save-categories">저장</button></div>';
  d.querySelector('[data-close]').onclick=()=>d.close();
  d.querySelectorAll('[data-cat-delete]').forEach(b=>b.onclick=async()=>{const id=b.dataset.catDelete;if([...events,...investmentEvents].some(e=>!e.deletedAt&&e.category===id)){toast('일정이 있어 삭제할 수 없습니다. 먼저 일정을 옮겨 주세요.');return;}if(['personal','investment'].includes(id)){toast('기본 캘린더는 유지됩니다.');return;}categories=categories.filter(c=>c.id!==id);await persistCategories();d.close();manageCategories();paintCategories();});
  $('#add-category').onclick=async()=>{categories.push({id:newId(),label:'새 캘린더',color:'#607cbb'});await persistCategories();d.close();manageCategories();};
