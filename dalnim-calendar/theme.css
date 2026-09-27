@@ -290,3 +290,22 @@ dialog::backdrop { background: #3a30463d; backdrop-filter: blur(5px); }
 }
 @media(prefers-reduced-motion:reduce){.flow-panel{transition:none}}
 @media print{.day-flow,.page-actions{display:none!important}}
+/* Investment and personal record scope */
+.archive-link{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;border:1px solid var(--line);border-radius:11px;padding:10px 14px;font-size:13px;color:var(--ink);white-space:nowrap}
+.archive-link:hover{background:var(--rose-soft);border-color:var(--rose-line)}
+.private-label{font-size:11px;color:var(--muted);padding:6px 0}
+.feed-state{border:1px solid #e2e9e7;border-radius:13px;background:#f4faf7;padding:11px 12px;color:#4b7768}
+.feed-state>span{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600}
+.feed-state .icon{width:15px;height:15px}
+.feed-state small{display:block;font-size:10px;line-height:1.7;margin:5px 0;color:#71897d}
+.feed-state .feed-refresh{padding:3px 0;min-height:32px;font-size:10px;color:#4b7768;justify-content:flex-start}
+.feed-state[data-state=error]{background:#fff8ef;border-color:#f0dfc7;color:#9b7145}
+.feed-state[data-state=error] small{color:#9b7145}
+.feed-state[data-state=disabled],.feed-state[data-state=local]{background:#f7f6fa;border-color:var(--line);color:var(--muted)}
+.block-page .block-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.block-card .connection-status{min-height:0;font-weight:600;color:#378e86;margin-bottom:12px}
+.archive-row{width:100%;display:flex;justify-content:space-between;gap:14px;text-align:left;padding:14px 4px;border-radius:0;border-bottom:1px solid var(--line)}
+.archive-row strong{font-size:13px;font-weight:500}.archive-row small{color:var(--muted);white-space:nowrap}
+.archive-details{margin-top:15px;font-size:12px;line-height:1.8}.archive-details span{color:var(--muted)}
+@media(max-width:760px){.archive-link{font-size:11px;padding:7px 11px;min-height:44px}.block-page .block-grid{grid-template-columns:1fr}.feed-state .feed-refresh{min-height:44px}.archive-row{flex-direction:column;gap:5px}}
+@media print{.feed-state{display:none!important}}
