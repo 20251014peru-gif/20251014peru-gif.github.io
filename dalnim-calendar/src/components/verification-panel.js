@@ -12,9 +12,9 @@ function caseCard(row,history=false){
 }
 export function verificationPanel(record,evidence,editable){
  const i=record.integration,p=planFor(record);
- const sourceHTML=(evidence?.sources||[]).map(s=>'<details class="evidence-source"><summary>'+esc(s.title||'연결 원본')+(s.missing?' · 원본 없음':'')+'</summary><p class="quiet small">'+esc(s.date||'작성일 미기록')+' · 현재 원본 내용</p><div class="evidence-prose">'+esc(s.body||'본문이 없거나 이 화면에서 읽을 수 없는 형식입니다. 원본 열기에서 확인해 주세요.')+'</div>'+link(s.url,'원문 자료')+'</details>').join('');
+ const sourceHTML=(evidence?.sources||[]).map(s=>'<details class="evidence-source"><summary>'+esc(s.title||'연결 원본')+(s.missing?' · 원본 없음':'')+'</summary><p class="quiet small">'+esc(s.date||'작성일 미기록')+' · 현재 원문 발췌</p><div class="evidence-prose">'+esc(s.body||'본문이 없거나 이 화면에서 읽을 수 없는 형식입니다. 원본 열기에서 확인해 주세요.')+'</div>'+link(s.url,'원문 자료')+'</details>').join('');
  const original=section('01','당시 무엇을 보고 판단했나',
-  '<div class="evidence-original"><span class="integration-label">저장된 확인 질문</span><p>'+esc(i.question||record.title)+'</p><span class="integration-label">당시 예상 · 대응 계획</span><p>'+esc(i.expectation||'예상 내용이 없습니다. 원문에서 확인해 아래에 적어 주세요.')+'</p></div>'+sourceHTML+
+  (record.location?'<p class="investment-source">'+esc(record.location)+'</p>':'')+'<div class="evidence-original"><span class="integration-label">저장된 확인 질문</span><p>'+esc(i.question||record.title)+'</p><span class="integration-label">당시 예상 · 대응 계획</span><p>'+esc(i.expectation||'예상 내용이 없습니다. 원문에서 확인해 아래에 적어 주세요.')+'</p></div>'+sourceHTML+
   (editable?text('plan.claim','당시 핵심 주장 · 근거 문장',p.claim,'원문에서 확인한 주장 한 문장과 이유를 적어 주세요. 영상은 발언 시각도 함께 적습니다.',4000):'')+'<p class="form-note">제목·예상과 실제 원문을 구분해 남깁니다. 아래 안내는 주제에 따른 확인 초안이며, 원문에서 추출하거나 검증한 사실이 아닙니다.</p>');
  const plan=section('02','이번에는 이것을 찾아 확인',
   (editable?text('plan.targetPeriod','확인할 대상 · 기간',p.targetPeriod,'예: 해당 회의 날짜와 직전 회의 날짜 / 종목과 회계분기. 미정이면 먼저 확인합니다.',4000):'')+
@@ -47,5 +47,5 @@ export function collectVerification(form,info){
 }
 export function conflictSummary(info){
  const labels={dueAt:'날짜',state:'상태',result:'결과',basisDate:'자료 기준일',comparison:'예상과 비교',observedChange:'실제 변화',judgment:'판단',changeReason:'판단 이유',lesson:'교훈',nextAction:'다음 행동'};
- return Object.entries(labels).map(([key,label])=>label+': '+(info[key]||'미기록')).join('\n')+'\n근거 링크: '+(info.links||[]).map(l=>l.url).join('\n')+'\n확인 지침:\n'+planFields.map(k=>k+': '+(info.verificationPlan?.[k]||'미기록')).join('\n');
+ return Object.entries(labels).map(([key,label])=>label+': '+((key==='comparison'?comparisons[info[key]]:key==='judgment'?judgments[info[key]]:key==='state'?{open:'미확인',working:'확인 중',done:'완료',paused:'보류'}[info[key]]:info[key])||'미기록')).join('\n')+'\n근거 링크: '+(info.links||[]).map(l=>l.url).join('\n')+'\n확인 지침:\n'+planFields.map(k=>({claim:'당시 핵심 주장',targetPeriod:'대상·기간',findWhat:'찾을 내용',whereToLook:'자료 위치',compareWith:'비교 기준',criteria:'판단 기준',patternKey:'패턴 이름'}[k])+': '+(info.verificationPlan?.[k]||'미기록')).join('\n');
 }
