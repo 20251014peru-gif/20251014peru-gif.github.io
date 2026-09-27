@@ -81,6 +81,14 @@ export class CloudStore{
    if(synced)this.onSynced?.(synced);
   }finally{this.flushing=false;await this.reload({fresh:true}).catch(()=>{});for(const fn of this.listeners)fn();}
  }
+ // Reminder reservations require a server acknowledgement and never enter the offline queue.
+ async saveOnline(event,expectedRevision=0){
+  const data=await this.request('/events','POST',{event,expectedRevision});
+  this.cache=[...this.cache.filter(e=>e.id!==data.event.id),data.event];this.lastError=null;
+  for(const fn of this.listeners)fn();
+  try{await this.reload({fresh:true});}catch(err){this.cache=[...this.cache.filter(e=>e.id!==data.event.id),data.event];this.lastError=err.message;for(const fn of this.listeners)fn();}
+  return data.event;
+ }
  async list(){return structuredClone(this.cache);}
  subscribe(fn){this.listeners.add(fn);return()=>this.listeners.delete(fn);}
  async remove(event){return this.save({...event,deletedAt:Date.now()},event.revision);}

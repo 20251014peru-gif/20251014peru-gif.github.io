@@ -1,6 +1,14 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {CloudStore} from '../src/cloud.js';
 const conf={apiBase:'https://api.example.test',firebase:{apiKey:'public'}};
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
+test('online-only reminder save rejects network errors without entering the offline queue',async()=>{
+ const s=new CloudStore(conf);s.request=async()=>{throw Object.assign(Error('offline'),{offline:true});};s.ensureQueue=()=>{throw Error('queue must not be opened');};
+ await assert.rejects(s.saveOnline({id:'reminder'},0),/offline/);assert.equal(s.pendingCount,0);assert.deepEqual(await s.list(),[]);
+});
+test('server-confirmed reminder remains confirmed when the following refresh fails',async()=>{
+ const s=new CloudStore(conf),event={id:'reminder',revision:2};s.request=async()=>({event});s.reload=async()=>{s.cache=[{id:'reminder',revision:1}];throw Error('refresh offline');};
+ assert.deepEqual(await s.saveOnline(event,1),event);assert.deepEqual(await s.list(),[event]);assert.equal(s.lastError,'refresh offline');
+});
 test('concurrent API requests share one access token refresh',async()=>{const savedFetch=global.fetch,savedStorage=global.localStorage;const gate=deferred();let refreshCount=0;global.localStorage={setItem(){}};global.fetch=async url=>{assert.ok(url.includes('securetoken'));refreshCount++;await gate.promise;return {ok:true,json:async()=>({id_token:'token',refresh_token:'refresh',expires_in:3600})};};try{const s=new CloudStore(conf);s.refreshToken='old';const a=s.accessToken(),b=s.accessToken();gate.resolve();assert.equal(await a,'token');assert.equal(await b,'token');assert.equal(refreshCount,1);}finally{global.fetch=savedFetch;global.localStorage=savedStorage;}});
 test('save waits for an in-flight poll then fetches a fresh version',async()=>{const s=new CloudStore(conf),gate=deferred();let gets=0;s.request=async(path,method)=>{if(method==='POST')return {event:{id:'a',revision:2}};gets++;if(gets===1){await gate.promise;return {events:[{id:'a',revision:1}]};}return {events:[{id:'a',revision:2}]};};const poll=s.reload(),save=s.save({id:'a'},1);gate.resolve();await Promise.all([poll,save]);assert.equal(gets,2);assert.equal((await s.list())[0].revision,2);});
 test('failed workspace login does not persist a session',async()=>{const previous=global.localStorage;let saved=false;global.localStorage={setItem(){saved=true;}};try{const s=new CloudStore(conf);s.request=async()=>{throw Error('not invited');};await assert.rejects(s.connectSession({idToken:'token',refreshToken:'refresh',expiresIn:3600}));assert.equal(saved,false);assert.equal(s.token,null);assert.equal(s.timer,undefined);}finally{global.localStorage=previous;}});
