@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-09-27T06:41:15.082338+09:00",
+ "updated_at": "2026-09-27T09:00:50.000753+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 10,
-   "channel_count": 6,
-   "total_views": 788377,
-   "latest": "2026-09-26T18:05:12+09:00",
+   "channel_count": 7,
+   "total_views": 634927,
+   "latest": "2026-09-27T07:00:18+09:00",
    "video_ids": [
+    "dsrACPT8sOE",
     "cBTK75UkdGM",
     "WGtNoUYGWiY",
     "8R4ZAkNeZ5k",
@@ -17,7 +18,6 @@
     "ahQfWAiANzo",
     "Cl6GOKqmOBo",
     "tfEtMqqbi4c",
-    "G7X-z_3ZzYw",
     "zdTN6BmbjFI"
    ],
    "channels": [
@@ -26,28 +26,14 @@
     "삼프로TV 3PROTV",
     "이효석아카데미",
     "증시각도기TV",
-    "체슬리TV (박세익)"
+    "체슬리TV (박세익)",
+    "티타임즈TV"
    ],
    "subtopics": [
     {
      "word": "시대",
      "videos": 3,
      "channels": 3
-    },
-    {
-     "word": "앞으",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "있다",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "마인드마이너",
-     "videos": 2,
-     "channels": 1
     },
     {
      "word": "토론합시다",
@@ -58,6 +44,21 @@
      "word": "별주부전",
      "videos": 2,
      "channels": 1
+    },
+    {
+     "word": "경읽남",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "김용섭",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "소장님",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -65,11 +66,13 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 5,
+   "video_count": 7,
    "channel_count": 4,
-   "total_views": 313283,
-   "latest": "2026-09-26T12:00:20+09:00",
+   "total_views": 321394,
+   "latest": "2026-09-27T08:30:03+09:00",
    "video_ids": [
+    "2wk0eefpLUU",
+    "dsrACPT8sOE",
     "8R4ZAkNeZ5k",
     "1aOIxYAtQjE",
     "YmMuVXTSbZc",
@@ -89,7 +92,27 @@
      "channels": 2
     },
     {
+     "word": "SK하이닉스",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "테크라이터",
+     "videos": 2,
+     "channels": 1
+    },
+    {
      "word": "삼성전자",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "김지현",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "병목",
      "videos": 2,
      "channels": 1
     }
@@ -99,11 +122,12 @@
   {
    "id": "중국경제",
    "name": "중국경제",
-   "video_count": 4,
-   "channel_count": 3,
-   "total_views": 719720,
-   "latest": "2026-09-26T20:55:26+09:00",
+   "video_count": 5,
+   "channel_count": 4,
+   "total_views": 758971,
+   "latest": "2026-09-27T08:00:11+09:00",
    "video_ids": [
+    "KEdQ_841ERE",
     "M1Pia49zf_8",
     "pF_M2eTeHSY",
     "yhSdiTsZSUk",
@@ -112,9 +136,15 @@
    "channels": [
     "달란트투자",
     "삼프로TV 3PROTV",
-    "언더스탠딩"
+    "언더스탠딩",
+    "최준영 박사의 지구본 연구소"
    ],
    "subtopics": [
+    {
+     "word": "중국",
+     "videos": 3,
+     "channels": 3
+    },
     {
      "word": "망했다",
      "videos": 2,
@@ -139,11 +169,6 @@
      "word": "남궁민",
      "videos": 2,
      "channels": 1
-    },
-    {
-     "word": "일본",
-     "videos": 2,
-     "channels": 1
     }
    ],
    "active": true
@@ -153,7 +178,7 @@
    "name": "미국증시",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 403124,
+   "total_views": 419207,
    "latest": "2026-09-26T20:00:38+09:00",
    "video_ids": [
     "r0iyuMrexWI",
@@ -173,7 +198,7 @@
    "name": "정책·정치",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 318968,
+   "total_views": 330960,
    "latest": "2026-09-26T14:42:10+09:00",
    "video_ids": [
     "CAs3xXSzY98",
@@ -197,15 +222,14 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 4,
+   "video_count": 3,
    "channel_count": 2,
-   "total_views": 250489,
+   "total_views": 229348,
    "latest": "2026-09-27T06:05:29+09:00",
    "video_ids": [
     "IVC4t7YKVrQ",
     "kR9ZZoaY2AM",
-    "r0iyuMrexWI",
-    "duwKzv-l9w8"
+    "r0iyuMrexWI"
    ],
    "channels": [
     "815머니톡",
@@ -231,16 +255,6 @@
      "word": "노딜",
      "videos": 2,
      "channels": 1
-    },
-    {
-     "word": "한국",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "증시",
-     "videos": 2,
-     "channels": 1
     }
    ],
    "active": true
@@ -250,7 +264,7 @@
    "name": "관세·무역",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 132883,
+   "total_views": 147632,
    "latest": "2026-09-27T06:05:29+09:00",
    "video_ids": [
     "IVC4t7YKVrQ",
@@ -290,7 +304,7 @@
    "name": "채권·크레딧",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 431678,
+   "total_views": 446615,
    "latest": "2026-09-27T06:05:29+09:00",
    "video_ids": [
     "IVC4t7YKVrQ",
