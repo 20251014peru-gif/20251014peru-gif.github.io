@@ -2,6 +2,8 @@ import {dateTimeField,bindDateTimes} from './components/time-dial.js';
 import {bindDayFlow} from './components/day-flow.js';
 import {defaultCategories,isArchivedEvent,scopeCategories,mergeCategories,calendarBackupRecords} from './core/calendar-scope.js';
 import {FeedConnection} from './core/feed-connection.js';
+import {isInvestmentReminder,investmentReminderOrigin,cancelInvestmentReminder} from './core/investment-snooze.js';
+import {mountRemindLater} from './components/remind-later.js';
 import {config} from './config.js';
 import {LocalStore} from './core/store.js';
 import {ModuleRegistry} from './core/registry.js';
@@ -64,7 +66,7 @@ function renderCalendar(){
   initialView:page==='agenda'?'listMonth':view,initialDate:selectedDate,locale:'ko',firstDay:0,headerToolbar:false,nowIndicator:true,allDayText:'종일',noEventsText:'표시할 일정이 없습니다.',buttonText:{today:'오늘'},height:'auto',expandRows:true,slotMinTime:'07:00:00',slotMaxTime:'22:00:00',scrollTime:'08:00:00',slotDuration:'00:30:00',snapDuration:'00:05:00',slotLabelInterval:'01:00:00',slotLabelFormat:{hour:'2-digit',minute:'2-digit',hour12:false},eventTimeFormat:{hour:'2-digit',minute:'2-digit',hour12:false},selectable:true,editable:true,eventDurationEditable:true,longPressDelay:350,selectMirror:true,dayMaxEvents:false,navLinks:true,slotEventOverlap:false,
   dayHeaderContent:arg=>{if(arg.view.type==='listMonth')return arg.text;return {html:'<span class="day-name">'+['일','월','화','수','목','금','토'][arg.date.getDay()]+'</span><span class="day-number">'+arg.date.getDate()+'</span>'};},
   events:(info,success)=>{
-   const mapped=expandEvents(visible(),info.start,info.end).map(e=>({id:e.occurrenceId,title:e.title,start:e.start,end:e.end,allDay:e.allDay,backgroundColor:color(e)+'1b',borderColor:color(e),extendedProps:{record:e},editable:e.repeat==='none'&&!e.readOnly}));
+   const mapped=expandEvents(visible(),info.start,info.end).map(e=>({id:e.occurrenceId,title:e.title,start:e.start,end:e.end,allDay:e.allDay,backgroundColor:color(e)+'1b',borderColor:color(e),extendedProps:{record:e},editable:e.repeat==='none'&&!e.readOnly&&!isInvestmentReminder(e)}));
    // Read-only investment items all share one category color, so several on the same day blur
    // together — alternate two colors by their order within that day instead.
    const READONLY_ALT=['#1e3f78','#e2760f'],dayCount={};
@@ -110,13 +112,20 @@ function openInvestmentFromQuery(){
  const item=investmentEvents.find(e=>e.id===id);if(item)openReadOnlyRecord(item);
 }
 function openReadOnlyRecord(record){
- const d=$('#editor'),isCheck=record.source?.kind==='check';
- d.innerHTML='<div class="dialog-head"><h2>'+esc(record.title)+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><p class="form-note">'+icon('link')+'투자 기록보관실에서 가져온 읽기 전용 기록입니다. 원본을 고치려면 투자 기록보관실에서 열어 주세요.</p>'+(record.location?'<p><strong>종목</strong> '+esc(record.location)+'</p>':'')+(record.notes?'<p style="white-space:pre-wrap">'+esc(record.notes)+'</p>':'')+'<p class="quiet small">'+new Date(record.start).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})+' · '+(record.status==='done'?'기록됨':'예정')+'</p>'+(isCheck?'<p class="form-note">완료 처리하면 투자 기록보관실의 "오늘의 체크리스트"에도 완료로 표시됩니다. 이 항목 자체는 날짜가 지나도 계속 캘린더에 남습니다(원본 앱과 동일한 동작입니다).</p>':'')+'</div><div class="dialog-actions">'+(isCheck?'<button class="soft" type="button" id="complete-check">'+icon('check')+'확인 완료 처리</button>':'')+'<button class="primary" type="button" data-close>닫기</button></div>';
+ const d=$('#editor'),isCheck=record.source?.kind==='check';let completed=false;
+ d.innerHTML='<div class="dialog-head"><h2 id="editor-title">'+esc(record.title)+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><p class="form-note">'+icon('link')+'투자 기록보관실에서 가져온 읽기 전용 기록입니다. 원본을 고치려면 투자 기록보관실에서 열어 주세요.</p>'+(record.location?'<p><strong>종목</strong> '+esc(record.location)+'</p>':'')+(record.notes?'<p style="white-space:pre-wrap">'+esc(record.notes)+'</p>':'')+'<p class="quiet small">'+new Date(record.start).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})+' · '+(record.status==='done'?'기록됨':'예정')+'</p>'+(isCheck?'<p class="form-note">확인 완료 처리하면 투자 기록보관실의 체크리스트에 반영하고 이 창에서 예약한 다시 알림도 취소합니다.</p>':'')+'<div id="remind-later-host"></div></div><div class="dialog-actions investment-actions"><button class="soft" type="button" id="remind-later-toggle">'+icon('clock')+'나중에 다시 알림</button>'+(isCheck?'<button class="soft" type="button" id="complete-check">'+icon('check')+'확인 완료 처리</button>':'')+'<button class="primary" type="button" data-close>닫기</button></div>';
+ const reminderUI=mountRemindLater({host:$('#remind-later-host'),button:$('#remind-later-toggle'),store,record,onChange:refresh,onBusy:busy=>{const b=d.querySelector('#complete-check');if(b)b.disabled=busy||completed;},onSettings:()=>{d.close();navigate('inbox');}});
+ d.addEventListener('close',()=>reminderUI.dispose(),{once:true});
  d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close());
  if(isCheck)$('#complete-check').onclick=async()=>{
-  const btn=$('#complete-check');btn.disabled=true;
-  try{await store.request('/investment-feed/complete','POST',{recordId:record.source.recordId,index:record.source.index});toast('확인 완료로 처리했습니다.');d.close();}
-  catch(err){toast(err.message||'처리하지 못했습니다.');btn.disabled=false;}
+  reminderUI.setBusy(true);
+  try{
+   if(!store.isCloud)throw Error('확인 완료는 클라우드에 연결한 뒤 사용할 수 있습니다.');
+   await store.request('/investment-feed/complete','POST',{recordId:record.source.recordId,index:record.source.index});completed=true;
+   try{await cancelInvestmentReminder(store,record);}catch(err){toast('확인 완료는 반영됐지만 다시 알림을 취소하지 못했습니다. 예약 취소를 다시 눌러 주세요.');return;}
+   await refresh();toast('확인 완료로 처리했습니다.');d.close();
+  }catch(err){toast(err.message||'처리하지 못했습니다.');}
+  finally{reminderUI.setBusy(false);}
  };
  d.showModal();
 }
@@ -179,7 +188,7 @@ function openPhotoViewer(photos,startIndex){
  render();d.showModal();
 }
 function openEditor(id,patch={},anchor=null){
- const old=id?events.find(e=>e.id===id):null;if(id&&!old)return;if(old&&isArchivedEvent(old)){openArchivedRecord(old);return;}
+ const old=id?events.find(e=>e.id===id):null;if(id&&!old)return;if(isInvestmentReminder(old)){openReadOnlyRecord(investmentEvents.find(e=>e.id===old.details.investmentItemId)||investmentReminderOrigin(old));return;}if(old&&isArchivedEvent(old)){openArchivedRecord(old);return;}
  selectedId=id;
  const perOccurrence=Boolean(old&&old.repeat!=='none'&&anchor);
  const start=atDay(dayKey(selectedDate),9);

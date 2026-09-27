@@ -318,3 +318,21 @@ dialog::backdrop { background: #3a30463d; backdrop-filter: blur(5px); }
 .welcome-gate>.welcome-home{margin:0 0 22px;min-height:44px}
 @media(max-width:760px){.system-home-link{min-height:44px;margin-bottom:6px}}
 @media print{.system-home-link{display:none!important}}
+
+/* Remind later stays inside the record, with the existing five-minute time dial. */
+.remind-later{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.remind-status{font-size:13px;font-weight:600;color:#537368;line-height:1.7}
+.remind-status:empty{display:none}
+.remind-options{margin-top:12px;padding:16px;border:1px solid var(--rose-line);border-radius:14px;background:var(--rose-soft)}
+.remind-options h3{font-size:14px;margin-bottom:12px}
+.remind-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.remind-presets button{min-height:44px;padding:8px 5px;background:#fff;font-size:12px}
+.remind-custom{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin-top:16px}
+.remind-custom input{min-width:0;min-height:44px}
+.remind-custom [data-remind-save]{grid-column:1/-1;min-height:44px}
+.remind-bottom{display:flex;align-items:center;gap:8px;margin-top:12px}
+.remind-bottom button{min-height:44px;font-size:12px}
+.investment-actions{flex-wrap:wrap}
+.investment-actions button{min-height:44px}
+.investment-actions #remind-later-toggle{margin-right:auto;background:var(--rose-soft);color:#87516f}
+@media(max-width:480px){.investment-actions{gap:7px;padding:13px 17px}.investment-actions #remind-later-toggle{width:100%;margin:0}.remind-options{padding:12px}.remind-presets{grid-template-columns:repeat(2,1fr)}}
