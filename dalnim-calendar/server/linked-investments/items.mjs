@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {saveTransition} from './followup-contract.mjs';
+import {comparisons,judgments,planFields,safeEvidenceURL} from '../../src/core/verification.js';
 
 export const fail=(status,message)=>Object.assign(Error(message),{status});
 export const validDate=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;
@@ -20,7 +21,8 @@ export function mapFollowup(f){
  return {...base('investment-followup:'+f.id,'🔔 '+(f.question||'확인·복기'),date,f.state==='done'?'done':f.state==='working'?'progress':'planned','followup',f.id),
   revision:f.revision||0,notes:f.expectation||'',location:(f.stocks||[]).join(', '),
   calendarVisible:!!date&&f.state!=='paused',aliases:followupAliases(f),
-  integration:{type:'followup',state:f.state||'open',dueAt:f.dueAt||'',result:f.result||'',nextAction:f.nextAction||'',expectation:f.expectation||'',revision:f.revision||0,editable:true,sourceIds:f.sourceIds||[],sourceTitles:(f.sourceSnapshots||[]).map(r=>r.title||'').join(' · ')}};
+  integration:{type:'followup',state:f.state||'open',dueAt:f.dueAt||'',result:f.result||'',nextAction:f.nextAction||'',expectation:f.expectation||'',revision:f.revision||0,editable:true,sourceIds:f.sourceIds||[],sourceTitles:(f.sourceSnapshots||[]).map(r=>r.title||'').join(' · '),
+   question:f.question||'',basisDate:f.basisDate||'',comparison:f.comparison||'',judgment:f.judgment||'pending',observedChange:f.observedChange||'',lesson:f.lesson||'',changeReason:f.changeReason||'',links:f.links||[],verificationPlan:f.verificationPlan||null}};
 }
 const predictionStates=['대기중','적중','빗나감','판정불가'];
 export function mapYoutubePrediction(p){
@@ -43,10 +45,28 @@ export function digestItems(events,today,reminders,now=Date.now()){
 export function followupChange(current,patch,expected,operationId,now=Date.now()){
  if(!current)throw fail(404,'확인 항목이 삭제되었거나 없습니다.');
  const clean={};
- for(const k of ['dueAt','result','nextAction','state'])if(patch[k]!==undefined)clean[k]=patch[k];
+ // Return the stored snapshot on retries before considering a different draft.
+ if(current.operationId===operationId&&operationId)return {item:current,repeated:true};
+ for(const k of ['dueAt','result','nextAction','state','basisDate','comparison','judgment','observedChange','lesson','changeReason','links'])if(patch[k]!==undefined)clean[k]=patch[k];
  if(clean.dueAt!==undefined&&clean.dueAt!==''&&!validDate(clean.dueAt))throw fail(400,'확인 날짜가 올바르지 않습니다.');
- for(const k of ['result','nextAction'])if(clean[k]!==undefined&&(typeof clean[k]!=='string'||clean[k].length>20000))throw fail(400,'입력 내용은 20,000자 이내로 적어 주세요.');
- try{return saveTransition(current,clean,{expected,operationId,id:current.id,now});}
+ if(clean.basisDate!==undefined&&clean.basisDate!==''&&!validDate(clean.basisDate))throw fail(400,'자료 기준일이 올바르지 않습니다.');
+ for(const k of ['result','nextAction','observedChange','lesson','changeReason'])if(clean[k]!==undefined&&(typeof clean[k]!=='string'||clean[k].length>20000))throw fail(400,'입력 내용은 20,000자 이내로 적어 주세요.');
+ if(clean.comparison!==undefined&&!Object.hasOwn(comparisons,clean.comparison))throw fail(400,'예상과 비교 항목을 확인해 주세요.');
+ if(clean.judgment!==undefined&&!Object.hasOwn(judgments,clean.judgment))throw fail(400,'판단 변화 항목을 확인해 주세요.');
+ if(clean.links!==undefined&&(!Array.isArray(clean.links)||clean.links.length>30||clean.links.some(l=>!l||typeof l.url!=='string'||l.url.length>2000||!safeEvidenceURL(l.url)||l.title!==undefined&&(typeof l.title!=='string'||l.title.length>500))))throw fail(400,'근거 링크는 http(s) 주소로 30개까지 적어 주세요.');
+ let plan;
+ if(patch.verificationPlan!==undefined){
+  const input=patch.verificationPlan;
+  if(!input||typeof input!=='object'||Array.isArray(input))throw fail(400,'확인 지침 형식이 올바르지 않습니다.');
+  plan={...(current.verificationPlan||{}),schemaVersion:1};
+  for(const key of planFields)if(input[key]!==undefined){if(typeof input[key]!=='string'||input[key].length>(key==='patternKey'?120:4000))throw fail(400,'확인 지침은 항목별 4,000자, 패턴 이름은 120자 이내로 적어 주세요.');plan[key]=input[key].trim();}
+ }
+ try{
+  const change=saveTransition(current,clean,{expected,operationId,id:current.id,now});
+  if(plan){change.item.verificationPlan=plan;change.review.verificationPlan=plan;}
+  if(new TextEncoder().encode(JSON.stringify(change.item)).length>750000)throw Error('TOO_LARGE');
+  return change;
+ }
  catch(e){throw fail(e.message==='CONFLICT'?409:400,({CONFLICT:'다른 화면에서 수정되었습니다. 입력은 유지됩니다. 최신 내용을 확인해 주세요.',RESULT_REQUIRED:'완료하려면 확인 결과를 적어 주세요.',PAUSE_REASON_REQUIRED:'보류 이유를 결과에 적어 주세요.',BAD_STATE:'확인 상태가 올바르지 않습니다.'})[e.message]||'입력 내용을 확인해 주세요.');}
 }
 export function predictionChange(current,patch,expected){

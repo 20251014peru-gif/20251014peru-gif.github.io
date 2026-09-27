@@ -1,6 +1,7 @@
 import {mapRecordToEvent} from '../investment-feed.mjs';
 import {fail,mapFollowup,mapYoutubePrediction,mapPrediction,followupChange,predictionChange,actionable,fingerprint} from './items.mjs';
 import {isInvestmentReminder,activeInvestmentReminder} from '../../src/core/investment-snooze.js';
+import {sourceContext,evidenceSnapshot,caseResults} from './evidence.mjs';
 
 const LIMIT=5000, idOK=s=>typeof s==='string'&&/^[\w.-]{1,160}$/.test(s);
 const values=s=>s.docs.map(d=>({...d.data(),id:d.id}));
@@ -73,6 +74,20 @@ export function createInvestmentRepository(db,{fetchJSON=async url=>{const r=awa
    return {event:item,cancelled};
   });
  }
+ // Detail-only reads: feed polling and reminder dispatch keep their small resolve path.
+ async function detail(itemId){
+  const event=await resolve(itemId,{fresh:true});if(!event||event.integration?.type!=='followup')return {event};
+  const target=reference(event.id),snap=await target.ref.get();if(!snap.exists)return {event:null};
+  const current={...snap.data(),id:snap.id},warnings=[];
+  const tasks=await Promise.allSettled([
+   Promise.all((current.sourceIds||[]).slice(0,20).filter(idOK).map(async id=>{const source=await db.collection('records').doc(id).get();return sourceContext(source.exists?{...source.data(),id}:null,{...current.sourceSnapshots?.find(x=>x.id===id),id});})),
+   db.collection('record_followup_reviews').where('followupId','==',target.id).limit(LIMIT+1).get().then(s=>{if(s.size>LIMIT)throw Error('history limit');const rows=values(s).sort((a,b)=>(b.revision||0)-(a.revision||0)||(b.recordedAt||0)-(a.recordedAt||0));return {total:rows.length,items:rows.slice(0,20).map(evidenceSnapshot)};}),
+   all('record_followups').then(rows=>caseResults(current,rows))
+  ]);
+  const labels=['원본 내용','저장 이력','같은 패턴 사례'];tasks.forEach((r,i)=>{if(r.status==='rejected')warnings.push(labels[i]+'을 불러오지 못했습니다. 다시 열어 확인해 주세요.');});
+  if((current.sourceIds||[]).length>20)warnings.push('연결된 원본 중 20개를 표시합니다. 나머지는 원본 앱에서 확인해 주세요.');
+  return {event:mapFollowup(current),evidence:{sources:tasks[0].value||[],history:tasks[1].value||null,cases:tasks[2].value||null,warnings}};
+ }
  async function cancelIfInactive(root,doc){
   const original=doc.data();if(!activeInvestmentReminder(original))return null;
   // Failed source reads throw; they must never be interpreted as deletion/completion.
@@ -94,5 +109,5 @@ export function createInvestmentRepository(db,{fetchJSON=async url=>{const r=awa
   }
   return cancelled;
  }
- return {investmentFeed,predictionFeed,resolve,save,cancelIfInactive,reconcile,reference};
+ return {investmentFeed,predictionFeed,resolve,detail,save,cancelIfInactive,reconcile,reference};
 }
