@@ -14,6 +14,32 @@
   --shadow-soft: 0 4px 18px #56426808;
 }
 
+/* Source calendars keep one color, regardless of date, ordering or filtering. */
+.calendar-group-label { margin: 12px 8px 5px; color: #8c8093; font-size: 10px; letter-spacing: .025em; }
+.calendar-group-label:first-child { margin-top: 0; }
+.cat-row { min-height: 42px; }
+.cat-row input { flex: none; }
+.cat-row > span:not(.count) { flex: 1; }
+.calendar-views { margin: 0 0 20px; padding: 15px 17px 12px; border: 1px solid #eee6ef; border-radius: 16px; background: linear-gradient(105deg,#fcf6fa,#f8f9fe); }
+.calendar-view-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 11px; color: #72677b; font-size: 11px; }
+.hide-completed { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.hide-completed input { width: 15px; height: 15px; margin: 0; }
+.calendar-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.calendar-chip { --cat: #59677f; min-height: 37px; padding: 8px 13px; border: 1px solid #e7e1ec; border-radius: 11px; background: #ffffffb8; color: #776f80; font-size: 12px; font-weight: 500; }
+.calendar-chip:hover { border-color: var(--cat); background: #fff; }
+.calendar-chip[aria-pressed=true] { background: color-mix(in srgb,var(--cat) 11%,white); color: var(--cat); border-color: color-mix(in srgb,var(--cat) 48%,white); box-shadow: 0 2px 6px #51446909; font-weight: 700; }
+.calendar-chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cat); flex: none; }
+.calendar-view-note { margin: 10px 0 0; color: #82788c; font-size: 11px; line-height: 1.65; }
+.calendar-view-note span { margin-left: 5px; color: #a095a7; }
+@media(max-width:760px) {
+ .calendar-views { margin-bottom: 14px; padding: 12px; border-radius: 13px; }
+ .calendar-chip { min-height: 44px; padding: 9px 11px; }
+ .hide-completed { min-height: 32px; }
+ .calendar-view-note span { display: none; }
+ .cat-row { min-height: 44px; }
+}
+@media print { .calendar-views { padding: 0; border: 0; background: none; } .calendar-view-head,.calendar-chips,.calendar-view-note span { display: none; } }
+
 /* Pearl, blush and a clear blue for actions. */
 body {
   background: radial-gradient(ellipse at 0 0, #f9eaf1 0, transparent 45%), var(--bg);
