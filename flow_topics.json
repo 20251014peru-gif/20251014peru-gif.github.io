@@ -1,20 +1,20 @@
 {
- "updated_at": "2026-09-27T21:34:12.635017+09:00",
+ "updated_at": "2026-09-28T02:20:55.506443+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 10,
-   "channel_count": 7,
-   "total_views": 767069,
-   "latest": "2026-09-27T15:00:34+09:00",
+   "channel_count": 6,
+   "total_views": 849770,
+   "latest": "2026-09-27T22:41:00+09:00",
    "video_ids": [
+    "kfFKLfgepEI",
     "JIJl6F3cONk",
     "m7CMPp0nwcw",
     "Y3ehcpWcfgw",
     "PGg1ztLS9F4",
     "dsrACPT8sOE",
-    "cBTK75UkdGM",
     "WGtNoUYGWiY",
     "Zm_uuw4IKZQ",
     "x9uiFXpJDZ4",
@@ -22,7 +22,6 @@
    ],
    "channels": [
     "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
     "삼프로TV 3PROTV",
     "이효석아카데미",
     "증시각도기TV",
@@ -66,11 +65,12 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 6,
+   "video_count": 7,
    "channel_count": 4,
-   "total_views": 644236,
-   "latest": "2026-09-27T20:00:25+09:00",
+   "total_views": 844959,
+   "latest": "2026-09-27T22:55:03+09:00",
    "video_ids": [
+    "V4nw0H9pgic",
     "Su2Qj-nGFio",
     "wZ9BFN541fs",
     "PGg1ztLS9F4",
@@ -87,8 +87,18 @@
    "subtopics": [
     {
      "word": "증시",
+     "videos": 4,
+     "channels": 3
+    },
+    {
+     "word": "즉시분석",
      "videos": 3,
-     "channels": 2
+     "channels": 1
+    },
+    {
+     "word": "국채금리",
+     "videos": 2,
+     "channels": 1
     },
     {
      "word": "정상회담",
@@ -96,22 +106,12 @@
      "channels": 1
     },
     {
-     "word": "즉시분석",
+     "word": "생방송",
      "videos": 2,
      "channels": 1
     },
     {
      "word": "찐시황",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "미중",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "노딜",
      "videos": 2,
      "channels": 1
     }
@@ -123,7 +123,7 @@
    "name": "중국경제",
    "video_count": 5,
    "channel_count": 4,
-   "total_views": 789205,
+   "total_views": 889010,
    "latest": "2026-09-27T09:00:37+09:00",
    "video_ids": [
     "9Ttvwd2E9jo",
@@ -177,7 +177,7 @@
    "name": "반도체",
    "video_count": 5,
    "channel_count": 3,
-   "total_views": 211687,
+   "total_views": 286435,
    "latest": "2026-09-27T17:00:14+09:00",
    "video_ids": [
     "JIcsdD9nqk0",
@@ -220,7 +220,7 @@
    "name": "배당·ETF",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 62185,
+   "total_views": 182355,
    "latest": "2026-09-27T20:00:25+09:00",
    "video_ids": [
     "Su2Qj-nGFio",
@@ -252,7 +252,7 @@
    "name": "일본·엔화",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 497949,
+   "total_views": 548519,
    "latest": "2026-09-27T17:00:38+09:00",
    "video_ids": [
     "dhOsoSGzkds",
@@ -297,7 +297,7 @@
    "name": "관세·무역",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 276815,
+   "total_views": 290256,
    "latest": "2026-09-27T06:05:29+09:00",
    "video_ids": [
     "IVC4t7YKVrQ",
@@ -316,6 +316,55 @@
     },
     {
      "word": "즉시분석",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "미중",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "노딜",
+     "videos": 2,
+     "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "채권_크레딧",
+   "name": "채권·크레딧",
+   "video_count": 3,
+   "channel_count": 1,
+   "total_views": 314894,
+   "latest": "2026-09-27T22:55:03+09:00",
+   "video_ids": [
+    "V4nw0H9pgic",
+    "IVC4t7YKVrQ",
+    "kR9ZZoaY2AM"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)"
+   ],
+   "subtopics": [
+    {
+     "word": "즉시분석",
+     "videos": 3,
+     "channels": 1
+    },
+    {
+     "word": "국채금리",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "정상회담",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "생방송",
      "videos": 2,
      "channels": 1
     },
