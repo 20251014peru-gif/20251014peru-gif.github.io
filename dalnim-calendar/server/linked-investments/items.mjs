@@ -1,0 +1,60 @@
+import {createHash} from 'node:crypto';
+import {saveTransition} from './followup-contract.mjs';
+
+export const fail=(status,message)=>Object.assign(Error(message),{status});
+export const validDate=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;
+const nextDay=s=>new Date(Date.parse(s)+86400000).toISOString().slice(0,10);
+const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
+export const fingerprint=v=>createHash('sha256').update(JSON.stringify(canonical(v))).digest('hex');
+const base=(id,title,date,status,kind,sourceId)=>({id,title:String(title).slice(0,160),start:date,end:validDate(date)?nextDay(date):'',allDay:true,timeZone:'Asia/Seoul',category:'investment',module:'investment',status,repeat:'none',reminder:-1,visibility:'personal',readOnly:true,revision:1,notes:'',location:'',details:{},source:{app:'investment-archive',kind,recordId:sourceId}});
+
+export function followupAliases(f){
+ const record=f.sourceIds?.[0],legacy=f.legacy;
+ if(!record||!legacy)return [];
+ if(legacy.reviewAt!==undefined)return ['investment-review:'+record];
+ if(Number.isInteger(legacy.index))return [...new Set(['investment-check:'+record+':'+(legacy.check?.id||legacy.index),'investment-check:'+record+':'+legacy.index])];
+ return [];
+}
+export function mapFollowup(f){
+ const date=validDate(f.dueAt)?f.dueAt:'';
+ return {...base('investment-followup:'+f.id,'🔔 '+(f.question||'확인·복기'),date,f.state==='done'?'done':f.state==='working'?'progress':'planned','followup',f.id),
+  revision:f.revision||0,notes:f.expectation||'',location:(f.stocks||[]).join(', '),
+  calendarVisible:!!date&&f.state!=='paused',aliases:followupAliases(f),
+  integration:{type:'followup',state:f.state||'open',dueAt:f.dueAt||'',result:f.result||'',nextAction:f.nextAction||'',expectation:f.expectation||'',revision:f.revision||0,editable:true,sourceIds:f.sourceIds||[],sourceTitles:(f.sourceSnapshots||[]).map(r=>r.title||'').join(' · ')}};
+}
+const predictionStates=['대기중','적중','빗나감','판정불가'];
+export function mapYoutubePrediction(p){
+ const date=validDate(p.검증기한)?p.검증기한:'',state=p.상태||'대기중';
+ return {...base('youtube-prediction:'+p.id,'🎯 '+(p.대상||p.영상제목||'예측 검증'),date,state==='대기중'?'planned':'done','youtube-prediction',p.id),calendarVisible:!!date,
+  location:[p.티커,p.채널].filter(Boolean).join(' · '),notes:[p.방향&&'예측 방향: '+p.방향,p.기준선&&'기준선: '+p.기준선,p.반증조건&&'반증 조건: '+p.반증조건,p.원문].filter(Boolean).join('\n'),
+  integration:{type:'youtube-prediction',state,dueAt:p.검증기한||'',result:p.판정근거||'',revision:fingerprint(p),editable:true,sourceTitles:p.영상제목||'',sourceIds:[]}};
+}
+export function mapPrediction(p,score){
+ const date=validDate(p.due)?p.due:'',state=p.status==='withdrawn'?'철회':score?.status||'대기중';
+ return {...base('investment-prediction:'+p.id,'🎯 '+(p.target||p.ticker||'투자 예측'),date,state==='대기중'?'planned':'done','prediction',p.id),calendarVisible:!!date,
+  location:[p.ticker,p.source?.name].filter(Boolean).join(' · '),notes:[p.direction&&'예측 방향: '+p.direction,p.baseline&&'기준선: '+p.baseline,p.invalidation&&'반증 조건: '+p.invalidation,p.reason].filter(Boolean).join('\n'),
+  integration:{type:'prediction',state,dueAt:p.due||'',result:score?.basis||'',editable:false,sourceTitles:p.source?.name||'',sourceIds:[]}};
+}
+export const actionable=e=>e&&(!e.integration||['open','working','대기중'].includes(e.integration.state));
+export function dueItems(events,today){return events.filter(e=>e.integration&&e.start===today&&actionable(e));}
+export function digestItems(events,today,reminders,now=Date.now()){
+ return dueItems(events,today).filter(e=>!reminders.some(r=>r.source?.app==='dalnim-investment-reminder'&&!r.deletedAt&&r.status!=='done'&&r.reminder>=0&&Date.parse(r.start)>now&&[e.id,...(e.aliases||[])].includes(r.details?.investmentItemId)));
+}
+export function followupChange(current,patch,expected,operationId,now=Date.now()){
+ if(!current)throw fail(404,'확인 항목이 삭제되었거나 없습니다.');
+ const clean={};
+ for(const k of ['dueAt','result','nextAction','state'])if(patch[k]!==undefined)clean[k]=patch[k];
+ if(clean.dueAt!==undefined&&clean.dueAt!==''&&!validDate(clean.dueAt))throw fail(400,'확인 날짜가 올바르지 않습니다.');
+ for(const k of ['result','nextAction'])if(clean[k]!==undefined&&(typeof clean[k]!=='string'||clean[k].length>20000))throw fail(400,'입력 내용은 20,000자 이내로 적어 주세요.');
+ try{return saveTransition(current,clean,{expected,operationId,id:current.id,now});}
+ catch(e){throw fail(e.message==='CONFLICT'?409:400,({CONFLICT:'다른 화면에서 수정되었습니다. 입력은 유지됩니다. 최신 내용을 확인해 주세요.',RESULT_REQUIRED:'완료하려면 확인 결과를 적어 주세요.',PAUSE_REASON_REQUIRED:'보류 이유를 결과에 적어 주세요.',BAD_STATE:'확인 상태가 올바르지 않습니다.'})[e.message]||'입력 내용을 확인해 주세요.');}
+}
+export function predictionChange(current,patch,expected){
+ if(!current)throw fail(404,'예측이 삭제되었거나 없습니다.');
+ if(fingerprint(current)!==expected)throw fail(409,'다른 화면에서 예측이 수정되었습니다. 입력은 유지됩니다. 최신 내용을 확인해 주세요.');
+ if(!validDate(patch.dueAt))throw fail(400,'검증 날짜를 선택해 주세요.');
+ if(!predictionStates.includes(patch.state))throw fail(400,'예측 판정이 올바르지 않습니다.');
+ if(typeof patch.result!=='string'||patch.result.length>20000)throw fail(400,'판정 근거는 20,000자 이내로 적어 주세요.');
+ if(patch.state!=='대기중'&&!patch.result.trim())throw fail(400,'판정 근거를 적어 주세요.');
+ return {검증기한:patch.dueAt,상태:patch.state,판정근거:patch.result};
+}

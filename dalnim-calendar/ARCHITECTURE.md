@@ -1,3 +1,7 @@
+# 0.12.0 연결 계약
+
+활성 연결은 `server/linked-investments/{items,repository,followup-contract}.mjs`가 담당합니다. 기록보관실의 현재 일정은 `record_followups`이며 구형 checks/reviewAt 투영은 활성 피드에서 사용하지 않습니다. 화면은 별도 FeedConnection으로 기록/예측 오류를 격리하고 `investment-detail.js`에서 원본 버전을 확인해 수정합니다. 원본 변경·이력·재알림 취소는 트랜잭션으로 저장합니다. 원본 앱에서 직접 수정한 상태는 예약 실행 서버가 재확인합니다. 상세 계약과 운영 제한은 [0.12.0 문서](UPDATE-0.12.0.md)를 따릅니다.
+
 # 달님 캘린더 — 블록 계약 v1
 
 이 캘린더는 개인 투자·기록용 독립 화면입니다. 기존 worklog.html/worklog.js와 실데이터는 수정하지 않습니다.

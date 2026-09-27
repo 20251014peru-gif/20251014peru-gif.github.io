@@ -2,8 +2,8 @@ import {dateTimeField,bindDateTimes} from './components/time-dial.js';
 import {bindDayFlow} from './components/day-flow.js';
 import {defaultCategories,isArchivedEvent,scopeCategories,mergeCategories,calendarBackupRecords} from './core/calendar-scope.js';
 import {FeedConnection} from './core/feed-connection.js';
-import {isInvestmentReminder,investmentReminderOrigin,cancelInvestmentReminder} from './core/investment-snooze.js';
-import {mountRemindLater} from './components/remind-later.js';
+import {isInvestmentReminder,investmentReminderOrigin} from './core/investment-snooze.js';
+import {openInvestmentDetail} from './components/investment-detail.js';
 import {config} from './config.js';
 import {LocalStore} from './core/store.js';
 import {ModuleRegistry} from './core/registry.js';
@@ -15,10 +15,11 @@ const $=s=>document.querySelector(s);
 const registry=new ModuleRegistry();
 let store,calendar,events=[],disabled=[],hidden=new Set(),categories=[],selectedDate=new Date(),page='calendar',view=innerWidth<761?'timeGridDay':'timeGridWeek',query='',selectedId=null,installEvent;
 let investmentEvents=[];
-const findAnyEvent=id=>events.find(e=>e.id===id)||investmentEvents.find(e=>e.id===id);
+const findAnyEvent=id=>events.find(e=>e.id===id)||investmentEvents.find(e=>e.id===id||e.aliases?.includes(id));
 const baseCategories=defaultCategories;
 let savedCategories=[],feedTimer;
-const investmentFeed=new FeedConnection(feed=>{investmentEvents=feed.events;if($('#categories')){paintCategories();paintFeedState();refreshCalendar();if(page==='blocks')renderBlocks();}});
+function feedChanged(){investmentEvents=[...investmentFeed.events,...predictionFeed.events];if($('#categories')){paintCategories();paintFeedState();refreshCalendar();if(page==='blocks')renderBlocks();}}
+const investmentFeed=new FeedConnection(feedChanged),predictionFeed=new FeedConnection(feedChanged);
 function setCategories(saved){savedCategories=saved;categories=scopeCategories(saved);}
 async function persistCategories(){savedCategories=mergeCategories(savedCategories,categories);await store.setMeta('categories',savedCategories);}
 const archivedEvents=()=>events.filter(isArchivedEvent);
@@ -26,7 +27,7 @@ const color=e=>categories.find(c=>c.id===e.category)?.color||'#8795ad';
 const catName=e=>categories.find(c=>c.id===e.category)?.label||'보관된 일정';
 const timeLabel=e=>e.allDay?'종일':new Date(e.start).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false})+' – '+new Date(e.end).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
 const enabled=id=>id==='personal'||!disabled.includes(id);
-const visible=()=>[...events,...investmentEvents].filter(e=>!isArchivedEvent(e)&&!e.deletedAt&&!hidden.has(e.category)&&(!query||[e.title,e.notes,e.location,...Object.values(e.details||{})].join(' ').toLowerCase().includes(query.toLowerCase())));
+const visible=()=>[...events,...investmentEvents].filter(e=>!isArchivedEvent(e)&&!e.deletedAt&&e.calendarVisible!==false&&!hidden.has(e.category)&&(!query||[e.title,e.notes,e.location,...Object.values(e.details||{})].join(' ').toLowerCase().includes(query.toLowerCase())));
 const stateLabel=()=>store?.isCloud?(store.pendingCount?'오프라인 저장 대기 · '+store.pendingCount+'건':store.lastError?'연결 확인 필요':'클라우드 연결됨'):'이 기기에 저장';
 const occurrenceAnchor=id=>id&&id.includes('@')?id.slice(id.indexOf('@')+1):null;
 function shell(){
@@ -109,25 +110,13 @@ function paintRail(){
 const dateInput=s=>{const d=new Date(s);return dayKey(d)+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
 function openInvestmentFromQuery(){
  const id=new URLSearchParams(location.search).get('investment');if(!id)return;
- const item=investmentEvents.find(e=>e.id===id);if(item)openReadOnlyRecord(item);
+ const item=investmentEvents.find(e=>e.id===id||e.aliases?.includes(id));if(item)openReadOnlyRecord(item);else if(store.isCloud)store.request('/investment-items/resolve','POST',{id}).then(r=>{if(r.event)openReadOnlyRecord(r.event);else toast('원본 항목을 찾지 못했습니다.');}).catch(e=>toast(e.message));
 }
 function openReadOnlyRecord(record){
- const d=$('#editor'),isCheck=record.source?.kind==='check';let completed=false;
- d.innerHTML='<div class="dialog-head"><h2 id="editor-title">'+esc(record.title)+'</h2><button type="button" data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><p class="form-note">'+icon('link')+'투자 기록보관실에서 가져온 읽기 전용 기록입니다. 원본을 고치려면 투자 기록보관실에서 열어 주세요.</p>'+(record.location?'<p><strong>종목</strong> '+esc(record.location)+'</p>':'')+(record.notes?'<p style="white-space:pre-wrap">'+esc(record.notes)+'</p>':'')+'<p class="quiet small">'+new Date(record.start).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})+' · '+(record.status==='done'?'기록됨':'예정')+'</p>'+(isCheck?'<p class="form-note">확인 완료 처리하면 투자 기록보관실의 체크리스트에 반영하고 이 창에서 예약한 다시 알림도 취소합니다.</p>':'')+'<div id="remind-later-host"></div></div><div class="dialog-actions investment-actions"><button class="soft" type="button" id="remind-later-toggle">'+icon('clock')+'나중에 다시 알림</button>'+(isCheck?'<button class="soft" type="button" id="complete-check">'+icon('check')+'확인 완료 처리</button>':'')+'<button class="primary" type="button" data-close>닫기</button></div>';
- const reminderUI=mountRemindLater({host:$('#remind-later-host'),button:$('#remind-later-toggle'),store,record,onChange:refresh,onBusy:busy=>{const b=d.querySelector('#complete-check');if(b)b.disabled=busy||completed;},onSettings:()=>{d.close();navigate('inbox');}});
- d.addEventListener('close',()=>reminderUI.dispose(),{once:true});
- d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close());
- if(isCheck)$('#complete-check').onclick=async()=>{
-  reminderUI.setBusy(true);
-  try{
-   if(!store.isCloud)throw Error('확인 완료는 클라우드에 연결한 뒤 사용할 수 있습니다.');
-   await store.request('/investment-feed/complete','POST',{recordId:record.source.recordId,index:record.source.index});completed=true;
-   try{await cancelInvestmentReminder(store,record);}catch(err){toast('확인 완료는 반영됐지만 다시 알림을 취소하지 못했습니다. 예약 취소를 다시 눌러 주세요.');return;}
-   await refresh();toast('확인 완료로 처리했습니다.');d.close();
-  }catch(err){toast(err.message||'처리하지 못했습니다.');}
-  finally{reminderUI.setBusy(false);}
- };
- d.showModal();
+ return openInvestmentDetail({dialog:$('#editor'),store,record,onChange:async item=>{
+  if(item){for(const feed of [investmentFeed,predictionFeed])feed.events=feed.events.map(e=>e.id===item.id?item:e);feedChanged();}
+  await refresh();await loadInvestmentFeed();
+ },onSettings:()=>navigate('inbox'),notify:toast});
 }
 // Basic viewer: pinch/wheel/double-click zoom, drag-to-pan, prev/next, save and share. Save/share
 // fetch the image as a blob first (Storage's download endpoint allows cross-origin reads) so a real
@@ -188,7 +177,7 @@ function openPhotoViewer(photos,startIndex){
  render();d.showModal();
 }
 function openEditor(id,patch={},anchor=null){
- const old=id?events.find(e=>e.id===id):null;if(id&&!old)return;if(isInvestmentReminder(old)){openReadOnlyRecord(investmentEvents.find(e=>e.id===old.details.investmentItemId)||investmentReminderOrigin(old));return;}if(old&&isArchivedEvent(old)){openArchivedRecord(old);return;}
+ const old=id?events.find(e=>e.id===id):null;if(id&&!old)return;if(isInvestmentReminder(old)){openReadOnlyRecord(investmentEvents.find(e=>e.id===old.details.investmentItemId||e.aliases?.includes(old.details.investmentItemId))||investmentReminderOrigin(old));return;}if(old&&isArchivedEvent(old)){openArchivedRecord(old);return;}
  selectedId=id;
  const perOccurrence=Boolean(old&&old.repeat!=='none'&&anchor);
  const start=atDay(dayKey(selectedDate),9);
@@ -349,23 +338,26 @@ function openEditor(id,patch={},anchor=null){
  });
  d.showModal();setTimeout(()=>form.elements.namedItem('title').focus(),30);
 }
-function feedStatusText(){
- const state=investmentFeed.state;
- if(state.status==='ready')return investmentEvents.length+'건 · '+new Date(state.updatedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+' 갱신';
+function feedStatusText(feed=investmentFeed){
+ const state=feed.state;
+ if(state.status==='ready'||state.status==='partial')return feed.events.filter(e=>e.calendarVisible!==false).length+'건 · '+new Date(state.updatedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+' 갱신'+(state.status==='partial'?' · '+state.error:'');
  return ({idle:'연결 준비 중',loading:'기록 불러오는 중…',error:'가져오기 실패 · '+(state.updatedAt?'이전 기록 표시 중':'연결 확인 필요'),disabled:'연결 꺼짐',local:'체험 공간 · 클라우드에서 연결',unavailable:'연결 모듈을 불러오지 못했어요'})[state.status]||'';
 }
 function paintFeedState(){
  const host=$('#feed-state');if(!host)return;
- host.innerHTML='<span>'+icon('link')+'투자 기록보관실</span><small>'+esc(feedStatusText())+'</small><button class="feed-refresh" aria-label="투자 기록 새로고침" '+(investmentFeed.state.status==='loading'?'disabled':'')+'>'+icon('download')+'새로고침</button>';
- host.dataset.state=investmentFeed.state.status;host.querySelector('button').onclick=loadInvestmentFeed;
+ host.innerHTML='<span>'+icon('link')+'투자 기록·검증</span><small>기록보관실 · '+esc(feedStatusText())+'</small><small>예측 · '+esc(feedStatusText(predictionFeed))+'</small><button class="feed-refresh" aria-label="투자 기록 새로고침">'+icon('download')+'새로고침</button>';
+ host.dataset.state=[investmentFeed,predictionFeed].some(f=>['error','partial'].includes(f.state.status))?'error':investmentFeed.state.status;host.querySelector('button').onclick=loadInvestmentFeed;
 }
-async function loadInvestmentFeed(){return investmentFeed.reload(store,registry.get('investment')?.readFeed,{enabled:enabled('investment')});}
-function startFeedPolling(){clearInterval(feedTimer);loadInvestmentFeed().then(openInvestmentFromQuery);if(store.isCloud)feedTimer=setInterval(()=>{if(!document.hidden)loadInvestmentFeed();},60000);}
+async function loadInvestmentFeed(){return Promise.allSettled([
+ investmentFeed.reload(store,registry.get('investment')?.readFeed,{enabled:enabled('investment')}),
+ predictionFeed.reload(store,s=>s.request('/prediction-feed'),{enabled:enabled('predictions')})
+]);}
+function startFeedPolling(){clearInterval(feedTimer);loadInvestmentFeed().then(openInvestmentFromQuery);if(store.isCloud)feedTimer=setInterval(()=>{if(!document.hidden)loadInvestmentFeed();},30000);}
 function renderBlocks(){
- const status=investmentFeed.state;
- $('#content').innerHTML='<div class="block-page"><div class="blocks-intro"><div>'+icon('chart')+'</div><div><strong>날짜를 따라 보는 투자와 기록</strong><p>직접 남긴 기록과 기록보관실의 확인 예정·재검토를 함께 봅니다.</p></div></div><div class="block-grid"><article class="block-card" style="--cat:#8a829e;--tint:#f5f0fa"><div class="block-icon">'+icon('list')+'</div><h3>나의 기록</h3><p>메모·관찰·학습·복기를 남기고 사진과 체크리스트를 함께 보관합니다.</p><div class="block-bottom"><span>나만 보는 기록</span><span class="pill">사용 중</span></div></article><article class="block-card" style="--cat:#378e86;--tint:#edf7f4"><div class="block-icon">'+icon('chart')+'</div><h3>투자 기록보관실</h3><p>투자 기록·확인 예정·공부노트 재검토 날짜를 가져옵니다. 직접 쓴 투자 노트는 연결을 꺼도 유지됩니다.</p><p class="connection-status">'+esc(feedStatusText())+'</p>'+(status.status==='error'?'<p class="form-error">'+esc(status.error)+'</p>':'')+'<div class="row-actions"><a class="soft archive-link" href="'+esc(config.investmentArchiveUrl)+'" target="_blank" rel="noopener">기록보관실 열기 ↗</a><button class="soft" id="refresh-investment">새로고침</button></div><div class="block-bottom"><span>가져온 원문은 기록보관실에서 수정</span><button role="switch" aria-checked="'+enabled('investment')+'" aria-label="투자 기록보관실 연결" class="switch" id="toggle-investment"></button></div></article></div><p class="blocks-legend">연결 오류가 있어도 직접 남긴 기록은 계속 사용할 수 있습니다.</p></div>';
- $('#refresh-investment').onclick=loadInvestmentFeed;
- $('#toggle-investment').onclick=async()=>{disabled=enabled('investment')?[...disabled,'investment']:disabled.filter(x=>x!=='investment');await store.setMeta('disabled',disabled);await loadInvestmentFeed();};
+ const card=(id,title,description,feed,url)=>'<article class="block-card" style="--cat:#378e86;--tint:#edf7f4"><div class="block-icon">'+icon('chart')+'</div><h3>'+title+'</h3><p>'+description+'</p><p class="connection-status">'+esc(feedStatusText(feed))+'</p>'+(['error','partial'].includes(feed.state.status)?'<p class="form-error">'+esc(feed.state.error)+'</p>':'')+'<div class="row-actions"><a class="soft archive-link" href="'+esc(url)+'" target="_blank" rel="noopener">원본 열기 ↗</a><button class="soft" data-refresh-feed>새로고침</button></div><div class="block-bottom"><span>필요한 연결만 켜 두세요</span><button role="switch" aria-checked="'+enabled(id)+'" aria-label="'+title+' 연결" class="switch" data-toggle-feed="'+id+'"></button></div></article>';
+ $('#content').innerHTML='<div class="block-page"><div class="blocks-intro"><div>'+icon('chart')+'</div><div><strong>날짜를 따라 보는 투자와 기록</strong><p>기록을 읽고, 예상과 결과를 확인하고, 필요한 때 다시 살펴봅니다.</p></div></div><div class="block-grid"><article class="block-card" style="--cat:#8a829e;--tint:#f5f0fa"><div class="block-icon">'+icon('list')+'</div><h3>나의 기록</h3><p>메모·관찰·학습·복기를 남기고 사진과 체크리스트를 함께 보관합니다.</p><div class="block-bottom"><span>나만 보는 기록</span><span class="pill">사용 중</span></div></article>'+card('investment','투자 기록보관실','기록 날짜와 최신 확인·복기를 연결합니다. 확인 날짜·상태·결과를 어느 화면에서 바꿔도 같은 원본에 저장합니다.',investmentFeed,config.investmentArchiveUrl)+card('predictions','예측 검증','유튜브 예측의 기한·판정·근거를 함께 관리합니다. 투자 예측은 자동 채점 원본의 날짜와 결과를 가져옵니다.',predictionFeed,config.youtubeUrl)+'</div><p class="blocks-legend">연결을 꺼도 원본과 직접 남긴 기록은 유지됩니다. 화면 연결을 끄는 것과 알림 예약 취소는 별개입니다.</p></div>';
+ document.querySelectorAll('[data-refresh-feed]').forEach(b=>b.onclick=loadInvestmentFeed);
+ document.querySelectorAll('[data-toggle-feed]').forEach(b=>b.onclick=async()=>{const id=b.dataset.toggleFeed;b.disabled=true;try{const next=enabled(id)?[...disabled,id]:disabled.filter(x=>x!==id);await store.setMeta('disabled',next);disabled=next;await loadInvestmentFeed();}catch(e){b.disabled=false;toast(e.message);}});
 }
 function openArchivedRecord(record){
  const d=$('#editor');d.innerHTML='<div class="dialog-head"><h2 id="editor-title">이전 분류 기록</h2><button data-close aria-label="닫기">'+icon('close')+'</button></div><div class="dialog-body"><h3>'+esc(record.title)+'</h3><p class="form-note">'+esc(timeLabel(record))+' · '+esc(record.start.slice(0,10))+(record.deletedAt?' · 휴지통':'')+'</p><p style="white-space:pre-wrap">'+esc(record.notes||'메모 없음')+'</p><div class="archive-details">'+Object.entries(record.details||{}).filter(([,v])=>v!==''&&v!==null).map(([k,v])=>'<p><span>'+esc(k)+'</span> '+esc(v)+'</p>').join('')+'</div><p class="form-note">이 기록은 이전 분류에 보관되어 있습니다. 전체 백업에 원본 상세와 첨부 정보가 포함됩니다.</p></div><div class="dialog-actions"><button class="soft" id="archive-back">보관 목록</button><button class="primary" data-close>닫기</button></div>';

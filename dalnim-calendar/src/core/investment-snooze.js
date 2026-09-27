@@ -3,6 +3,7 @@ import {validateEvent} from './model.js';
 const APP='dalnim-investment-reminder';
 export const isInvestmentReminder=e=>e?.source?.app===APP&&e?.details?.kind==='investment-reminder';
 export const activeInvestmentReminder=e=>isInvestmentReminder(e)&&!e.deletedAt&&e.status!=='done'&&e.reminder>=0;
+export const canRemindInvestment=e=>!e?.integration||['open','working','대기중'].includes(e.integration.state);
 export async function investmentReminderId(itemId){
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(itemId)));
  return 'investment-reminder:'+Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join('');
@@ -11,6 +12,7 @@ export function makeInvestmentReminder(record,when,id,previous=null,now=Date.now
  const at=+new Date(when);
  if(!Number.isFinite(at)||at<now+60000)throw Error('지금보다 1분 이상 뒤의 시간을 선택해 주세요.');
  if(!record?.id||record.source?.app!=='investment-archive')throw Error('다시 확인할 투자 기록을 찾지 못했습니다.');
+ if(!canRemindInvestment(record))throw Error('완료·보류된 항목은 다시 열거나 대기 상태로 바꾼 후 예약해 주세요.');
  if(previous?.pendingSync)throw Error('이전 변경을 서버에 저장한 뒤 다시 시도해 주세요.');
  // Flat primitive fields survive the existing server's details allowlist. The original text is
  // stored once in notes, so long Korean notes do not double the API payload size.
@@ -37,12 +39,13 @@ export function investmentReminderOrigin(event){
 export async function getInvestmentReminder(store,record,{fresh=false}={}){
  if(fresh&&store.isCloud)await store.reload({fresh:true});
  const id=await investmentReminderId(record.id);
- return (await store.list()).find(e=>e.id===id)||null;
+ const ids=[record.id,...(record.aliases||[])];
+ return (await store.list()).filter(e=>e.id===id||(isInvestmentReminder(e)&&ids.includes(e.details.investmentItemId))).sort((a,b)=>Number(activeInvestmentReminder(b))-Number(activeInvestmentReminder(a))||(b.updatedAt||0)-(a.updatedAt||0))[0]||null;
 }
 const save=(store,event,revision)=>store.isCloud?store.saveOnline(event,revision):store.save(event,revision);
 export async function scheduleInvestmentReminder(store,record,when,now=Date.now()){
  const previous=await getInvestmentReminder(store,record,{fresh:true});
- const id=await investmentReminderId(record.id);
+ const id=previous?.id||await investmentReminderId(record.id);
  const event=makeInvestmentReminder(record,when,id,previous,Math.max(now,Date.now()));
  return save(store,event,previous?.revision||0);
 }
