@@ -100,6 +100,10 @@ export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',ma
    if(role!=='owner')throw failure(403,'연결 항목은 공간 관리자만 볼 수 있습니다.');
    res.json({event:await investments.resolve(req.body?.id,{fresh:true})});return;
   }
+  if(route==='/investment-items/detail'&&req.method==='POST'){
+   if(role!=='owner')throw failure(403,'연결 근거는 공간 관리자만 볼 수 있습니다.');
+   res.json(await investments.detail(req.body?.id));return;
+  }
   if(route==='/investment-items/save'&&req.method==='POST'){
    if(role!=='owner')throw failure(403,'연결 항목은 공간 관리자만 수정할 수 있습니다.');
    if(Buffer.byteLength(JSON.stringify(req.body||{}))>100000)throw failure(413,'입력 내용이 너무 큽니다.');

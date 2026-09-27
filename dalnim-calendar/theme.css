@@ -377,3 +377,25 @@ dialog::backdrop { background: #3a30463d; backdrop-filter: blur(5px); }
 .investment-actions{flex-wrap:wrap;gap:8px}
 .investment-actions .archive-link{padding:11px 14px;min-height:44px}
 @media(max-width:600px){.investment-actions>*{flex:1 1 42%;justify-content:center}.investment-detail-form .form-grid{grid-template-columns:1fr}.investment-context{padding:12px}}
+
+/* Evidence-led investment follow-up; isolated from other editors. */
+#editor:has(.with-verification){width:780px;max-width:calc(100vw - 32px)}
+.verification-intro{display:flex;flex-direction:column;gap:5px;padding:18px 20px;background:linear-gradient(115deg,#f9edf3,#f1effb);border:1px solid #efe2ed;border-radius:18px;margin:4px 0 24px;color:#685070}
+.verification-intro span{font-size:12px;color:#99859b}
+.verification-section{margin:0 0 28px;min-width:0}
+.verification-section h3{font-size:17px;display:flex;gap:10px;align-items:center;margin:0 0 17px;color:#55495f}
+.verification-section h3>span{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;border-radius:10px;background:#f4e9f2;font-size:11px;letter-spacing:1px;color:#ae7198}
+.evidence-original{background:#faf8fc;border:1px solid #efebf4;border-radius:16px;padding:18px 20px;margin-bottom:14px}
+.evidence-original p{margin:8px 0 17px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}.evidence-original p:last-child{margin-bottom:0}
+.evidence-source,.evidence-edit,.evidence-collection{border:1px solid #ece7f1;border-radius:14px;padding:0 16px;margin:12px 0;background:#fff}
+.evidence-source summary,.evidence-edit summary,.evidence-collection summary{cursor:pointer;padding:14px 0;font-size:13px;font-weight:600;line-height:1.6;min-height:44px;color:#786682}
+.evidence-prose{white-space:pre-wrap;max-height:260px;overflow:auto;font-size:13px;line-height:1.8;margin:12px 0;overflow-wrap:anywhere}
+.evidence-guide{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.evidence-guide>div{border:1px solid #ebe7f3;border-radius:16px;padding:17px;background:#fcfaff;min-width:0}
+.evidence-guide strong{font-size:13px;color:#8c6386}.evidence-guide p{font-size:13px;line-height:1.85;margin:9px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;color:#595263}
+.evidence-links{display:flex;flex-wrap:wrap;gap:8px}
+.evidence-link{display:inline-flex;align-items:center;min-height:44px;font-size:12px;color:#6674b6;overflow-wrap:anywhere;padding:6px 0;margin-right:12px;max-width:100%}
+.with-verification .field{margin:12px 0;min-width:0}.with-verification textarea{min-height:94px;line-height:1.7}.with-verification textarea[name="result"]{min-height:138px}.with-verification textarea[name="plan.targetPeriod"]{min-height:72px}
+.with-verification .form-grid{gap:4px 14px}.with-verification .form-note{line-height:1.8}
+.evidence-case{border-top:1px solid #eee8f0;padding:15px 0;overflow-wrap:anywhere}.evidence-case>strong{font-size:14px}.evidence-case p{line-height:1.7;font-size:13px;white-space:pre-wrap;margin:10px 0}.evidence-case p>b{display:block;font-size:11px;color:#9b849b;margin-bottom:4px}.evidence-verdict{color:#94749f}.evidence-empty{font-size:13px;color:#9b899e;line-height:1.9;padding-bottom:12px}
+@media(max-width:640px){#editor:has(.with-verification){max-width:calc(100vw - 16px);width:100%;max-height:calc(100dvh - 16px)}.with-verification .dialog-body{padding:18px}.evidence-guide{grid-template-columns:1fr}.verification-section h3{font-size:15px}.verification-intro{padding:15px}.with-verification .dialog-actions{padding:10px}.with-verification .dialog-actions>*{font-size:12px;min-height:44px;padding:9px}.with-verification .field input,.with-verification .field select,.with-verification .field textarea{font-size:16px}}
