@@ -309,3 +309,12 @@ dialog::backdrop { background: #3a30463d; backdrop-filter: blur(5px); }
 .archive-details{margin-top:15px;font-size:12px;line-height:1.8}.archive-details span{color:var(--muted)}
 @media(max-width:760px){.archive-link{font-size:11px;padding:7px 11px;min-height:44px}.block-page .block-grid{grid-template-columns:1fr}.feed-state .feed-refresh{min-height:44px}.archive-row{flex-direction:column;gap:5px}}
 @media print{.feed-state{display:none!important}}
+
+/* System home is reachable without opening the sidebar, including on mobile. */
+.system-home-link{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:7px 11px;margin-bottom:8px;border:1px solid var(--rose-line);border-radius:10px;background:var(--rose-soft);color:#87516f;font-size:12px;font-weight:600;line-height:1.4;white-space:nowrap;transition:background .16s,border-color .16s}
+.system-home-link .icon{width:15px;height:15px;flex:none}
+.system-home-link:hover{background:#f4e1ed;border-color:#d9b7ca}
+.system-home-link:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.welcome-gate>.welcome-home{margin:0 0 22px;min-height:44px}
+@media(max-width:760px){.system-home-link{min-height:44px;margin-bottom:6px}}
+@media print{.system-home-link{display:none!important}}
