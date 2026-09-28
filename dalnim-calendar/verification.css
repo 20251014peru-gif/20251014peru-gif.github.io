@@ -24,6 +24,7 @@ body:has(#editor[open] .with-verification){overflow:hidden}
 .with-verification .form-grid{gap:3px 10px}
 .with-verification .form-note{font-size:11px;line-height:1.7;margin:9px 0}
 .with-verification .evidence-guide{grid-template-columns:1fr;gap:8px;margin:10px 0}
+.with-verification .evidence-guide[hidden]{display:none}
 .with-verification .evidence-guide>div{padding:11px 13px;border-radius:12px}
 .with-verification .evidence-guide strong{font-size:12px}
 .with-verification .evidence-guide p{font-size:12px;line-height:1.7;margin:5px 0 0}

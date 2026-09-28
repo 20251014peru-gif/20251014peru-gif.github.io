@@ -1,7 +1,8 @@
 import {mapRecordToEvent} from '../investment-feed.mjs';
 import {fail,mapFollowup,mapYoutubePrediction,mapPrediction,followupChange,predictionChange,actionable,fingerprint} from './items.mjs';
 import {isInvestmentReminder,activeInvestmentReminder} from '../../src/core/investment-snooze.js';
-import {sourceContext,evidenceSnapshot,caseResults} from './evidence.mjs';
+import {sourceContext,evidenceSnapshot,caseResults,predictionSnapshot,predictionCases} from './evidence.mjs';
+import {safeEvidenceURL} from '../../src/core/verification.js';
 
 const LIMIT=5000, idOK=s=>typeof s==='string'&&/^[\w.-]{1,160}$/.test(s);
 const values=s=>s.docs.map(d=>({...d.data(),id:d.id}));
@@ -67,7 +68,7 @@ export function createInvestmentRepository(db,{fetchJSON=async url=>{const r=awa
    if(!repeated){
     tx.set(target.ref,changed);
     if(review)tx.set(db.collection('record_followup_reviews').doc(target.id+'_'+operationId),{...review,followupId:target.id});
-    else tx.set(root.collection('integrationHistory').doc(fingerprint(id+':'+operationId)),{itemId:id,before:{dueAt:current.검증기한||'',state:current.상태||'대기중',result:current.판정근거||''},after:patch,changedBy:uid,changedAt:Date.now()});
+    else tx.set(root.collection('integrationHistory').doc(fingerprint(id+':'+operationId)),{itemId:id,before:predictionSnapshot(current),after:patch,snapshot:predictionSnapshot(changed),changedBy:uid,changedAt:Date.now()});
    }
    const cancelled=[];
    for(const doc of reminders?.docs||[]){const e=doc.data();if(activeInvestmentReminder(e)&&reminderMatches(e,item))cancelled.push(writeCancellation(tx,root,doc,e,item.integration.state));}
@@ -75,8 +76,10 @@ export function createInvestmentRepository(db,{fetchJSON=async url=>{const r=awa
   });
  }
  // Detail-only reads: feed polling and reminder dispatch keep their small resolve path.
- async function detail(itemId){
-  const event=await resolve(itemId,{fresh:true});if(!event||event.integration?.type!=='followup')return {event};
+ async function detail(itemId,root){
+  const event=await resolve(itemId,{fresh:true});if(!event)return {event};
+  if(event.integration?.type==='youtube-prediction')return predictionDetail(event,root);
+  if(event.integration?.type!=='followup')return {event};
   const target=reference(event.id),snap=await target.ref.get();if(!snap.exists)return {event:null};
   const current={...snap.data(),id:snap.id},warnings=[];
   const tasks=await Promise.allSettled([
@@ -87,6 +90,27 @@ export function createInvestmentRepository(db,{fetchJSON=async url=>{const r=awa
   const labels=['원본 내용','저장 이력','같은 패턴 사례'];tasks.forEach((r,i)=>{if(r.status==='rejected')warnings.push(labels[i]+'을 불러오지 못했습니다. 다시 열어 확인해 주세요.');});
   if((current.sourceIds||[]).length>20)warnings.push('연결된 원본 중 20개를 표시합니다. 나머지는 원본 앱에서 확인해 주세요.');
   return {event:mapFollowup(current),evidence:{sources:tasks[0].value||[],history:tasks[1].value||null,cases:tasks[2].value||null,warnings}};
+ }
+ async function predictionDetail(event,root){
+  const target=reference(event.id),snap=await target.ref.get();if(!snap.exists)return {event:null};
+  const current={...snap.data(),id:snap.id},warnings=[];
+  const tasks=await Promise.allSettled([
+   (async()=>{
+    const summary=idOK(current.summaryId)?(await db.collection('youtube_summaries').doc(current.summaryId).get()).data():null;
+    return [{id:current.id,title:current.영상제목||current.대상||'예측 원문',date:current.게시일||'',body:current.원문||'',url:safeEvidenceURL(summary?.url||''),kind:'prediction'}];
+   })(),
+   (async()=>{
+    if(!root)throw Error('missing workspace');
+    const s=await root.collection('integrationHistory').where('itemId','==',event.id).limit(LIMIT+1).get();
+    if(s.size>LIMIT)throw Error('history limit');
+    const rows=values(s).sort((a,b)=>(b.changedAt||0)-(a.changedAt||0));
+    return {total:rows.length,items:rows.slice(0,20).map(x=>({...x.snapshot||x.after,recordedAt:x.changedAt,predictionVerdict:x.snapshot?.predictionVerdict||x.after?.state||'',revision:x.snapshot?.revision||0}))};
+   })(),
+   all('youtube_predictions').then(rows=>predictionCases(current,rows))
+  ]);
+  ['원문 연결','저장 이력','같은 패턴 사례'].forEach((label,i)=>{if(tasks[i].status==='rejected')warnings.push(label+'을 불러오지 못했습니다. 다시 열어 확인해 주세요.');});
+  const fallback=[{id:current.id,title:current.영상제목||'예측 원문',date:current.게시일||'',body:current.원문||'',url:'',kind:'prediction'}];
+  return {event:mapYoutubePrediction(current),evidence:{sources:tasks[0].value||fallback,history:tasks[1].value||null,cases:tasks[2].value||null,warnings}};
  }
  async function cancelIfInactive(root,doc){
   const original=doc.data();if(!activeInvestmentReminder(original))return null;

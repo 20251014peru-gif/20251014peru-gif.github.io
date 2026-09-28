@@ -10,12 +10,12 @@ function worker(fetch){
 }
 test('an update caches versioned entry assets and activates without closing existing calendar tabs',async()=>{
  const w=worker();let pending;w.listeners.install({waitUntil:p=>pending=p});await pending;
- assert.ok(w.activated());assert.ok(w.added.some(r=>r.url==='./src/app.js?v=0.14.1'));
- assert.ok(w.added.some(r=>r.url==='./src/config.js?v=0.14.1'));assert.ok(w.added.every(r=>r.cache==='reload'));
+ assert.ok(w.activated());assert.ok(w.added.some(r=>r.url==='./src/app.js?v=0.15.0'));
+ assert.ok(w.added.some(r=>r.url==='./src/config.js?v=0.15.0'));assert.ok(w.added.every(r=>r.cache==='reload'));
 });
 test('online shell requests revalidate HTTP cache and retain a usable offline copy',async()=>{
  let cacheMode;const response={ok:true,type:'basic',clone(){return this;}},w=worker(async(req,options)=>{cacheMode=options.cache;return response;});let result;const tasks=[];
- w.listeners.fetch({request:{method:'GET',url:w.scope+'src/app.js?v=0.14.1'},respondWith:p=>result=p,waitUntil:p=>tasks.push(p)});
+ w.listeners.fetch({request:{method:'GET',url:w.scope+'src/app.js?v=0.15.0'},respondWith:p=>result=p,waitUntil:p=>tasks.push(p)});
  assert.equal(await result,response);await Promise.all(tasks);assert.equal(cacheMode,'no-cache');assert.equal(w.writes.length,1);
 });
 test('offline requests still use the saved shell, while API and cross-origin calls stay untouched',async()=>{
