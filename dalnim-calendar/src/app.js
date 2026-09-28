@@ -5,7 +5,7 @@ import {defaultCategories,isArchivedEvent,scopeCategories,mergeCategories,calend
 import {FeedConnection} from './core/feed-connection.js';
 import {isInvestmentReminder,investmentReminderOrigin} from './core/investment-snooze.js';
 import {openInvestmentDetail} from './components/investment-detail.js';
-import {config} from './config.js?v=0.13.0';
+import {config} from './config.js?v=0.14.0';
 import {LocalStore} from './core/store.js';
 import {ModuleRegistry} from './core/registry.js';
 import {dayKey,atDay,shiftDay,newId,expandEvents,safeURL,ZONE,MAX_PHOTOS} from './core/model.js';

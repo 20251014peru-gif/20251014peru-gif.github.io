@@ -34,6 +34,15 @@ export function verificationGuide(item){
   whereToLook:'미 재무부 TIC 자료에서 해당 월의 국가별 미 국채 보유 표와 주석을 확인합니다. 거래를 주장한 원문이라면 잔액 표와 별도로 매입·매도 거래 자료를 찾습니다.',
   compareWith:'같은 국가·같은 표의 전월 잔액 → 이번 잔액 → 차이를 적습니다. 원본이 예상한 증가·감소 방향과 비교하고 수정 여부를 확인합니다.',
   criteria:'보유 잔액 감소만으로 순매도를 확정하지 않습니다. 원문이 주장한 매도 전환을 뒷받침할 거래 자료가 있는지 구분하고 없으면 그 부분은 판단 유보로 남깁니다.',sources:[{title:'미 재무부 TIC 자료',url:'https://home.treasury.gov/data/treasury-international-capital-tic-system/'}]};
+ if(/\bADI\b|아날로그\s*디바이스/i.test(q)){
+  const range=q.match(/(\d+(?:\.\d+)?)\s*[~～–-]\s*(\d+(?:\.\d+)?)\s*달러/),level=range?range[1]+'~'+range[2]+'달러':'원문에 기록된 가격 구간';
+  guide={...guide,
+   findWhat:'① ADI 공식 실적 발표일과 회계분기 ② 그 분기의 실제 EPS와 원문 예상의 차이 ③ 관찰 날짜의 종가와 당시 저항 구간 '+level+'의 관계를 각각 확인합니다.',
+   whereToLook:'ADI 공식 일정·분기별 실적에서 해당 발표를 선택합니다. 가격은 사용 중인 차트에서 ADI를 열고 거래일·종가를 적습니다. EMA는 원문과 같은 기간 설정인지 확인합니다.',
+   compareWith:'원문에 적힌 저항 구간 '+level+'을 기준으로 확인 날짜의 종가를 비교합니다. 장중 돌파와 종가 돌파를 구분하고, 현재 EMA 값은 당시 가격 구간과 별도로 적습니다. EPS는 같은 분기의 예상치 출처·발표치를 비교합니다.',
+   criteria:'실적 발표 일정 확인 / EPS 예상 대비 결과 / 가격 구간 돌파 여부를 따로 기록합니다. 확인 예정일을 실적 발표일로 보지 않으며, 한 조건만 확인됐다면 나머지는 미확인으로 남깁니다.',
+   sources:[{title:'ADI 공식 실적 발표 일정',url:'https://investor.analog.com/events'},{title:'ADI 분기별 실적·EPS 자료',url:'https://investor.analog.com/financial-info/quarterly-results'}]};
+ }
  return {claim:'',targetPeriod:'',...guide};
 }
 export function planFor(item){const base=verificationGuide(item),saved=item.verificationPlan||item.integration?.verificationPlan;return {...base,...saved,sources:base.sources};}
