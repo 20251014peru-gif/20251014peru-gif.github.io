@@ -26,10 +26,12 @@ export function mapFollowup(f){
 }
 const predictionStates=['대기중','적중','빗나감','판정불가'];
 export function mapYoutubePrediction(p){
- const date=validDate(p.검증기한)?p.검증기한:'',state=p.상태||'대기중';
+ const date=validDate(p.검증기한)?p.검증기한:'',state=p.상태||'대기중',v=p.calendarVerification||{};
  return {...base('youtube-prediction:'+p.id,'🎯 '+(p.대상||p.영상제목||'예측 검증'),date,state==='대기중'?'planned':'done','youtube-prediction',p.id),calendarVisible:!!date,
   location:[p.티커,p.채널].filter(Boolean).join(' · '),notes:[p.방향&&'예측 방향: '+p.방향,p.기준선&&'기준선: '+p.기준선,p.반증조건&&'반증 조건: '+p.반증조건,p.원문].filter(Boolean).join('\n'),
-  integration:{type:'youtube-prediction',state,dueAt:p.검증기한||'',result:p.판정근거||'',revision:fingerprint(p),editable:true,sourceTitles:p.영상제목||'',sourceIds:[]}};
+  integration:{type:'youtube-prediction',state,dueAt:p.검증기한||'',result:p.판정근거||'',revision:fingerprint(p),editable:true,verificationEditable:true,sourceTitles:p.영상제목||'',sourceIds:[],
+   question:p.대상||'',expectation:[p.방향&&'예측 방향: '+p.방향,p.기준선&&'기준선: '+p.기준선,p.반증조건&&'반증 조건: '+p.반증조건].filter(Boolean).join('\n'),originalClaim:p.원문||'',baseline:p.기준선||'',invalidation:p.반증조건||'',publishedAt:p.게시일||'',
+   nextAction:v.nextAction||'',basisDate:v.basisDate||'',comparison:v.comparison||'',judgment:v.judgment||'pending',observedChange:v.observedChange||'',lesson:v.lesson||'',changeReason:v.changeReason||'',links:v.links||[],verificationPlan:v.verificationPlan||null,reviewRevision:v.revision||0}};
 }
 export function mapPrediction(p,score){
  const date=validDate(p.due)?p.due:'',state=p.status==='withdrawn'?'철회':score?.status||'대기중';
@@ -42,11 +44,8 @@ export function dueItems(events,today){return events.filter(e=>e.integration&&e.
 export function digestItems(events,today,reminders,now=Date.now()){
  return dueItems(events,today).filter(e=>!reminders.some(r=>r.source?.app==='dalnim-investment-reminder'&&!r.deletedAt&&r.status!=='done'&&r.reminder>=0&&Date.parse(r.start)>now&&[e.id,...(e.aliases||[])].includes(r.details?.investmentItemId)));
 }
-export function followupChange(current,patch,expected,operationId,now=Date.now()){
- if(!current)throw fail(404,'확인 항목이 삭제되었거나 없습니다.');
+function validatedEvidence(current,patch){
  const clean={};
- // Return the stored snapshot on retries before considering a different draft.
- if(current.operationId===operationId&&operationId)return {item:current,repeated:true};
  for(const k of ['dueAt','result','nextAction','state','basisDate','comparison','judgment','observedChange','lesson','changeReason','links'])if(patch[k]!==undefined)clean[k]=patch[k];
  if(clean.dueAt!==undefined&&clean.dueAt!==''&&!validDate(clean.dueAt))throw fail(400,'확인 날짜가 올바르지 않습니다.');
  if(clean.basisDate!==undefined&&clean.basisDate!==''&&!validDate(clean.basisDate))throw fail(400,'자료 기준일이 올바르지 않습니다.');
@@ -61,6 +60,13 @@ export function followupChange(current,patch,expected,operationId,now=Date.now()
   plan={...(current.verificationPlan||{}),schemaVersion:1};
   for(const key of planFields)if(input[key]!==undefined){if(typeof input[key]!=='string'||input[key].length>(key==='patternKey'?120:4000))throw fail(400,'확인 지침은 항목별 4,000자, 패턴 이름은 120자 이내로 적어 주세요.');plan[key]=input[key].trim();}
  }
+ return {clean,plan};
+}
+export function followupChange(current,patch,expected,operationId,now=Date.now()){
+ if(!current)throw fail(404,'확인 항목이 삭제되었거나 없습니다.');
+ // Return the stored snapshot on retries before considering a different draft.
+ if(current.operationId===operationId&&operationId)return {item:current,repeated:true};
+ const {clean,plan}=validatedEvidence(current,patch);
  try{
   const change=saveTransition(current,clean,{expected,operationId,id:current.id,now});
   if(plan){change.item.verificationPlan=plan;change.review.verificationPlan=plan;}
@@ -76,5 +82,17 @@ export function predictionChange(current,patch,expected){
  if(!predictionStates.includes(patch.state))throw fail(400,'예측 판정이 올바르지 않습니다.');
  if(typeof patch.result!=='string'||patch.result.length>20000)throw fail(400,'판정 근거는 20,000자 이내로 적어 주세요.');
  if(patch.state!=='대기중'&&!patch.result.trim())throw fail(400,'판정 근거를 적어 주세요.');
- return {검증기한:patch.dueAt,상태:patch.state,판정근거:patch.result};
+ const fields=['basisDate','comparison','judgment','observedChange','lesson','changeReason','nextAction','links','verificationPlan'];
+ const hasReview=fields.some(k=>patch[k]!==undefined);
+ // Reuse the validated evidence contract while retaining prediction verdict semantics.
+ // Only explicitly supplied review fields are merged, so older clients preserve detail.
+ let calendarVerification;
+ if(hasReview){
+  const previous=current.calendarVerification||{},reviewPatch=Object.fromEntries(fields.filter(k=>patch[k]!==undefined).map(k=>[k,patch[k]]));
+  const {clean,plan}=validatedEvidence(previous,reviewPatch),validated={...clean,...(plan?{verificationPlan:plan}:{})};
+  calendarVerification={...previous,...Object.fromEntries(fields.filter(k=>validated[k]!==undefined).map(k=>[k,validated[k]])),schemaVersion:1,revision:(previous.revision||0)+1,updatedAt:Date.now()};
+ }
+ const result={검증기한:patch.dueAt,상태:patch.state,판정근거:patch.result,...(hasReview?{calendarVerification}:{})};
+ if(new TextEncoder().encode(JSON.stringify({...current,...result})).length>750000)throw fail(400,'저장 내용이 너무 큽니다. 근거 자료를 링크로 남겨 주세요.');
+ return result;
 }

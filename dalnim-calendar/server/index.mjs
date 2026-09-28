@@ -102,7 +102,7 @@ export const calendarApi=onRequest({region:'asia-northeast3',invoker:'public',ma
   }
   if(route==='/investment-items/detail'&&req.method==='POST'){
    if(role!=='owner')throw failure(403,'연결 근거는 공간 관리자만 볼 수 있습니다.');
-   res.json(await investments.detail(req.body?.id));return;
+   res.json(await investments.detail(req.body?.id,root));return;
   }
   if(route==='/investment-items/save'&&req.method==='POST'){
    if(role!=='owner')throw failure(403,'연결 항목은 공간 관리자만 수정할 수 있습니다.');

@@ -43,6 +43,12 @@ export function verificationGuide(item){
    criteria:'실적 발표 일정 확인 / EPS 예상 대비 결과 / 가격 구간 돌파 여부를 따로 기록합니다. 확인 예정일을 실적 발표일로 보지 않으며, 한 조건만 확인됐다면 나머지는 미확인으로 남깁니다.',
    sources:[{title:'ADI 공식 실적 발표 일정',url:'https://investor.analog.com/events'},{title:'ADI 분기별 실적·EPS 자료',url:'https://investor.analog.com/financial-info/quarterly-results'}]};
  }
+ const prediction=item.integration?.type==='youtube-prediction'?item.integration:null;
+ if(prediction){
+  guide.findWhat='대상: '+q+'\n'+guide.findWhat;
+  if(prediction.invalidation)guide.criteria='원본의 반증 조건: '+prediction.invalidation+'\n이 조건의 충족 여부와 확인 근거를 먼저 적습니다.\n'+guide.criteria;
+  guide.compareWith+=' EPS·매출 전망과 주가 기준선을 섞지 않습니다. 서로 다른 지표이면 각각 비교합니다.';
+ }
  return {claim:'',targetPeriod:'',...guide};
 }
 export function planFor(item){const base=verificationGuide(item),saved=item.verificationPlan||item.integration?.verificationPlan;return {...base,...saved,sources:base.sources};}
