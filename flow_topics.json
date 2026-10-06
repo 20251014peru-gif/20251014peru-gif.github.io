@@ -1,21 +1,22 @@
 {
- "updated_at": "2026-10-06T10:58:59.725449+09:00",
+ "updated_at": "2026-10-06T15:59:09.167624+09:00",
  "topics": [
   {
    "id": "미국증시",
    "name": "미국증시",
-   "video_count": 11,
+   "video_count": 12,
    "channel_count": 8,
-   "total_views": 699600,
-   "latest": "2026-10-06T10:38:49+09:00",
+   "total_views": 1419580,
+   "latest": "2026-10-06T13:09:44+09:00",
    "video_ids": [
+    "_v8UI8HKq4s",
+    "wyJ91F1Xl2I",
+    "kMuSNu1XcZQ",
     "41_UaeSmKoE",
     "dZOo92L9RoY",
     "VaNZQOzeVn8",
-    "1IU1k7cdwGE",
     "dgKLdPKNgB0",
     "TxpcSf5yeIk",
-    "dvO3e4Xrf5M",
     "V3ZQ02Syf5U",
     "tvNKAz1knfE",
     "3qiWGfDIPZQ",
@@ -34,16 +35,16 @@
    "subtopics": [
     {
      "word": "나스닥",
-     "videos": 10,
+     "videos": 9,
      "channels": 7
     },
     {
-     "word": "최고치",
-     "videos": 4,
-     "channels": 4
+     "word": "엔비디아",
+     "videos": 3,
+     "channels": 3
     },
     {
-     "word": "엔비디아",
+     "word": "최고치",
      "videos": 3,
      "channels": 3
     },
@@ -53,12 +54,12 @@
      "channels": 3
     },
     {
-     "word": "사상",
+     "word": "뉴욕증시",
      "videos": 3,
      "channels": 2
     },
     {
-     "word": "코스피",
+     "word": "10년물",
      "videos": 2,
      "channels": 2
     }
@@ -68,18 +69,16 @@
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 9,
-   "channel_count": 8,
-   "total_views": 737022,
+   "video_count": 7,
+   "channel_count": 7,
+   "total_views": 761808,
    "latest": "2026-10-06T10:34:46+09:00",
    "video_ids": [
     "dZOo92L9RoY",
     "VaNZQOzeVn8",
     "dgKLdPKNgB0",
-    "Hv7LTm56vRw",
     "V3ZQ02Syf5U",
     "tvNKAz1knfE",
-    "s3r7b_76UTQ",
     "QEB4-W1_HZw",
     "FzHMUHEbuwY"
    ],
@@ -87,7 +86,6 @@
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
     "미주은 (미국주식으로 은퇴하기)",
-    "삼프로TV 3PROTV",
     "소수몽키",
     "언더스탠딩",
     "이효석아카데미",
@@ -105,11 +103,12 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 7,
+   "video_count": 8,
    "channel_count": 5,
-   "total_views": 1668732,
-   "latest": "2026-10-06T09:55:03+09:00",
+   "total_views": 1846874,
+   "latest": "2026-10-06T13:09:44+09:00",
    "video_ids": [
+    "_v8UI8HKq4s",
     "VaNZQOzeVn8",
     "TxpcSf5yeIk",
     "nWEcPotJ9wE",
@@ -163,24 +162,23 @@
    "id": "반도체",
    "name": "반도체",
    "video_count": 7,
-   "channel_count": 5,
-   "total_views": 401402,
-   "latest": "2026-10-06T09:08:50+09:00",
+   "channel_count": 4,
+   "total_views": 248466,
+   "latest": "2026-10-06T15:00:36+09:00",
    "video_ids": [
-    "IhkWGREnBGo",
+    "8uq4srVsgbU",
+    "_v8UI8HKq4s",
+    "SGu8cBiJ_vA",
     "ZY8rVWpnh-s",
     "S67uM3ungJo",
     "tkAFD1bL8XU",
-    "ZhAQxqNweDg",
-    "zVXsqH1_ob8",
-    "rLWfseoX4p0"
+    "zVXsqH1_ob8"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
-    "증시각도기TV"
+    "체슬리TV (박세익)"
    ],
    "subtopics": [
     {
@@ -191,55 +189,17 @@
     {
      "word": "SK하이닉스",
      "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "10월",
-     "videos": 2,
-     "channels": 2
+     "channels": 1
     },
     {
      "word": "증시",
      "videos": 2,
-     "channels": 2
+     "channels": 1
     },
     {
      "word": "대표",
      "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "교수",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "중국경제",
-   "name": "중국경제",
-   "video_count": 4,
-   "channel_count": 4,
-   "total_views": 166825,
-   "latest": "2026-10-06T08:05:22+09:00",
-   "video_ids": [
-    "Hv7LTm56vRw",
-    "S67uM3ungJo",
-    "s3r7b_76UTQ",
-    "9RyYhEdgAzc"
-   ],
-   "channels": [
-    "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "달란트투자",
-    "삼프로TV 3PROTV"
-   ],
-   "subtopics": [
-    {
-     "word": "중국",
-     "videos": 3,
-     "channels": 3
+     "channels": 1
     }
    ],
    "active": true
@@ -247,11 +207,12 @@
   {
    "id": "채권_크레딧",
    "name": "채권·크레딧",
-   "video_count": 4,
+   "video_count": 5,
    "channel_count": 3,
-   "total_views": 171325,
-   "latest": "2026-10-06T10:38:49+09:00",
+   "total_views": 250426,
+   "latest": "2026-10-06T15:00:36+09:00",
    "video_ids": [
+    "8uq4srVsgbU",
     "41_UaeSmKoE",
     "TxpcSf5yeIk",
     "nWEcPotJ9wE",
