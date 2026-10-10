@@ -1,12 +1,12 @@
 {
- "updated_at": "2026-10-10T22:08:32.696989+09:00",
+ "updated_at": "2026-10-11T04:37:20.624022+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 12,
-   "channel_count": 10,
-   "total_views": 1082643,
+   "video_count": 11,
+   "channel_count": 9,
+   "total_views": 1074613,
    "latest": "2026-10-10T21:12:13+09:00",
    "video_ids": [
     "mBtNHeL7DTc",
@@ -19,13 +19,11 @@
     "EBTfl7ePqDw",
     "UQH8C5tAN8c",
     "e_LNwojQR-8",
-    "iwTmjiMTx1k",
-    "X2zIotF_JEY"
+    "iwTmjiMTx1k"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "내일은 투자왕 - 김단테",
     "미주은 (미국주식으로 은퇴하기)",
     "삼프로TV 3PROTV",
     "소수몽키",
@@ -71,9 +69,9 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 9,
-   "channel_count": 8,
-   "total_views": 364346,
+   "video_count": 8,
+   "channel_count": 7,
+   "total_views": 499426,
    "latest": "2026-10-10T20:00:39+09:00",
    "video_ids": [
     "lbT8CSmo5fk",
@@ -83,13 +81,11 @@
     "5BJZ_yKZnO4",
     "gfHo-oPYTVA",
     "UQH8C5tAN8c",
-    "McTbA8a8L_U",
-    "MCu7HRunY4s"
+    "McTbA8a8L_U"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "경제사냥꾼",
     "달란트투자",
     "슈퍼개미 이세무사TV",
     "염블리와 함께 (염승환)",
@@ -99,8 +95,8 @@
    "subtopics": [
     {
      "word": "삼성전자",
-     "videos": 4,
-     "channels": 3
+     "videos": 3,
+     "channels": 2
     },
     {
      "word": "SK하이닉스",
@@ -115,7 +111,7 @@
    "name": "금리·연준",
    "video_count": 6,
    "channel_count": 5,
-   "total_views": 837425,
+   "total_views": 1967621,
    "latest": "2026-10-10T19:15:13+09:00",
    "video_ids": [
     "6M3_5AFWPXk",
@@ -136,80 +132,11 @@
    "active": true
   },
   {
-   "id": "실적시즌",
-   "name": "실적시즌",
-   "video_count": 4,
-   "channel_count": 4,
-   "total_views": 387540,
-   "latest": "2026-10-10T18:00:25+09:00",
-   "video_ids": [
-    "nCIY3H7FWGg",
-    "gfHo-oPYTVA",
-    "kiDCF84SER0",
-    "k1Ysumyvyio"
-   ],
-   "channels": [
-    "815머니톡",
-    "내일은 투자왕 - 김단테",
-    "슈퍼개미 이세무사TV",
-    "이효석아카데미"
-   ],
-   "subtopics": [
-    {
-     "word": "OpenAI",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "삼성전자",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "매출",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "환율_달러",
-   "name": "환율·달러",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 719791,
-   "latest": "2026-10-10T20:00:39+09:00",
-   "video_ids": [
-    "lbT8CSmo5fk",
-    "2hUkTmwYm3A",
-    "k1Ysumyvyio"
-   ],
-   "channels": [
-    "815머니톡",
-    "내일은 투자왕 - 김단테",
-    "슈카월드"
-   ],
-   "subtopics": [
-    {
-     "word": "200억",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "매출",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "정책_정치",
    "name": "정책·정치",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 321818,
+   "total_views": 419589,
    "latest": "2026-10-10T19:00:32+09:00",
    "video_ids": [
     "cw93jmpwt7A",
@@ -224,6 +151,32 @@
    "subtopics": [
     {
      "word": "한국",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "실적시즌",
+   "name": "실적시즌",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 155346,
+   "latest": "2026-10-10T18:00:25+09:00",
+   "video_ids": [
+    "nCIY3H7FWGg",
+    "gfHo-oPYTVA",
+    "kiDCF84SER0"
+   ],
+   "channels": [
+    "815머니톡",
+    "슈퍼개미 이세무사TV",
+    "이효석아카데미"
+   ],
+   "subtopics": [
+    {
+     "word": "삼성전자",
      "videos": 2,
      "channels": 2
     }
