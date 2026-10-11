@@ -1,14 +1,16 @@
 {
- "updated_at": "2026-10-11T04:37:20.624022+09:00",
+ "updated_at": "2026-10-11T09:34:45.100836+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 11,
-   "channel_count": 9,
-   "total_views": 1074613,
-   "latest": "2026-10-10T21:12:13+09:00",
+   "channel_count": 8,
+   "total_views": 644464,
+   "latest": "2026-10-11T08:30:21+09:00",
    "video_ids": [
+    "wAPm15ZY9NE",
+    "ar5KU9S6838",
     "mBtNHeL7DTc",
     "lbT8CSmo5fk",
     "KpJ7jhEtOac",
@@ -17,15 +19,12 @@
     "5WDw_kX8MZ8",
     "Ob5TSrJbxbs",
     "EBTfl7ePqDw",
-    "UQH8C5tAN8c",
-    "e_LNwojQR-8",
-    "iwTmjiMTx1k"
+    "UQH8C5tAN8c"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
     "미주은 (미국주식으로 은퇴하기)",
-    "삼프로TV 3PROTV",
     "소수몽키",
     "슈퍼개미 이세무사TV",
     "이효석아카데미",
@@ -34,32 +33,22 @@
    ],
    "subtopics": [
     {
+     "word": "증시",
+     "videos": 3,
+     "channels": 2
+    },
+    {
      "word": "교수님",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "증시",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "대표",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "경고",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "블루닷AI",
+     "word": "이주연",
      "videos": 2,
      "channels": 1
     },
     {
-     "word": "연구소장",
+     "word": "대표",
      "videos": 2,
      "channels": 1
     }
@@ -69,9 +58,9 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 8,
-   "channel_count": 7,
-   "total_views": 499426,
+   "video_count": 7,
+   "channel_count": 6,
+   "total_views": 468574,
    "latest": "2026-10-10T20:00:39+09:00",
    "video_ids": [
     "lbT8CSmo5fk",
@@ -80,12 +69,10 @@
     "E2jAOG262MM",
     "5BJZ_yKZnO4",
     "gfHo-oPYTVA",
-    "UQH8C5tAN8c",
-    "McTbA8a8L_U"
+    "UQH8C5tAN8c"
    ],
    "channels": [
     "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
     "달란트투자",
     "슈퍼개미 이세무사TV",
     "염블리와 함께 (염승환)",
@@ -107,38 +94,14 @@
    "active": true
   },
   {
-   "id": "금리_연준",
-   "name": "금리·연준",
-   "video_count": 6,
-   "channel_count": 5,
-   "total_views": 1967621,
-   "latest": "2026-10-10T19:15:13+09:00",
-   "video_ids": [
-    "6M3_5AFWPXk",
-    "2hUkTmwYm3A",
-    "3mzrBJ_lUpg",
-    "W1acM8mjmWI",
-    "NFJBkYfKWaM",
-    "McTbA8a8L_U"
-   ],
-   "channels": [
-    "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "김영익의 경제스쿨",
-    "박종훈의 지식한방",
-    "슈카월드"
-   ],
-   "subtopics": [],
-   "active": true
-  },
-  {
    "id": "정책_정치",
    "name": "정책·정치",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 419589,
-   "latest": "2026-10-10T19:00:32+09:00",
+   "video_count": 4,
+   "channel_count": 4,
+   "total_views": 446950,
+   "latest": "2026-10-11T06:00:18+09:00",
    "video_ids": [
+    "u8Ij7RXnN4k",
     "cw93jmpwt7A",
     "LW4LO1COi9M",
     "YNR-_a76PsI"
@@ -146,9 +109,15 @@
    "channels": [
     "815머니톡",
     "달란트투자",
-    "삼프로TV 3PROTV"
+    "삼프로TV 3PROTV",
+    "체슬리TV (박세익)"
    ],
    "subtopics": [
+    {
+     "word": "중간선거",
+     "videos": 2,
+     "channels": 2
+    },
     {
      "word": "한국",
      "videos": 2,
@@ -158,25 +127,67 @@
    "active": true
   },
   {
-   "id": "실적시즌",
-   "name": "실적시즌",
+   "id": "금리_연준",
+   "name": "금리·연준",
+   "video_count": 4,
+   "channel_count": 4,
+   "total_views": 2013127,
+   "latest": "2026-10-10T19:15:13+09:00",
+   "video_ids": [
+    "6M3_5AFWPXk",
+    "2hUkTmwYm3A",
+    "3mzrBJ_lUpg",
+    "NFJBkYfKWaM"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "김영익의 경제스쿨",
+    "박종훈의 지식한방",
+    "슈카월드"
+   ],
+   "subtopics": [],
+   "active": true
+  },
+  {
+   "id": "환율_달러",
+   "name": "환율·달러",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 155346,
-   "latest": "2026-10-10T18:00:25+09:00",
+   "total_views": 1218237,
+   "latest": "2026-10-11T09:00:23+09:00",
    "video_ids": [
-    "nCIY3H7FWGg",
-    "gfHo-oPYTVA",
-    "kiDCF84SER0"
+    "k4Lj4HIwMDo",
+    "lbT8CSmo5fk",
+    "2hUkTmwYm3A"
    ],
    "channels": [
     "815머니톡",
-    "슈퍼개미 이세무사TV",
+    "슈카월드",
+    "이효석아카데미"
+   ],
+   "subtopics": [],
+   "active": true
+  },
+  {
+   "id": "2차전지",
+   "name": "2차전지",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 185917,
+   "latest": "2026-10-11T09:00:23+09:00",
+   "video_ids": [
+    "k4Lj4HIwMDo",
+    "Dn_uQ1i03s8",
+    "YtK9-GHu8QU"
+   ],
+   "channels": [
+    "815머니톡",
+    "삼프로TV 3PROTV",
     "이효석아카데미"
    ],
    "subtopics": [
     {
-     "word": "삼성전자",
+     "word": "승부처",
      "videos": 2,
      "channels": 2
     }
