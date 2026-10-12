@@ -2359,6 +2359,9 @@ table.ProseMirror-selectednode {
   .mf-imghandle{position:fixed;z-index:211;width:18px;height:18px;background:var(--accent);border:2px solid #fff;border-radius:4px;cursor:nwse-resize;box-shadow:0 1px 4px rgba(0,0,0,.4);touch-action:none;}
   .mf-imgtip{position:fixed;z-index:212;background:var(--text);color:var(--bg);font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:6px;box-shadow:var(--shadow);pointer-events:none;white-space:nowrap;}
   /* 이미지 설명(디스크립션) → 사진 아래 캡션 */
+  .toastui-editor-ww-container .ProseMirror td img,.toastui-editor-ww-container .ProseMirror th img{max-height:56px;max-width:100%;width:auto;object-fit:contain;cursor:zoom-in;}
+  .toastui-editor-ww-container .ProseMirror td p:has(img),.toastui-editor-ww-container .ProseMirror th p:has(img){display:inline-block;margin:2px 4px 0 0;vertical-align:top;}
+  .toastui-editor-ww-container .ProseMirror td .mf-figcap,.toastui-editor-ww-container .ProseMirror th .mf-figcap{display:none;}
   .mf-figcap{display:block;font-size:12.5px;color:var(--text-faint);text-align:center;margin:3px 0 8px;line-height:1.45;font-style:italic;cursor:text;}
   .mf-figcap:hover{color:var(--text-soft);text-decoration:underline dotted;}
   /* 동영상 임베드 */
@@ -2596,7 +2599,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.10</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.11</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -39087,7 +39090,7 @@ window.markflowBootError=function(items,detail){
   }
   var TEMPLATES={
     blank:"# 무제\n\n",
-    book:"# 책 제목\n\n**저자**: \n\n**분야 / 태그**: \n\n**읽은 날**: \n\n> 💡 새로 알게 됨: 한 줄 요약\n\n## 🎯 핵심 3가지\n\n1. \n2. \n3. \n\n## 📖 챕터별 정리\n\n### 1장. \n\n- \n\n## ✨ 인상 깊은 구절\n\n> \n\n## 💭 나의 생각\n\n\n\n## ✅ 적용할 점\n\n- [ ] \n",
+    book:"# 책 제목\n\n**저자**: \n\n**분야 / 태그**: \n\n**읽은 날**: \n\n> 💡 새로 알게 됨: 한 줄 요약\n\n| 쪽 | 핵심 | 나의 생각 | 적용 |\n| --- | --- | --- | --- |\n|  |  |  |  |\n|  |  |  |  |\n|  |  |  |  |\n|  |  |  |  |\n|  |  |  |  |\n\n",
     lecture:"# 강의 제목\n\n**강사 / 출처**: \n\n**주제 / 태그**: \n\n**날짜**: \n\n> 💡 새로 알게 됨: 한 줄 요약\n\n## 🎯 핵심 정리\n\n- \n\n## 📝 상세 노트\n\n### \n\n- \n\n## ❓ 더 알아볼 것\n\n- \n\n## ✅ 실천 / 과제\n\n- [ ] \n"
   };
   function newDoc(folder, tpl){
@@ -40352,12 +40355,14 @@ window.markflowBootError=function(items,detail){
     var st=v.state, $f=st.selection.$to, par=$f.parent;
     if(!par||!par.isTextblock||$f.depth<1) return null;
     var tr=st.tr, size=0; nodes.forEach(function(n){ size+=n.nodeSize; });
+    var inCell=false; for(var k=$f.depth;k>0;k--){ var nn=$f.node(k).type.name; if(nn==="tableBodyCell"||nn==="tableHeadCell"){ inCell=true; break; } }   // 표 칸 안이면 사진 아래에 빈 줄을 따로 만들지 않음(칸이 높아지지 않게)
+    var tail=inCell?[]:[pType.create()];
     var empty=par.content.size===0, atEnd=$f.parentOffset===par.content.size, atStart=$f.parentOffset===0, canSplit=(par.type===pType), at;
-    if(empty&&canSplit){ at=$f.before(); tr.replaceWith(at,$f.after(),nodes.concat([pType.create()])); }      // 빈 줄: 그 자리에 사진, 아래에 빈 줄
-    else if(atEnd||!canSplit){ at=$f.after(); tr.insert(at,nodes.concat([pType.create()])); }               // 문단 끝(또는 제목 등): 바로 아래
+    if(empty&&canSplit){ at=$f.before(); tr.replaceWith(at,$f.after(),nodes.concat(tail)); }      // 빈 줄: 그 자리에 사진, 아래에 빈 줄
+    else if(atEnd||!canSplit){ at=$f.after(); tr.insert(at,nodes.concat(tail)); }               // 문단 끝(또는 제목 등): 바로 아래
     else if(atStart){ tr.insert($f.before(),nodes); return tr; }                                              // 문단 맨 앞: 바로 위 (커서는 그대로라 다음 사진이 이어서 아래로)
     else { tr.split($f.pos); tr.insert($f.pos+1,nodes); return tr; }                                         // 문단 중간: 커서에서 둘로 나눠 그 사이에
-    tr.setSelection(TS.create(tr.doc,at+size+1));                                                            // 커서는 새 빈 줄로 → 다음 사진이 그 아래로 순서대로
+    tr.setSelection(TS.create(tr.doc,inCell?at+size-1:at+size+1));                                                            // 커서는 새 빈 줄로 → 다음 사진이 그 아래로 순서대로
     return tr;
   }
   function insertPhotosAtCursor(imgs){
