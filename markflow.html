@@ -40346,12 +40346,33 @@ window.markflowBootError=function(items,detail){
     });
     inp.click();
   }
+  // 커서 바로 그 자리에 사진을 넣는 변환을 만든다 (못 만들면 null → 아래 기존 방식으로 대신 넣음)
+  function photoTrAtCursor(v, nodes, pType){
+    var TS=window.PM&&window.PM.TextSelection; if(!TS) return null;
+    var st=v.state, $f=st.selection.$to, par=$f.parent;
+    if(!par||!par.isTextblock||$f.depth<1) return null;
+    var tr=st.tr, size=0; nodes.forEach(function(n){ size+=n.nodeSize; });
+    var empty=par.content.size===0, atEnd=$f.parentOffset===par.content.size, atStart=$f.parentOffset===0, canSplit=(par.type===pType), at;
+    if(empty&&canSplit){ at=$f.before(); tr.replaceWith(at,$f.after(),nodes.concat([pType.create()])); }      // 빈 줄: 그 자리에 사진, 아래에 빈 줄
+    else if(atEnd||!canSplit){ at=$f.after(); tr.insert(at,nodes.concat([pType.create()])); }               // 문단 끝(또는 제목 등): 바로 아래
+    else if(atStart){ tr.insert($f.before(),nodes); return tr; }                                              // 문단 맨 앞: 바로 위 (커서는 그대로라 다음 사진이 이어서 아래로)
+    else { tr.split($f.pos); tr.insert($f.pos+1,nodes); return tr; }                                         // 문단 중간: 커서에서 둘로 나눠 그 사이에
+    tr.setSelection(TS.create(tr.doc,at+size+1));                                                            // 커서는 새 빈 줄로 → 다음 사진이 그 아래로 순서대로
+    return tr;
+  }
   function insertPhotosAtCursor(imgs){
     var v=wwView_(); if(!v){ return; } var schema=v.state.schema; var imgType=schema.nodes.image, pType=schema.nodes.paragraph; if(!imgType||!pType) return;
     var nodes=[]; imgs.forEach(function(im){ var inode; try{ inode=imgType.create({imageUrl:im.url, altText:im.name||""}); }catch(e){ inode=null; } if(inode){ try{ nodes.push(pType.create(null, inode)); }catch(_){} } });
     if(!nodes.length) return;
+    var done=false;
+    try{ var ctr=photoTrAtCursor(v,nodes,pType); if(ctr){ v.dispatch(ctr); done=true; } }catch(e){ done=false; }
+    if(!done){
     var insertPos; try{ var $f=v.state.selection.$from; insertPos=$f.depth>=1? $f.after(1) : v.state.doc.content.size; }catch(e){ insertPos=v.state.doc.content.size; }
-    try{ var tr=v.state.tr.insert(insertPos, nodes); v.dispatch(tr); }catch(e){ return; }
+    try{ var tr=v.state.tr.insert(insertPos, nodes);
+      // 넣은 사진 뒤로 커서를 옮겨, 다음에 넣는 사진이 그 아래로 순서대로 쌓이게 함 (옮기지 않으면 매번 같은 자리라 역순이 됨)
+      try{ var endPos=insertPos; nodes.forEach(function(n){ endPos+=n.nodeSize; }); var TS=window.PM&&window.PM.TextSelection; if(TS){ tr.setSelection(TS.near?TS.near(tr.doc.resolve(endPos),-1):TS.create(tr.doc,endPos-1)); } }catch(_){}
+      v.dispatch(tr); }catch(e){ return; }
+    }
     afterHlEdit(); if(window.__mfResetFold) window.__mfResetFold();
   }
   // ---- 표 크기 선택 ----
