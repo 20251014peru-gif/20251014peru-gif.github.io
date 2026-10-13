@@ -2374,7 +2374,10 @@ table.ProseMirror-selectednode {
   .toastui-editor-ww-container .ProseMirror table.mf-booktbl{width:100%;table-layout:fixed;}
   .toastui-editor-ww-container .ProseMirror table.mf-booktbl th:nth-child(1){width:34px;}
   .toastui-editor-ww-container .ProseMirror table.mf-booktbl th:nth-child(2){width:44%;}
+  .toastui-editor-ww-container .ProseMirror table.mf-bt5 th:nth-child(2){width:100px;}
+  .toastui-editor-ww-container .ProseMirror table.mf-bt5 th:nth-child(3){width:38%;}
   }
+  .toastui-editor-ww-container .ProseMirror table.mf-bt5 td:nth-child(2) img:not([width]){width:100%;max-height:140px;}
   .toastui-editor-ww-container .ProseMirror td .mf-figcap,.toastui-editor-ww-container .ProseMirror th .mf-figcap{display:none;}
   .mf-figcap{display:block;font-size:12.5px;color:var(--text-faint);text-align:center;margin:3px 0 8px;line-height:1.45;font-style:italic;cursor:text;}
   .mf-figcap:hover{color:var(--text-soft);text-decoration:underline dotted;}
@@ -2610,6 +2613,23 @@ table.ProseMirror-selectednode {
     .hm-thumb{height:72px;}
     .hm-foot{display:none;}
   }
+  /* ===== 인쇄 / PDF (v3.8.16): 화면 도구는 숨기고 본문만 A4에 여러 쪽으로 ===== */
+  @media print{
+    @page{size:A4;margin:14mm;}
+    html,body{height:auto!important;overflow:visible!important;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    #app,.body,.mf-writing-column,.editor-wrap,#editor,.toastui-editor-defaultUI,.toastui-editor-main,.toastui-editor-main-container,.toastui-editor-ww-container,.toastui-editor-contents{display:block!important;position:static!important;height:auto!important;max-height:none!important;overflow:visible!important;}
+    .topbar,.sidebar,.mf-sbedge,.sb-backdrop,.status,#mf-home,#mf-photopane,.mf-organized-toolbar,.toastui-editor-defaultUI-toolbar,.mf-handle-layer,.mf-imgact,.mf-imghandle,.mf-tblbar,.mf-zoom,.mf-imgtip,.mf-savetoast,.mf-aipill{display:none!important;}
+    .toastui-editor-ww-container .ProseMirror{padding:0!important;overflow:visible!important;}
+    .toastui-editor-ww-container .ProseMirror img{max-width:100%;break-inside:avoid;}
+    .toastui-editor-ww-container .ProseMirror .ProseMirror-selectednode,.toastui-editor-ww-container .ProseMirror img.ProseMirror-selectednode{outline:none!important;box-shadow:none!important;}
+    .toastui-editor-ww-container .ProseMirror table{width:100%;border-collapse:collapse;}
+    .toastui-editor-ww-container .ProseMirror tr,.toastui-editor-ww-container .ProseMirror td,.toastui-editor-ww-container .ProseMirror th{break-inside:avoid;page-break-inside:avoid;}
+    .toastui-editor-ww-container .ProseMirror thead{display:table-header-group;}
+    .toastui-editor-ww-container .ProseMirror h1,.toastui-editor-ww-container .ProseMirror h2,.toastui-editor-ww-container .ProseMirror h3{break-after:avoid;}
+    .toastui-editor-ww-container .ProseMirror table.mf-booktbl{table-layout:fixed;}
+    .toastui-editor-ww-container .ProseMirror table.mf-booktbl th:nth-child(1){width:34px;}
+    .toastui-editor-ww-container .ProseMirror table.mf-bt5 th:nth-child(2){width:100px;}
+  }
 </style>
 </head>
 <body>
@@ -2676,7 +2696,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.15</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.17</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -39174,7 +39194,7 @@ window.markflowBootError=function(items,detail){
   }
   var TEMPLATES={
     blank:"# 무제\n\n",
-    book:"# 책 제목\n\n**저자**: \n\n**분야 / 태그**: \n\n**읽은 날**: \n\n> 💡 새로 알게 됨: 한 줄 요약\n\n| 쪽 | 핵심 | 나의 생각 | 적용 |\n| --- | --- | --- | --- |\n|  |  |  |  |\n|  |  |  |  |\n|  |  |  |  |\n|  |  |  |  |\n|  |  |  |  |\n\n",
+    book:"# 책 제목\n\n**저자**: \n\n**분야 / 태그**: \n\n**읽은 날**: \n\n> 💡 새로 알게 됨: 한 줄 요약\n\n| 쪽 | 사진 | 핵심 | 나의 생각 | 적용 |\n| --- | --- | --- | --- | --- |\n|  |  |  |  |  |\n|  |  |  |  |  |\n|  |  |  |  |  |\n|  |  |  |  |  |\n|  |  |  |  |  |\n\n",
     lecture:"# 강의 제목\n\n**강사 / 출처**: \n\n**주제 / 태그**: \n\n**날짜**: \n\n> 💡 새로 알게 됨: 한 줄 요약\n\n## 🎯 핵심 정리\n\n- \n\n## 📝 상세 노트\n\n### \n\n- \n\n## ❓ 더 알아볼 것\n\n- \n\n## ✅ 실천 / 과제\n\n- [ ] \n"
   };
   function newDoc(folder, tpl){
@@ -40006,7 +40026,7 @@ window.markflowBootError=function(items,detail){
       var plugin=new window.PM.Plugin({ props:{ decorations:function(state){
         var decos=[];
         state.doc.descendants(function(node,pos){
-          if(node.type&&node.type.name==="table"){ var hd=node.firstChild, hr=hd&&hd.firstChild, hn=[]; if(hr){ hr.forEach(function(c){ hn.push(c.textContent.trim()); }); } if(hn.join("|")==="쪽|핵심|나의 생각|적용") decos.push(window.PM.Decoration.node(pos,pos+node.nodeSize,{class:"mf-booktbl"})); }   // 책 요약 표만 화면 폭에 맞춤
+          if(node.type&&node.type.name==="table"){ var hd=node.firstChild, hr=hd&&hd.firstChild, hn=[]; if(hr){ hr.forEach(function(c){ hn.push(c.textContent.trim()); }); } var hj=hn.join("|"); if(hj==="쪽|핵심|나의 생각|적용") decos.push(window.PM.Decoration.node(pos,pos+node.nodeSize,{class:"mf-booktbl"})); else if(hj==="쪽|사진|핵심|나의 생각|적용") decos.push(window.PM.Decoration.node(pos,pos+node.nodeSize,{class:"mf-booktbl mf-bt5"})); }   // 책 요약 표만 화면 폭에 맞춤
           if(node.type&&node.type.name==="image"){ var cap=imageCaption(node.attrs.altText); if(cap){ (function(ipos,capText){
             decos.push(window.PM.Decoration.widget(ipos+node.nodeSize, function(){ var d=document.createElement("span"); d.className="mf-figcap"; d.textContent=capText; d.title="눌러서 설명 편집"; d.addEventListener("mousedown",function(e){ if(viewMode) return; e.preventDefault(); e.stopPropagation(); openCapEditor(ipos); }); return d; }, {side:1, ignoreSelection:true, key:"cap:"+ipos+":"+capText})); })(pos,cap); } }
           if(node.isTextblock){ var vt=node.textContent;
@@ -40647,13 +40667,27 @@ window.markflowBootError=function(items,detail){
     return idbPutMedia(key,file).then(function(){ return idbKvPut(window.markflowBackup.displayKey(displayUrl),{key:key,name:file.name||"",type:file.type||"",size:file.size,addedAt:Date.now()}); })
       .then(function(){ return true; },function(){ return false; });
   }
+  // v3.8.16: 원본이 크면(1.5MB 초과) 긴 변 2400px · JPEG 0.88로 줄여 보관한다(확대해도 선명, 용량은 줄임). 작은 파일·결과가 더 큰 경우는 원본 그대로.
+  function shrinkOriginal(file){
+    if(!file||!file.size||file.size<=1572864||!/^image\/(jpeg|png|webp)/i.test(file.type||"")) return Promise.resolve(file);
+    return new Promise(function(res){
+      var url=URL.createObjectURL(file), im=new Image();
+      im.onload=function(){ try{
+        var w=im.naturalWidth, h=im.naturalHeight, sc=Math.min(1,2400/Math.max(w,h)), tw=Math.round(w*sc), th=Math.round(h*sc);
+        var cv=document.createElement("canvas"); cv.width=tw; cv.height=th; var cx=cv.getContext("2d"); cx.fillStyle="#fff"; cx.fillRect(0,0,tw,th); cx.drawImage(im,0,0,tw,th);
+        cv.toBlob(function(b){ URL.revokeObjectURL(url); if(b&&b.size<file.size){ try{ b.name=file.name; }catch(_){} res(new File([b],file.name||"photo.jpg",{type:"image/jpeg"})); } else res(file); },"image/jpeg",0.88);
+      }catch(e){ URL.revokeObjectURL(url); res(file); } };
+      im.onerror=function(){ URL.revokeObjectURL(url); res(file); };
+      im.src=url;
+    });
+  }
   // ---- 사진 여러 장 넣기 ----
   function pickMultiplePhotos(){
     var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.multiple=true; inp.style.display="none";
     document.body.appendChild(inp);
     inp.addEventListener("change",function(){ var files=Array.prototype.slice.call(inp.files||[]); inp.remove(); if(!files.length) return;
       var reads=files.map(function(f){ return new Promise(function(res){ var r=new FileReader(); r.onload=function(){
-        shrinkDataUrl(String(r.result), 1400, 0.82).then(function(u){ return storePhotoOriginal(f,u).then(function(ok){ res({name:(f.name||"사진").replace(/\.[^.]+$/,""), url:u, original:ok}); }); });
+        shrinkDataUrl(String(r.result), 1200, 0.78).then(function(u){ return shrinkOriginal(f).then(function(of){ return storePhotoOriginal(of,u); }).then(function(ok){ res({name:(f.name||"사진").replace(/\.[^.]+$/,""), url:u, original:ok}); }); });
       }; r.onerror=function(){ res(null); }; r.readAsDataURL(f); }); });
       Promise.all(reads).then(function(imgs){ imgs=imgs.filter(Boolean); if(!imgs.length) return; insertPhotosAtCursor(imgs);
         var lost=imgs.filter(function(x){ return !x.original; }).length; if(lost) mfToast("사진 "+lost+"장은 원본을 저장하지 못해 화면용 축소본만 넣었어요 (저장 공간 확인)"); });
@@ -40678,7 +40712,8 @@ window.markflowBootError=function(items,detail){
   }
   function insertPhotosAtCursor(imgs){
     var v=wwView_(); if(!v){ return; } var schema=v.state.schema; var imgType=schema.nodes.image, pType=schema.nodes.paragraph; if(!imgType||!pType) return;
-    var nodes=[]; imgs.forEach(function(im){ var inode; try{ inode=imgType.create({imageUrl:im.url, altText:im.name||""}); }catch(e){ inode=null; } if(inode){ try{ nodes.push(pType.create(null, inode)); }catch(_){} } });
+    var blankAlt=false; try{ var $a=v.state.selection.$from; for(var ka=$a.depth;ka>0;ka--){ var an=$a.node(ka).type.name; if(an==="tableBodyCell"||an==="tableHeadCell"){ blankAlt=true; break; } } if(!blankAlt && /\|\s*쪽\s*\|/.test(current().content||"")) blankAlt=true; }catch(_){}
+    var nodes=[]; imgs.forEach(function(im){ var inode; try{ inode=imgType.create({imageUrl:im.url, altText:(blankAlt?"":(im.name||""))}); }catch(e){ inode=null; } if(inode){ try{ nodes.push(pType.create(null, inode)); }catch(_){} } });
     if(!nodes.length) return;
     // v3.8.15: 표 칸 안에는 사진을 1장만. 이미 있으면 넣지 않고, 여러 장이면 첫 장만 넣는다.
     try{ var $c=v.state.selection.$from, cellN=null; for(var kk=$c.depth;kk>0;kk--){ var cn=$c.node(kk); if(cn.type.name==="tableBodyCell"||cn.type.name==="tableHeadCell"){ cellN=cn; break; } }
@@ -41183,6 +41218,9 @@ window.markflowBootError=function(items,detail){
     highlight:openHlPicker,bullet:function(){bulletBtn.click();},outdent:function(){outdentBtn.click();},indent:function(){indentBtn.click();},fold:function(){foldAllBtn.click();},photos:pickMultiplePhotos,video:openVideoInput,more:openTbMore,
     onCaret:function(fn){editor.on('caretChange',fn);},blockType:function(){var v=wwView();if(!v)return 'p';var n=v.state.selection.$from.parent;return n.type.name==='heading'?'h'+n.attrs.level:'p';}
   });
+  // v3.8.16: 설정 안의 '나의 시스템 홈'(index.html) 버튼을 MarkFlow 이름 옆으로 뺀다
+  try{ var bh=document.getElementById("btn-home"), bn=document.querySelector(".mf-app-name");
+    if(bh&&bn){ var hrow=bh.closest(".mf-setting-row"); bn.after(bh); if(hrow) hrow.remove(); bh.title="나의 시스템 홈 (다른 프로그램 모음)"; bh.setAttribute("aria-label","나의 시스템 홈"); } }catch(_){}
   window.__mfBooted=true;
 })().catch(function(e){
   // 시작 도중 오류: 자동 저장을 멈추고(초기화·덮어쓰기 방지) 읽기 전용으로 두고 안내한다.
