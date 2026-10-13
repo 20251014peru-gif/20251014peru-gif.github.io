@@ -2359,8 +2359,13 @@ table.ProseMirror-selectednode {
   .mf-imghandle{position:fixed;z-index:211;width:18px;height:18px;background:var(--accent);border:2px solid #fff;border-radius:4px;cursor:nwse-resize;box-shadow:0 1px 4px rgba(0,0,0,.4);touch-action:none;}
   .mf-imgtip{position:fixed;z-index:212;background:var(--text);color:var(--bg);font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:6px;box-shadow:var(--shadow);pointer-events:none;white-space:nowrap;}
   /* 이미지 설명(디스크립션) → 사진 아래 캡션 */
-  .toastui-editor-ww-container .ProseMirror td img,.toastui-editor-ww-container .ProseMirror th img{max-height:56px;max-width:100%;width:auto;object-fit:contain;cursor:zoom-in;}
-  .toastui-editor-ww-container .ProseMirror td p:has(img),.toastui-editor-ww-container .ProseMirror th p:has(img){display:inline-block;margin:2px 4px 0 0;vertical-align:top;}
+  .toastui-editor-ww-container .ProseMirror td img,.toastui-editor-ww-container .ProseMirror th img{max-width:100%;object-fit:contain;cursor:zoom-in;}
+  .toastui-editor-ww-container .ProseMirror td img:not([width]),.toastui-editor-ww-container .ProseMirror th img:not([width]){max-height:100px;width:auto;}
+  @media(min-width:761px){
+  .toastui-editor-ww-container .ProseMirror table.mf-booktbl{width:100%;table-layout:fixed;}
+  .toastui-editor-ww-container .ProseMirror table.mf-booktbl th:nth-child(1){width:34px;}
+  .toastui-editor-ww-container .ProseMirror table.mf-booktbl th:nth-child(2){width:44%;}
+  }
   .toastui-editor-ww-container .ProseMirror td .mf-figcap,.toastui-editor-ww-container .ProseMirror th .mf-figcap{display:none;}
   .mf-figcap{display:block;font-size:12.5px;color:var(--text-faint);text-align:center;margin:3px 0 8px;line-height:1.45;font-style:italic;cursor:text;}
   .mf-figcap:hover{color:var(--text-soft);text-decoration:underline dotted;}
@@ -2599,7 +2604,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.11</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.12</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -39696,6 +39701,7 @@ window.markflowBootError=function(items,detail){
       var plugin=new window.PM.Plugin({ props:{ decorations:function(state){
         var decos=[];
         state.doc.descendants(function(node,pos){
+          if(node.type&&node.type.name==="table"){ var hd=node.firstChild, hr=hd&&hd.firstChild, hn=[]; if(hr){ hr.forEach(function(c){ hn.push(c.textContent.trim()); }); } if(hn.join("|")==="쪽|핵심|나의 생각|적용") decos.push(window.PM.Decoration.node(pos,pos+node.nodeSize,{class:"mf-booktbl"})); }   // 책 요약 표만 화면 폭에 맞춤
           if(node.type&&node.type.name==="image"){ var cap=imageCaption(node.attrs.altText); if(cap){ (function(ipos,capText){
             decos.push(window.PM.Decoration.widget(ipos+node.nodeSize, function(){ var d=document.createElement("span"); d.className="mf-figcap"; d.textContent=capText; d.title="눌러서 설명 편집"; d.addEventListener("mousedown",function(e){ if(viewMode) return; e.preventDefault(); e.stopPropagation(); openCapEditor(ipos); }); return d; }, {side:1, ignoreSelection:true, key:"cap:"+ipos+":"+capText})); })(pos,cap); } }
           if(node.isTextblock){ var vt=node.textContent;
