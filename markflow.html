@@ -2374,7 +2374,10 @@ table.ProseMirror-selectednode {
   .toastui-editor-ww-container .ProseMirror table.mf-booktbl{width:100%;table-layout:fixed;}
   .toastui-editor-ww-container .ProseMirror table.mf-booktbl th:nth-child(1){width:34px;}
   .toastui-editor-ww-container .ProseMirror table.mf-booktbl th:nth-child(2){width:44%;}
+  .toastui-editor-ww-container .ProseMirror table.mf-bt5 th:nth-child(2){width:140px;}
+  .toastui-editor-ww-container .ProseMirror table.mf-bt5 th:nth-child(3){width:38%;}
   }
+  .toastui-editor-ww-container .ProseMirror table.mf-bt5 td:nth-child(2) img:not([width]){width:100%;max-height:200px;}
   .toastui-editor-ww-container .ProseMirror td .mf-figcap,.toastui-editor-ww-container .ProseMirror th .mf-figcap{display:none;}
   .mf-figcap{display:block;font-size:12.5px;color:var(--text-faint);text-align:center;margin:3px 0 8px;line-height:1.45;font-style:italic;cursor:text;}
   .mf-figcap:hover{color:var(--text-soft);text-decoration:underline dotted;}
@@ -2676,7 +2679,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.15</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.16</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -39174,7 +39177,7 @@ window.markflowBootError=function(items,detail){
   }
   var TEMPLATES={
     blank:"# 무제\n\n",
-    book:"# 책 제목\n\n**저자**: \n\n**분야 / 태그**: \n\n**읽은 날**: \n\n> 💡 새로 알게 됨: 한 줄 요약\n\n| 쪽 | 핵심 | 나의 생각 | 적용 |\n| --- | --- | --- | --- |\n|  |  |  |  |\n|  |  |  |  |\n|  |  |  |  |\n|  |  |  |  |\n|  |  |  |  |\n\n",
+    book:"# 책 제목\n\n**저자**: \n\n**분야 / 태그**: \n\n**읽은 날**: \n\n> 💡 새로 알게 됨: 한 줄 요약\n\n| 쪽 | 사진 | 핵심 | 나의 생각 | 적용 |\n| --- | --- | --- | --- | --- |\n|  |  |  |  |  |\n|  |  |  |  |  |\n|  |  |  |  |  |\n|  |  |  |  |  |\n|  |  |  |  |  |\n\n",
     lecture:"# 강의 제목\n\n**강사 / 출처**: \n\n**주제 / 태그**: \n\n**날짜**: \n\n> 💡 새로 알게 됨: 한 줄 요약\n\n## 🎯 핵심 정리\n\n- \n\n## 📝 상세 노트\n\n### \n\n- \n\n## ❓ 더 알아볼 것\n\n- \n\n## ✅ 실천 / 과제\n\n- [ ] \n"
   };
   function newDoc(folder, tpl){
@@ -40006,7 +40009,7 @@ window.markflowBootError=function(items,detail){
       var plugin=new window.PM.Plugin({ props:{ decorations:function(state){
         var decos=[];
         state.doc.descendants(function(node,pos){
-          if(node.type&&node.type.name==="table"){ var hd=node.firstChild, hr=hd&&hd.firstChild, hn=[]; if(hr){ hr.forEach(function(c){ hn.push(c.textContent.trim()); }); } if(hn.join("|")==="쪽|핵심|나의 생각|적용") decos.push(window.PM.Decoration.node(pos,pos+node.nodeSize,{class:"mf-booktbl"})); }   // 책 요약 표만 화면 폭에 맞춤
+          if(node.type&&node.type.name==="table"){ var hd=node.firstChild, hr=hd&&hd.firstChild, hn=[]; if(hr){ hr.forEach(function(c){ hn.push(c.textContent.trim()); }); } var hj=hn.join("|"); if(hj==="쪽|핵심|나의 생각|적용") decos.push(window.PM.Decoration.node(pos,pos+node.nodeSize,{class:"mf-booktbl"})); else if(hj==="쪽|사진|핵심|나의 생각|적용") decos.push(window.PM.Decoration.node(pos,pos+node.nodeSize,{class:"mf-booktbl mf-bt5"})); }   // 책 요약 표만 화면 폭에 맞춤
           if(node.type&&node.type.name==="image"){ var cap=imageCaption(node.attrs.altText); if(cap){ (function(ipos,capText){
             decos.push(window.PM.Decoration.widget(ipos+node.nodeSize, function(){ var d=document.createElement("span"); d.className="mf-figcap"; d.textContent=capText; d.title="눌러서 설명 편집"; d.addEventListener("mousedown",function(e){ if(viewMode) return; e.preventDefault(); e.stopPropagation(); openCapEditor(ipos); }); return d; }, {side:1, ignoreSelection:true, key:"cap:"+ipos+":"+capText})); })(pos,cap); } }
           if(node.isTextblock){ var vt=node.textContent;
