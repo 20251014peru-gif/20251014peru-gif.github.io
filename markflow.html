@@ -2370,6 +2370,10 @@ table.ProseMirror-selectednode {
   .toastui-editor-ww-container .ProseMirror td img,.toastui-editor-ww-container .ProseMirror th img{max-width:100%;object-fit:contain;cursor:zoom-in;}
   .toastui-editor-ww-container .ProseMirror td img:not([width]),.toastui-editor-ww-container .ProseMirror th img:not([width]){max-height:100px;width:auto;}
   .toastui-editor-ww-container .ProseMirror table.mf-booktbl td{vertical-align:top;}
+  /* 사진만 있는 칸: 사진 아래 빈 줄(커서 줄) 높이를 없앤다 */
+  .toastui-editor-ww-container .ProseMirror td p:has(> img),.toastui-editor-ww-container .ProseMirror th p:has(> img){line-height:0;font-size:0;}
+  .toastui-editor-ww-container .ProseMirror td p > img + br,.toastui-editor-ww-container .ProseMirror th p > img + br{display:none;}
+  .toastui-editor-ww-container .ProseMirror td img,.toastui-editor-ww-container .ProseMirror th img{margin:0!important;display:block;}
   @media(min-width:761px){
   .toastui-editor-ww-container .ProseMirror table.mf-booktbl{width:100%;table-layout:fixed;}
   .toastui-editor-ww-container .ProseMirror table.mf-booktbl th:nth-child(1){width:34px;}
@@ -2696,7 +2700,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.17</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.18</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
