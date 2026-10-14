@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-10-15T02:40:40.539531+09:00",
+ "updated_at": "2026-10-15T06:59:50.574056+09:00",
  "topics": [
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 19,
-   "channel_count": 12,
-   "total_views": 2174989,
-   "latest": "2026-10-14T20:00:06+09:00",
+   "video_count": 18,
+   "channel_count": 11,
+   "total_views": 1949263,
+   "latest": "2026-10-15T06:05:06+09:00",
    "video_ids": [
+    "7kAJ5VgDe3E",
     "5OMTQD4L_sU",
     "idn71TczNok",
     "bdc6CC7pdXw",
@@ -21,20 +22,17 @@
     "xvBCcCtChJU",
     "tKiBrmVN-Jg",
     "YtPCCL2QYyU",
-    "3WKtC5URKN0",
     "RN0wu87jnxA",
     "Gp4VbE7amYc",
     "EQCk0zpM_QE",
     "2TpsyR1rLBE",
-    "6nAqXMCBars",
-    "4Wt_PZqM5ZE"
+    "6nAqXMCBars"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
     "경제사냥꾼",
     "김영익의 경제스쿨",
-    "내일은 투자왕 - 김단테",
     "박종훈의 지식한방",
     "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
@@ -55,16 +53,6 @@
      "channels": 3
     },
     {
-     "word": "메모리",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "증시",
-     "videos": 3,
-     "channels": 3
-    },
-    {
      "word": "급락",
      "videos": 3,
      "channels": 3
@@ -73,6 +61,16 @@
      "word": "10월",
      "videos": 4,
      "channels": 2
+    },
+    {
+     "word": "삼전닉스",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "외국인",
+     "videos": 3,
+     "channels": 2
     }
    ],
    "active": true
@@ -80,11 +78,12 @@
   {
    "id": "국내증시",
    "name": "국내증시",
-   "video_count": 11,
-   "channel_count": 7,
-   "total_views": 1398837,
-   "latest": "2026-10-14T22:00:11+09:00",
+   "video_count": 12,
+   "channel_count": 8,
+   "total_views": 1440197,
+   "latest": "2026-10-15T06:05:06+09:00",
    "video_ids": [
+    "7kAJ5VgDe3E",
     "U6SoT3GAIMk",
     "5OMTQD4L_sU",
     "O7THUCIKdc0",
@@ -99,6 +98,7 @@
    ],
    "channels": [
     "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
     "경제사냥꾼",
     "내일은 투자왕 - 김단테",
     "삼프로TV 3PROTV",
@@ -118,6 +118,11 @@
      "channels": 4
     },
     {
+     "word": "주도주",
+     "videos": 2,
+     "channels": 2
+    },
+    {
      "word": "마세요",
      "videos": 2,
      "channels": 2
@@ -131,11 +136,6 @@
      "word": "전무",
      "videos": 2,
      "channels": 2
-    },
-    {
-     "word": "대표",
-     "videos": 2,
-     "channels": 1
     }
    ],
    "active": true
@@ -145,7 +145,7 @@
    "name": "중국경제",
    "video_count": 5,
    "channel_count": 5,
-   "total_views": 1025087,
+   "total_views": 1061065,
    "latest": "2026-10-14T19:30:05+09:00",
    "video_ids": [
     "cWaFivsMEVY",
@@ -176,11 +176,40 @@
    "active": true
   },
   {
+   "id": "AI_엔비디아",
+   "name": "AI·엔비디아",
+   "video_count": 5,
+   "channel_count": 4,
+   "total_views": 685395,
+   "latest": "2026-10-15T06:05:06+09:00",
+   "video_ids": [
+    "7kAJ5VgDe3E",
+    "UMIka6hqIEc",
+    "idn71TczNok",
+    "W7wmnIIN8I4",
+    "DcTNTwbz_uI"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "박종훈의 지식한방",
+    "삼프로TV 3PROTV",
+    "티타임즈TV"
+   ],
+   "subtopics": [
+    {
+     "word": "이제",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "금리_연준",
    "name": "금리·연준",
    "video_count": 5,
    "channel_count": 4,
-   "total_views": 555349,
+   "total_views": 682321,
    "latest": "2026-10-14T22:00:03+09:00",
    "video_ids": [
     "uiQnHMlY0sI",
@@ -224,7 +253,7 @@
    "name": "2차전지",
    "video_count": 5,
    "channel_count": 3,
-   "total_views": 229572,
+   "total_views": 259171,
    "latest": "2026-10-14T20:00:06+09:00",
    "video_ids": [
     "5OMTQD4L_sU",
@@ -263,38 +292,11 @@
    "active": true
   },
   {
-   "id": "AI_엔비디아",
-   "name": "AI·엔비디아",
-   "video_count": 4,
-   "channel_count": 3,
-   "total_views": 601728,
-   "latest": "2026-10-14T21:00:34+09:00",
-   "video_ids": [
-    "UMIka6hqIEc",
-    "idn71TczNok",
-    "W7wmnIIN8I4",
-    "DcTNTwbz_uI"
-   ],
-   "channels": [
-    "박종훈의 지식한방",
-    "삼프로TV 3PROTV",
-    "티타임즈TV"
-   ],
-   "subtopics": [
-    {
-     "word": "이제",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "조선_방산",
    "name": "조선·방산",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 173827,
+   "total_views": 187729,
    "latest": "2026-10-14T18:00:17+09:00",
    "video_ids": [
     "flKdfYx5vN8",
@@ -326,7 +328,7 @@
    "name": "미국증시",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 437592,
+   "total_views": 443982,
    "latest": "2026-10-14T20:52:25+09:00",
    "video_ids": [
     "co0qYFS6LYU",
