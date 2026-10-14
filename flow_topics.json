@@ -1,17 +1,16 @@
 {
- "updated_at": "2026-10-14T21:32:37.102644+09:00",
+ "updated_at": "2026-10-15T02:40:40.539531+09:00",
  "topics": [
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 20,
-   "channel_count": 13,
-   "total_views": 1416105,
+   "video_count": 19,
+   "channel_count": 12,
+   "total_views": 2174989,
    "latest": "2026-10-14T20:00:06+09:00",
    "video_ids": [
     "5OMTQD4L_sU",
     "idn71TczNok",
-    "AjM6b8kACtk",
     "bdc6CC7pdXw",
     "xVP2tjAgx_M",
     "flKdfYx5vN8",
@@ -40,7 +39,6 @@
     "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
     "염블리와 함께 (염승환)",
-    "이효석아카데미",
     "증시각도기TV",
     "체슬리TV (박세익)",
     "홍춘욱의 경제강의노트"
@@ -82,11 +80,12 @@
   {
    "id": "국내증시",
    "name": "국내증시",
-   "video_count": 10,
+   "video_count": 11,
    "channel_count": 7,
-   "total_views": 1155112,
-   "latest": "2026-10-14T20:00:06+09:00",
+   "total_views": 1398837,
+   "latest": "2026-10-14T22:00:11+09:00",
    "video_ids": [
+    "U6SoT3GAIMk",
     "5OMTQD4L_sU",
     "O7THUCIKdc0",
     "puoWYCfc6JA",
@@ -110,7 +109,7 @@
    "subtopics": [
     {
      "word": "코스피",
-     "videos": 8,
+     "videos": 9,
      "channels": 6
     },
     {
@@ -146,7 +145,7 @@
    "name": "중국경제",
    "video_count": 5,
    "channel_count": 5,
-   "total_views": 876667,
+   "total_views": 1025087,
    "latest": "2026-10-14T19:30:05+09:00",
    "video_ids": [
     "cWaFivsMEVY",
@@ -177,48 +176,18 @@
    "active": true
   },
   {
-   "id": "AI_엔비디아",
-   "name": "AI·엔비디아",
-   "video_count": 6,
-   "channel_count": 4,
-   "total_views": 236048,
-   "latest": "2026-10-14T21:00:34+09:00",
-   "video_ids": [
-    "UMIka6hqIEc",
-    "idn71TczNok",
-    "W7wmnIIN8I4",
-    "MDuPiPgFJok",
-    "DcTNTwbz_uI",
-    "3WJSDNbGAqY"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "박종훈의 지식한방",
-    "삼프로TV 3PROTV",
-    "티타임즈TV"
-   ],
-   "subtopics": [
-    {
-     "word": "이제",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "금리_연준",
    "name": "금리·연준",
    "video_count": 5,
    "channel_count": 4,
-   "total_views": 458730,
-   "latest": "2026-10-14T20:39:44+09:00",
+   "total_views": 555349,
+   "latest": "2026-10-14T22:00:03+09:00",
    "video_ids": [
+    "uiQnHMlY0sI",
     "PrEHp2DoRVU",
     "xVP2tjAgx_M",
     "6q10oQ_nXv4",
-    "YtPCCL2QYyU",
-    "3WJSDNbGAqY"
+    "YtPCCL2QYyU"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
@@ -255,7 +224,7 @@
    "name": "2차전지",
    "video_count": 5,
    "channel_count": 3,
-   "total_views": 66699,
+   "total_views": 229572,
    "latest": "2026-10-14T20:00:06+09:00",
    "video_ids": [
     "5OMTQD4L_sU",
@@ -270,11 +239,6 @@
     "이효석아카데미"
    ],
    "subtopics": [
-    {
-     "word": "반도체",
-     "videos": 2,
-     "channels": 2
-    },
     {
      "word": "테슬라",
      "videos": 2,
@@ -299,11 +263,38 @@
    "active": true
   },
   {
+   "id": "AI_엔비디아",
+   "name": "AI·엔비디아",
+   "video_count": 4,
+   "channel_count": 3,
+   "total_views": 601728,
+   "latest": "2026-10-14T21:00:34+09:00",
+   "video_ids": [
+    "UMIka6hqIEc",
+    "idn71TczNok",
+    "W7wmnIIN8I4",
+    "DcTNTwbz_uI"
+   ],
+   "channels": [
+    "박종훈의 지식한방",
+    "삼프로TV 3PROTV",
+    "티타임즈TV"
+   ],
+   "subtopics": [
+    {
+     "word": "이제",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "조선_방산",
    "name": "조선·방산",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 87640,
+   "total_views": 173827,
    "latest": "2026-10-14T18:00:17+09:00",
    "video_ids": [
     "flKdfYx5vN8",
@@ -335,7 +326,7 @@
    "name": "미국증시",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 419233,
+   "total_views": 437592,
    "latest": "2026-10-14T20:52:25+09:00",
    "video_ids": [
     "co0qYFS6LYU",
