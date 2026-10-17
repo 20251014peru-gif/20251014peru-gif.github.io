@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-10-18T06:07:40.125698+09:00",
+ "updated_at": "2026-10-18T08:36:47.658722+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 11,
+   "video_count": 12,
    "channel_count": 7,
-   "total_views": 1454048,
-   "latest": "2026-10-18T06:00:09+09:00",
+   "total_views": 1475637,
+   "latest": "2026-10-18T07:00:24+09:00",
    "video_ids": [
+    "olgx2UaLfks",
     "jFiNx1HOJTA",
     "IWNWZ41eGt4",
     "NhSEP0KFais",
@@ -69,7 +70,7 @@
    "name": "반도체",
    "video_count": 8,
    "channel_count": 6,
-   "total_views": 694101,
+   "total_views": 717165,
    "latest": "2026-10-17T20:00:16+09:00",
    "video_ids": [
     "N6WiklH0TIs",
@@ -126,16 +127,15 @@
   {
    "id": "국내증시",
    "name": "국내증시",
-   "video_count": 6,
+   "video_count": 5,
    "channel_count": 5,
-   "total_views": 902536,
+   "total_views": 460180,
    "latest": "2026-10-17T18:44:16+09:00",
    "video_ids": [
     "ftX09B5goJc",
     "iiAQWLGywRA",
     "TLwymKGmanA",
     "L2GG_DeUDa0",
-    "1tY-6u7NQyQ",
     "jnOq7neSi6E"
    ],
    "channels": [
@@ -155,38 +155,6 @@
      "word": "외국인",
      "videos": 2,
      "channels": 2
-    },
-    {
-     "word": "회복",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "금리_연준",
-   "name": "금리·연준",
-   "video_count": 4,
-   "channel_count": 3,
-   "total_views": 337941,
-   "latest": "2026-10-18T06:05:01+09:00",
-   "video_ids": [
-    "-kFSsGzhgIM",
-    "xwCT5Jw9Szs",
-    "FOr7t4xnr-s",
-    "KneFfNSSGbM"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "김영익의 경제스쿨",
-    "증시각도기TV"
-   ],
-   "subtopics": [
-    {
-     "word": "주식시장",
-     "videos": 2,
-     "channels": 2
     }
    ],
    "active": true
@@ -196,7 +164,7 @@
    "name": "부동산",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 521210,
+   "total_views": 556860,
    "latest": "2026-10-17T20:15:12+09:00",
    "video_ids": [
     "R4K0qIgCK9Y",
@@ -222,7 +190,7 @@
    "name": "실적시즌",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 129130,
+   "total_views": 131093,
    "latest": "2026-10-17T17:30:22+09:00",
    "video_ids": [
     "KC325ejEias",
@@ -249,11 +217,36 @@
    "active": true
   },
   {
+   "id": "금리_연준",
+   "name": "금리·연준",
+   "video_count": 3,
+   "channel_count": 2,
+   "total_views": 162504,
+   "latest": "2026-10-18T06:05:01+09:00",
+   "video_ids": [
+    "-kFSsGzhgIM",
+    "xwCT5Jw9Szs",
+    "FOr7t4xnr-s"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "김영익의 경제스쿨"
+   ],
+   "subtopics": [
+    {
+     "word": "주식시장",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "정책_정치",
    "name": "정책·정치",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 395845,
+   "total_views": 402675,
    "latest": "2026-10-17T18:05:31+09:00",
    "video_ids": [
     "TxgBbGWx_Kc",
@@ -303,7 +296,7 @@
    "name": "배당·ETF",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 196823,
+   "total_views": 198607,
    "latest": "2026-10-17T11:56:12+09:00",
    "video_ids": [
     "L_yuVZ-9EFA",
@@ -338,7 +331,7 @@
    "name": "중국경제",
    "video_count": 3,
    "channel_count": 1,
-   "total_views": 269559,
+   "total_views": 275634,
    "latest": "2026-10-17T18:00:04+09:00",
    "video_ids": [
     "UvGTuWz1g0M",
