@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-10-17T20:15:01.529814+09:00",
+ "updated_at": "2026-10-18T01:00:47.375163+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 9,
+   "video_count": 10,
    "channel_count": 7,
-   "total_views": 1012417,
-   "latest": "2026-10-17T15:42:21+09:00",
+   "total_views": 1353762,
+   "latest": "2026-10-17T20:55:45+09:00",
    "video_ids": [
+    "IWNWZ41eGt4",
     "NhSEP0KFais",
     "_EsS-zgxSuQ",
     "x5GWax8eyDo",
@@ -38,6 +39,26 @@
      "word": "주식",
      "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "학습부장",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "별주부전",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "박세익",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "체슬리",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -47,7 +68,7 @@
    "name": "국내증시",
    "video_count": 8,
    "channel_count": 7,
-   "total_views": 1148968,
+   "total_views": 1218153,
    "latest": "2026-10-17T18:44:16+09:00",
    "video_ids": [
     "ftX09B5goJc",
@@ -92,7 +113,7 @@
    "name": "반도체",
    "video_count": 9,
    "channel_count": 6,
-   "total_views": 528830,
+   "total_views": 678775,
    "latest": "2026-10-17T20:00:16+09:00",
    "video_ids": [
     "N6WiklH0TIs",
@@ -152,7 +173,7 @@
    "name": "금리·연준",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 378712,
+   "total_views": 393349,
    "latest": "2026-10-17T07:05:04+09:00",
    "video_ids": [
     "xwCT5Jw9Szs",
@@ -185,11 +206,37 @@
    "active": true
   },
   {
+   "id": "부동산",
+   "name": "부동산",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 336513,
+   "latest": "2026-10-17T20:15:12+09:00",
+   "video_ids": [
+    "R4K0qIgCK9Y",
+    "PtKB4OzvwLc",
+    "2DGvQcGVB-I"
+   ],
+   "channels": [
+    "달란트투자",
+    "박종훈의 지식한방",
+    "티타임즈TV"
+   ],
+   "subtopics": [
+    {
+     "word": "전세계",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "실적시즌",
    "name": "실적시즌",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 96197,
+   "total_views": 121383,
    "latest": "2026-10-17T17:30:22+09:00",
    "video_ids": [
     "KC325ejEias",
@@ -218,16 +265,15 @@
   {
    "id": "배당_ETF",
    "name": "배당·ETF",
-   "video_count": 5,
+   "video_count": 4,
    "channel_count": 2,
-   "total_views": 497385,
+   "total_views": 474978,
    "latest": "2026-10-17T11:56:12+09:00",
    "video_ids": [
     "L_yuVZ-9EFA",
     "BdaMcT6YbQA",
     "CrO9EXVbXko",
-    "5-5kzb43rFU",
-    "GZ6Tfbzn3Do"
+    "5-5kzb43rFU"
    ],
    "channels": [
     "체슬리TV (박세익)",
@@ -236,17 +282,17 @@
    "subtopics": [
     {
      "word": "체슬리투자자문",
-     "videos": 4,
+     "videos": 3,
      "channels": 1
     },
     {
      "word": "박세익",
-     "videos": 4,
+     "videos": 3,
      "channels": 1
     },
     {
      "word": "전무",
-     "videos": 4,
+     "videos": 3,
      "channels": 1
     },
     {
@@ -262,7 +308,7 @@
    "name": "정책·정치",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 340957,
+   "total_views": 374422,
    "latest": "2026-10-17T18:05:31+09:00",
    "video_ids": [
     "TxgBbGWx_Kc",
@@ -312,7 +358,7 @@
    "name": "중국경제",
    "video_count": 3,
    "channel_count": 1,
-   "total_views": 157533,
+   "total_views": 245311,
    "latest": "2026-10-17T18:00:04+09:00",
    "video_ids": [
     "UvGTuWz1g0M",
@@ -329,7 +375,7 @@
      "channels": 1
     }
    ],
-   "active": true
+   "active": false
   }
  ]
 }
