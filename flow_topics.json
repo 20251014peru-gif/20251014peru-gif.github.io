@@ -1,14 +1,16 @@
 {
- "updated_at": "2026-10-19T06:08:36.298471+09:00",
+ "updated_at": "2026-10-19T08:47:37.834522+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 13,
-   "channel_count": 7,
-   "total_views": 1913574,
-   "latest": "2026-10-18T20:55:36+09:00",
+   "video_count": 14,
+   "channel_count": 8,
+   "total_views": 1982107,
+   "latest": "2026-10-19T07:51:28+09:00",
    "video_ids": [
+    "QrctOAr3X6M",
+    "Qmx3pgh3vQg",
     "4b_BAWXrE18",
     "Vq8vfS2Eb0c",
     "xxFUfAvkvRM",
@@ -20,12 +22,12 @@
     "NhSEP0KFais",
     "_EsS-zgxSuQ",
     "x5GWax8eyDo",
-    "MxZb55v92g8",
-    "DB_pvycXuhs"
+    "MxZb55v92g8"
    ],
    "channels": [
     "815머니톡",
     "내일은 투자왕 - 김단테",
+    "삼프로TV 3PROTV",
     "언더스탠딩",
     "이효석아카데미",
     "증시각도기TV",
@@ -34,12 +36,22 @@
    ],
    "subtopics": [
     {
+     "word": "코어위브",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "전무",
+     "videos": 5,
+     "channels": 2
+    },
+    {
      "word": "SK하이닉스",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "코어위브",
+     "word": "급락",
      "videos": 2,
      "channels": 2
     },
@@ -52,16 +64,6 @@
      "word": "체슬리",
      "videos": 4,
      "channels": 1
-    },
-    {
-     "word": "박세익",
-     "videos": 4,
-     "channels": 1
-    },
-    {
-     "word": "전무",
-     "videos": 4,
-     "channels": 1
     }
    ],
    "active": true
@@ -69,47 +71,30 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 9,
-   "channel_count": 5,
-   "total_views": 1207070,
-   "latest": "2026-10-18T20:00:19+09:00",
+   "video_count": 8,
+   "channel_count": 4,
+   "total_views": 929458,
+   "latest": "2026-10-19T08:10:16+09:00",
    "video_ids": [
+    "cbetF8o2aWc",
     "A5LZFk6AYf4",
     "4OSmNrNsM6k",
     "TT1koVS5fOo",
     "jxebGk9j6kM",
     "_v8rV9CnW5Q",
     "p-A2qeyYZvg",
-    "N6WiklH0TIs",
-    "Fnlg3uWqLHA",
-    "DB_pvycXuhs"
+    "N6WiklH0TIs"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
     "삼프로TV 3PROTV",
-    "체슬리TV (박세익)",
-    "티타임즈TV"
+    "체슬리TV (박세익)"
    ],
    "subtopics": [
     {
      "word": "SK하이닉스",
      "videos": 5,
-     "channels": 2
-    },
-    {
-     "word": "외국인",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "증시",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "한국",
-     "videos": 2,
      "channels": 2
     },
     {
@@ -121,6 +106,21 @@
      "word": "대표",
      "videos": 4,
      "channels": 1
+    },
+    {
+     "word": "헤지펀드",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "찐시황",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "외국인",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -130,7 +130,7 @@
    "name": "국내증시",
    "video_count": 5,
    "channel_count": 4,
-   "total_views": 403361,
+   "total_views": 427164,
    "latest": "2026-10-19T00:06:56+09:00",
    "video_ids": [
     "9A3iUhcWB5Y",
@@ -165,11 +165,36 @@
    "active": true
   },
   {
+   "id": "중국경제",
+   "name": "중국경제",
+   "video_count": 3,
+   "channel_count": 2,
+   "total_views": 749419,
+   "latest": "2026-10-19T08:10:16+09:00",
+   "video_ids": [
+    "cbetF8o2aWc",
+    "vCB7KKmF4YU",
+    "NFzqfBJAbDc"
+   ],
+   "channels": [
+    "달란트투자",
+    "삼프로TV 3PROTV"
+   ],
+   "subtopics": [
+    {
+     "word": "중국",
+     "videos": 3,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "정책_정치",
    "name": "정책·정치",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 273841,
+   "total_views": 299169,
    "latest": "2026-10-19T06:05:04+09:00",
    "video_ids": [
     "lxf09ER5BmM",
