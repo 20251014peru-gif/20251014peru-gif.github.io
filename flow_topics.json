@@ -1,12 +1,12 @@
 {
- "updated_at": "2026-10-20T21:22:36.235937+09:00",
+ "updated_at": "2026-10-21T02:37:17.472120+09:00",
  "topics": [
   {
    "id": "국내증시",
    "name": "국내증시",
-   "video_count": 14,
-   "channel_count": 9,
-   "total_views": 2030357,
+   "video_count": 13,
+   "channel_count": 8,
+   "total_views": 2603687,
    "latest": "2026-10-20T20:00:27+09:00",
    "video_ids": [
     "bfKrpBXeUac",
@@ -21,12 +21,10 @@
     "V2IBqJMkxPE",
     "GMC_8EaaD4Q",
     "NdhkAQixnj4",
-    "125hABISJ64",
-    "9A3iUhcWB5Y"
+    "125hABISJ64"
    ],
    "channels": [
     "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
     "김영익의 경제스쿨",
     "삼프로TV 3PROTV",
     "슈카월드",
@@ -38,8 +36,8 @@
    "subtopics": [
     {
      "word": "코스피",
-     "videos": 9,
-     "channels": 7
+     "videos": 8,
+     "channels": 6
     },
     {
      "word": "외국인",
@@ -74,7 +72,7 @@
    "name": "반도체",
    "video_count": 12,
    "channel_count": 8,
-   "total_views": 1876669,
+   "total_views": 2238777,
    "latest": "2026-10-20T21:00:06+09:00",
    "video_ids": [
     "It4T14aqScA",
@@ -139,7 +137,7 @@
    "name": "AI·엔비디아",
    "video_count": 11,
    "channel_count": 7,
-   "total_views": 1024566,
+   "total_views": 1177961,
    "latest": "2026-10-20T19:00:08+09:00",
    "video_ids": [
     "mca1-gNxK2c",
@@ -197,7 +195,7 @@
    "name": "금리·연준",
    "video_count": 8,
    "channel_count": 6,
-   "total_views": 1482490,
+   "total_views": 1684457,
    "latest": "2026-10-20T18:00:20+09:00",
    "video_ids": [
     "XRFN7Lm09Aw",
@@ -256,7 +254,7 @@
    "name": "2차전지",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 111664,
+   "total_views": 465451,
    "latest": "2026-10-20T19:32:20+09:00",
    "video_ids": [
     "-oFBRrYBD9I",
@@ -280,11 +278,31 @@
    "active": true
   },
   {
+   "id": "정책_정치",
+   "name": "정책·정치",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 103357,
+   "latest": "2026-10-20T21:30:23+09:00",
+   "video_ids": [
+    "ST8_0kMgOf0",
+    "NnUnhEwAyuQ",
+    "lxf09ER5BmM"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "경제사냥꾼",
+    "언더스탠딩"
+   ],
+   "subtopics": [],
+   "active": true
+  },
+  {
    "id": "실적시즌",
    "name": "실적시즌",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 308403,
+   "total_views": 452623,
    "latest": "2026-10-20T20:00:27+09:00",
    "video_ids": [
     "bfKrpBXeUac",
@@ -310,7 +328,7 @@
    "name": "배당·ETF",
    "video_count": 4,
    "channel_count": 2,
-   "total_views": 141403,
+   "total_views": 239058,
    "latest": "2026-10-20T19:00:02+09:00",
    "video_ids": [
     "lko5D_z-WGQ",
