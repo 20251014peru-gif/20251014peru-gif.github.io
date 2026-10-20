@@ -1,26 +1,24 @@
 {
- "updated_at": "2026-10-20T09:47:55.646428+09:00",
+ "updated_at": "2026-10-20T14:29:05.295731+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 14,
+   "video_count": 12,
    "channel_count": 8,
-   "total_views": 993218,
-   "latest": "2026-10-20T09:45:30+09:00",
+   "total_views": 1651537,
+   "latest": "2026-10-20T12:14:03+09:00",
    "video_ids": [
-    "GAdvcKv8Jb8",
+    "K3gLY120WDc",
+    "aVCebOfGmXk",
+    "nNw8oJvVSU0",
     "gEOSbhl3gXU",
-    "0FNztssN8A8",
-    "PoLndyAWfo8",
     "t2O7mJw0uEU",
     "quJTDt4JGpU",
     "saua1B_ahpM",
     "JI3g5hkBzB8",
     "VXemwjBX68M",
     "Npk6nTDdlwY",
-    "NUiMyWpRYCA",
-    "VZNOx1FMOfo",
     "4b_BAWXrE18",
     "xxFUfAvkvRM"
    ],
@@ -37,33 +35,13 @@
    "subtopics": [
     {
      "word": "데이터센터",
-     "videos": 3,
-     "channels": 3
+     "videos": 2,
+     "channels": 2
     },
     {
      "word": "10월",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "반도체",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "삼성전자",
      "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "대표",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "금리",
-     "videos": 2,
-     "channels": 2
+     "channels": 1
     }
    ],
    "active": true
@@ -71,22 +49,19 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 12,
+   "video_count": 9,
    "channel_count": 8,
-   "total_views": 1347261,
-   "latest": "2026-10-20T09:45:30+09:00",
+   "total_views": 1842872,
+   "latest": "2026-10-20T13:00:14+09:00",
    "video_ids": [
-    "GAdvcKv8Jb8",
-    "ybCBD2N9zkU",
+    "SC4iULs0Xk4",
+    "K3gLY120WDc",
+    "8qck1dPP4Rg",
     "saua1B_ahpM",
-    "i5H-IjPquog",
     "GMC_8EaaD4Q",
     "VXemwjBX68M",
     "1vRprxmeA6Q",
     "125hABISJ64",
-    "z7cEcb6h6QA",
-    "NUiMyWpRYCA",
-    "VZNOx1FMOfo",
     "4OSmNrNsM6k"
    ],
    "channels": [
@@ -101,80 +76,17 @@
    ],
    "subtopics": [
     {
-     "word": "AI",
-     "videos": 4,
-     "channels": 3
-    },
-    {
-     "word": "코스피",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "삼성전자",
-     "videos": 5,
-     "channels": 2
-    },
-    {
-     "word": "SK하이닉스",
-     "videos": 4,
-     "channels": 2
-    },
-    {
-     "word": "대표",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "10월",
+     "word": "코어위브",
      "videos": 2,
      "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "국내증시",
-   "name": "국내증시",
-   "video_count": 7,
-   "channel_count": 6,
-   "total_views": 1199861,
-   "latest": "2026-10-20T09:09:15+09:00",
-   "video_ids": [
-    "ybCBD2N9zkU",
-    "ze2AY2vMBVE",
-    "GMC_8EaaD4Q",
-    "NdhkAQixnj4",
-    "125hABISJ64",
-    "VZNOx1FMOfo",
-    "9A3iUhcWB5Y"
-   ],
-   "channels": [
-    "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "삼프로TV 3PROTV",
-    "슈카월드",
-    "슈퍼개미 이세무사TV",
-    "염블리와 함께 (염승환)"
-   ],
-   "subtopics": [
-    {
-     "word": "코스피",
-     "videos": 6,
-     "channels": 5
     },
     {
      "word": "외국인",
-     "videos": 4,
-     "channels": 4
-    },
-    {
-     "word": "반도체",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "대표",
+     "word": "머스크",
      "videos": 2,
      "channels": 2
     }
@@ -186,11 +98,11 @@
    "name": "금리·연준",
    "video_count": 7,
    "channel_count": 5,
-   "total_views": 940964,
-   "latest": "2026-10-20T08:19:37+09:00",
+   "total_views": 1219408,
+   "latest": "2026-10-20T13:00:14+09:00",
    "video_ids": [
+    "SC4iULs0Xk4",
     "gEOSbhl3gXU",
-    "0FNztssN8A8",
     "uaiCPmlkd4w",
     "saua1B_ahpM",
     "8R0XSKOTRnI",
@@ -198,18 +110,13 @@
     "yc_ZrWoTEfw"
    ],
    "channels": [
+    "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "삼프로TV 3PROTV",
     "슈카월드",
     "증시각도기TV",
     "체슬리TV (박세익)"
    ],
    "subtopics": [
-    {
-     "word": "AI",
-     "videos": 2,
-     "channels": 2
-    },
     {
      "word": "경읽남",
      "videos": 2,
@@ -219,17 +126,53 @@
    "active": true
   },
   {
+   "id": "국내증시",
+   "name": "국내증시",
+   "video_count": 6,
+   "channel_count": 5,
+   "total_views": 1286196,
+   "latest": "2026-10-20T14:15:09+09:00",
+   "video_ids": [
+    "wLK6xqk6QjU",
+    "ze2AY2vMBVE",
+    "GMC_8EaaD4Q",
+    "NdhkAQixnj4",
+    "125hABISJ64",
+    "9A3iUhcWB5Y"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
+    "슈카월드",
+    "슈퍼개미 이세무사TV",
+    "염블리와 함께 (염승환)"
+   ],
+   "subtopics": [
+    {
+     "word": "코스피",
+     "videos": 5,
+     "channels": 4
+    },
+    {
+     "word": "외국인",
+     "videos": 4,
+     "channels": 4
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "배당_ETF",
    "name": "배당·ETF",
    "video_count": 5,
    "channel_count": 2,
-   "total_views": 347467,
-   "latest": "2026-10-20T09:37:39+09:00",
+   "total_views": 349788,
+   "latest": "2026-10-20T11:49:01+09:00",
    "video_ids": [
+    "n6rm-94iAmc",
     "Yt0mrXLU3SM",
     "EAHkTt6864c",
     "2v71mOy8_gg",
-    "NiEpzfayRMc",
     "dUzYaIv6IVc"
    ],
    "channels": [
@@ -256,16 +199,6 @@
      "word": "모닝브리프",
      "videos": 3,
      "channels": 1
-    },
-    {
-     "word": "펀드매니저들",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "운용회",
-     "videos": 2,
-     "channels": 1
     }
    ],
    "active": true
@@ -275,7 +208,7 @@
    "name": "중국경제",
    "video_count": 4,
    "channel_count": 2,
-   "total_views": 508716,
+   "total_views": 551505,
    "latest": "2026-10-19T17:30:34+09:00",
    "video_ids": [
     "RaU-DxiAG6o",
@@ -302,34 +235,39 @@
    "active": true
   },
   {
-   "id": "실적시즌",
-   "name": "실적시즌",
+   "id": "코인",
+   "name": "코인",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 278620,
-   "latest": "2026-10-20T09:45:30+09:00",
+   "total_views": 31596,
+   "latest": "2026-10-20T12:11:03+09:00",
    "video_ids": [
-    "GAdvcKv8Jb8",
-    "PoLndyAWfo8",
-    "JI3g5hkBzB8"
+    "H67k1BAIBf8",
+    "6p40aWxBKNc",
+    "8tE-YoDhDDg"
    ],
    "channels": [
-    "삼프로TV 3PROTV",
-    "증시각도기TV"
+    "달란트투자",
+    "삼프로TV 3PROTV"
    ],
    "subtopics": [
     {
-     "word": "10월",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "AI",
+     "word": "PLUS",
      "videos": 2,
      "channels": 1
     },
     {
-     "word": "우려",
+     "word": "서동주",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "김동환",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "크립토",
      "videos": 2,
      "channels": 1
     }
