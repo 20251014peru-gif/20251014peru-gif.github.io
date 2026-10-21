@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v308-1021-0630
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v309-1021-0700
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -200,6 +200,16 @@ function errText(e){
 }
 
 /* 바뀐 칸 계산 */
+/* 병합 저장(merge)은 '없어진 칸'을 지워 주지 않는다 — 지운 칸은 DELM 으로 따로 표시해서 보낸다 */
+function fieldDiff(cur,old){
+  var out={},keys={};
+  Object.keys(cur).concat(Object.keys(old||{})).forEach(function(k){keys[k]=1;});
+  Object.keys(keys).forEach(function(k){
+    if(cur[k]===undefined)out[k]=DELM;
+    else if(JS(cur[k])!==JS((old||{})[k]))out[k]=cur[k];
+  });
+  return out;
+}
 function computeOps(){
   var ops=[],seen={};
   S.habits.forEach(function(h){
@@ -217,14 +227,21 @@ function computeOps(){
       Object.keys(ids).forEach(function(id){
         var cj=cur[id]===undefined?undefined:JS(cur[id]);
         if(cj===old[id])return;
-        (patch[f[2]]=patch[f[2]]||{})[id]=cj===undefined?DELM:cur[id];
+        var pv;
+        if(cj===undefined)pv=DELM;
+        else if(f[0]==='memo'&&old[id]!==undefined)pv=fieldDiff(cur[id],JSON.parse(old[id]));
+        else pv=cur[id];
+        (patch[f[2]]=patch[f[2]]||{})[id]=pv;
         apply.push([f[1],d,id,cj]);
       });
     });
     var mj=S.mood[d]===undefined?undefined:JS(S.mood[d]);
     if(mj!==SY.mood[d]){patch.mood=mj===undefined?DELM:S.mood[d];apply.push(['mood',d,null,mj]);}
     var nj=S.note[d]===undefined?undefined:JS(S.note[d]);
-    if(nj!==SY.note[d]){patch.note=nj===undefined?DELM:S.note[d];apply.push(['note',d,null,nj]);}
+    if(nj!==SY.note[d]){
+      patch.note=nj===undefined?DELM:(SY.note[d]===undefined?S.note[d]:fieldDiff(S.note[d],JSON.parse(SY.note[d])));
+      apply.push(['note',d,null,nj]);
+    }
     if(apply.length)ops.push({k:'day',d:d,patch:patch,apply:apply});
   });
   return ops;
@@ -1101,7 +1118,7 @@ function autoSummary(d){
   if(miss.length)lines.push('· 못한 것: '+miss.join(', '));
   return lines.join('\n');
 }
-var DCOLS=[['th','🧠 생각','머릿속에 맴도는 생각, 아이디어, 정리하고 싶은 것'],['sc','🤫 비밀','아무에게도 말하지 못한 이야기까지 적어요'],['d','📓 일기','오늘 하루는 어땠나요? 편하게 적어 보세요']];
+var DCOLS=[['th','🧠 생각','머릿속에 맴도는 생각, 아이디어, 정리하고 싶은 것'],['d','📓 일기','오늘 하루는 어땠나요? 편하게 적어 보세요'],['sc','🤫 비밀','아무에게도 말하지 못한 이야기까지 적어요']];
 var DLAB={h:'하이라이트',k:'잘한 점',w:'아쉬운 점',g:'감사',r:'내일의 나에게'};
 function dayD(n){
   var t=tx(n.d),o=[];
@@ -1117,7 +1134,7 @@ function diaryListHtml(){
   var lim=ui.dlimit||60;
   return ds.slice(0,lim).map(function(d,i){
     var n=S.note[d];
-    var cols=[['th','🧠 생각',tx(n.th)],['sc','🤫 비밀',tx(n.sc)],['d','📓 일기',dayD(n)]].map(function(c){
+    var cols=[['th','🧠 생각',tx(n.th)],['d','📓 일기',dayD(n)],['sc','🤫 비밀',tx(n.sc)]].map(function(c){
       return '<section><h4>'+c[1]+'</h4><div class="dtx">'+(c[2]?esc(c[2]):'<span class="note">—</span>')+'</div></section>';
     }).join('');
     return '<article class="dslide"><header><b>'+d.slice(0,4)+'.'+d.slice(5,7)+'.'+d.slice(8)+' ('+DOWN[dow(d)]+')</b><span class="dno">'+(i+1)+' / '+Math.min(ds.length,lim)+'</span><button type="button" class="btn xs" data-act="dgoto" data-date="'+d+'">이 날 열어 고치기</button></header>'
@@ -1557,6 +1574,7 @@ var onClick=function(e){
     Object.keys(S.logs).forEach(function(dd){delete S.logs[dd][id];if(!Object.keys(S.logs[dd]).length)delete S.logs[dd];});
     Object.keys(S.times).forEach(function(dd){delete S.times[dd][id];if(!Object.keys(S.times[dd]).length)delete S.times[dd];});
     Object.keys(S.memo).forEach(function(dd){delete S.memo[dd][id];if(!Object.keys(S.memo[dd]).length)delete S.memo[dd];});
+    Object.keys(S.memo).forEach(function(dd){delete S.memo[dd][id];if(!Object.keys(S.memo[dd]).length)delete S.memo[dd];});
     save();render();return;}
   if(a==='export'){ui.showExport=!ui.showExport;render();return;}
   if(a==='copy'){var box=$('#exportBox'),msg=$('#copyMsg'),txt=box.textContent;
@@ -1658,7 +1676,8 @@ document.addEventListener('keydown',function(e){
 var rz=null;
 window.addEventListener('resize',function(){if(!isOpen())return;clearTimeout(rz);rz=setTimeout(function(){kmemo={};autofit();},100);});
 
-window.addEventListener('pagehide',function(){try{invFlushAll();}catch(e){}});
+window.addEventListener('pagehide',function(){try{invFlushAll();if(hasDb()&&computeOps().length)flush();}catch(e){}});
+document.addEventListener('visibilitychange',function(){try{if(document.visibilityState==='hidden'&&hasDb()&&computeOps().length)flush();}catch(e){}});
 prefLoad();
 cacheLoad();
 S.memo=S.memo||{};S.times=S.times||{};
