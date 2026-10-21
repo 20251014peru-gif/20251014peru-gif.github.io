@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v306-1021-0530
+   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v307-1021-0600
    달님 : 「개인일지가 있다는 걸 자꾸 잊는다 / 윗줄 아이콘이 구별이 안 된다」
 
    ① 맨 위에 늘 붙어 있는 큰 전환 바 (어느 탭에서도 보인다)
@@ -24,14 +24,18 @@
   var css = ''
   + '#wlModeBar{position:sticky;top:0;z-index:1500;display:flex;align-items:stretch;gap:8px;'
   +   'padding:8px 16px;background:#fff;border-bottom:1px solid #d6e0ec;box-shadow:0 2px 8px rgba(26,47,69,.06)}'
-  + '#wlModeBar .wlm-seg{display:flex;flex:0 1 460px;min-width:0;border:2px solid #cbd8e8;border-radius:14px;overflow:hidden;background:#f4f8fd}'
-  + '#wlModeBar .wlm-btn{flex:1;min-width:0;border:0;background:transparent;cursor:pointer;font-family:inherit;'
+  + '#wlModeBar .wlm-seg{display:flex;flex:0 1 460px;min-width:0;gap:8px}'
+  + '#wlModeBar .wlm-btn{flex:1;min-width:0;border:2px solid transparent;border-radius:14px;background:transparent;cursor:pointer;font-family:inherit;'
   +   'padding:9px 10px;font-size:16px;font-weight:800;color:#6b7f95;line-height:1.2;touch-action:manipulation;'
   +   'display:flex;flex-direction:column;align-items:center;gap:1px}'
   + '#wlModeBar .wlm-btn small{font-size:11px;font-weight:600;opacity:.85}'
-  + '#wlModeBar .wlm-btn[data-wlmode="work"].on{background:#2563a8;color:#fff}'
-  + '#wlModeBar .wlm-btn[data-wlmode="personal"].on{background:#db2777;color:#fff}'
-  + '#wlModeBar .wlm-btn:not(.on):hover{background:#e6eef8}'
+  /* 선택 안 된 쪽도 흐리게 두지 않는다 — 각자 자기 색을 진하게 */
+  + '#wlModeBar .wlm-btn[data-wlmode="work"]{background:#dbeafe;color:#1e40af;border-color:#7fb0f0}'
+  + '#wlModeBar .wlm-btn[data-wlmode="personal"]{background:#fde1ef;color:#be185d;border-color:#f08cbc}'
+  + '#wlModeBar .wlm-btn[data-wlmode="work"].on{background:#1d4ed8;color:#fff;border-color:#1e3a8a;box-shadow:0 2px 6px rgba(29,78,216,.4)}'
+  + '#wlModeBar .wlm-btn[data-wlmode="personal"].on{background:#db2777;color:#fff;border-color:#9d174d;box-shadow:0 2px 6px rgba(219,39,119,.4)}'
+  + '#wlModeBar .wlm-btn:not(.on):hover{filter:brightness(.96)}'
+  + 'html[data-wl-mode="personal"] header .brand h1{color:#be185d !important}'
   + '#wlModeBar .wlm-now{flex:1;min-width:0;align-self:center;font-size:13px;font-weight:700;line-height:1.35;'
   +   'padding-left:4px;overflow:hidden;text-overflow:ellipsis}'
   + 'html[data-wl-mode="work"] #wlModeBar .wlm-now{color:#2563a8}'
@@ -142,6 +146,18 @@
       if(m==='personal'){ f.setAttribute('data-wlhid','1'); f.style.setProperty('display','none','important'); }
       else if(f.getAttribute('data-wlhid')){ f.removeAttribute('data-wlhid'); f.style.setProperty('display','flex','important'); }
     });
+    /* 머리 제목: 개인일지에서는 '개인일지'로 */
+    var h1 = document.querySelector('header .brand h1'), sub = document.querySelector('header .brand .sub');
+    if(h1){
+      if(!h1.getAttribute('data-wlorig')) h1.setAttribute('data-wlorig', h1.textContent);
+      var wantT = (m==='personal') ? '개인일지' : h1.getAttribute('data-wlorig');
+      if(h1.textContent !== wantT) h1.textContent = wantT;
+    }
+    if(sub && sub.firstChild && sub.firstChild.nodeType===3){
+      if(!sub.getAttribute('data-wlorig')) sub.setAttribute('data-wlorig', sub.firstChild.nodeValue);
+      var wantS = (m==='personal') ? '나만의 기록 ' : sub.getAttribute('data-wlorig');
+      if(sub.firstChild.nodeValue !== wantS) sub.firstChild.nodeValue = wantS;
+    }
     var now = document.getElementById('wlModeNow');
     if(now) now.textContent = (m==='personal')
       ? '🏠 지금은 개인일지예요 — 업무일지와 따로 저장됩니다'
