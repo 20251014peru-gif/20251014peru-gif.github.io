@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v320-1021-2040
+   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v321-1021-2120
    달님 : 「개인일지가 있다는 걸 자꾸 잊는다 / 윗줄 아이콘이 구별이 안 된다」
 
    ① 맨 위에 늘 붙어 있는 큰 전환 바 (어느 탭에서도 보인다)
@@ -113,7 +113,7 @@
       +   '<button type="button" class="wlm-btn" data-wlmode="personal" role="tab">🏠 개인일지<small>나만의 기록</small></button>'
       + '</div>'
       + '<button type="button" class="wlm-habit" id="wlmHabit">🌱 습관 만들기<small>매일 체크</small></button>'
-      + '<button type="button" class="wlm-habit diary" id="wlmDiary">📓 일기<small>하루 정리</small></button>'
+      + '<button type="button" class="wlm-habit diary" id="wlmDiary">🗂 자료실<small>기록 모음</small></button>'
       + '<button type="button" class="wlm-habit inv" id="wlmInv">💹 투자<small>생각 · 자료 · 사진</small></button>'
       + '<button type="button" class="wlm-habit book" id="wlmBook">📚 독서<small>읽은 책 기록</small></button>'
       + '<div class="wlm-now" id="wlModeNow"></div>';

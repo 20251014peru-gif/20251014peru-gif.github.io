@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v320-1021-2040';
+window.PERSONAL_BUILD = 'v321-1021-2120';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -9027,7 +9027,7 @@ window.PERSONAL_BUILD = 'v320-1021-2040';
     host.querySelectorAll('[data-lt]').forEach(function(b){
       b.addEventListener('click', function(){
         var t=b.getAttribute('data-lt');
-        /* 🌱 습관 만들기 · 📓 일기 는 화면 전체를 쓰는 창으로 바로 연다 (이 화면은 그대로 둔다) */
+        /* 🌱 습관 만들기 · 🗂 자료실 은 화면 전체를 쓰는 창으로 바로 연다 (이 화면은 그대로 둔다) */
         if(t==='hab'||t==='dia'){ if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen(t==='dia'?'diary':'day'); return; }
         cur=t; curQ=''; curCat='전체'; EDIT=null;
         lsSet(LS_TAB,cur); render();
