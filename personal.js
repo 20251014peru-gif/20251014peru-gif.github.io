@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v299-1020-2309';
+window.PERSONAL_BUILD = 'v300-1021-0112';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -8784,7 +8784,18 @@ window.PERSONAL_BUILD = 'v299-1020-2309';
   }
 
   /* ══════ 렌더 ══════ */
-  var TABS=[['rec','📋 기록'],['car','🚗 차계부'],['ct','📞 연락처'],['stat','📊 결산'],['safe','🛟 안전']];
+  var TABS=[['rec','📋 기록'],['hab','✅ 체크리스트'],['car','🚗 차계부'],['ct','📞 연락처'],['stat','📊 결산'],['safe','🛟 안전']];
+
+  /* ✅ 체크리스트 — 창 전체를 쓰는 화면(habits.js)을 연다. 이 자리에는 다시 여는 단추만 둔다.
+     습관·기록은 habits.js 가 Firestore(habit_defs / habit_logs)에 따로 저장한다. 이 파일의 다른 저장과 섞이지 않는다. */
+  function viewHab(){
+    return '<div style="padding:34px 12px;text-align:center;color:#5d6f86">'
+      + '<div style="font-size:36px;margin-bottom:6px">✅</div>'
+      + '<div style="font-size:15px;font-weight:800;color:#1a2f45;margin-bottom:4px">습관 체크리스트</div>'
+      + '<div style="font-size:12.5px;margin-bottom:14px">하루·주간·월간·년간을 한 화면에서 봅니다. 창 전체를 쓰는 화면으로 열려요.</div>'
+      + '<button type="button" id="lfHabOpen" class="lf-pbtn" style="padding:9px 18px;font-weight:800">체크리스트 열기</button>'
+      + '</div>';
+  }
 
   function render(){
     var host=document.getElementById(HOST_ID); if(!host) return;
@@ -8794,7 +8805,8 @@ window.PERSONAL_BUILD = 'v299-1020-2309';
       if(other && other.innerHTML) other.innerHTML='';
     }catch(e){}
     if(!isPersonal()) return renderDS(host);
-    var body = cur==='car'  ? viewCar()
+    var body = cur==='hab'  ? viewHab()
+             : cur==='car'  ? viewCar()
              : cur==='ct'   ? viewCt()
              : cur==='stat' ? viewSum()
              : cur==='safe' ? viewSafe()
@@ -9018,8 +9030,10 @@ window.PERSONAL_BUILD = 'v299-1020-2309';
       b.addEventListener('click', function(){
         cur=b.getAttribute('data-lt'); curQ=''; curCat='전체'; EDIT=null;
         lsSet(LS_TAB,cur); render();
+        if(cur==='hab') setTimeout(function(){ if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen(); }, 30);
       });
     });
+    var hbo=host.querySelector('#lfHabOpen'); if(hbo) hbo.addEventListener('click', function(){ if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen(); });
     /* 칩 */
     host.querySelectorAll('[data-lc]').forEach(function(b){
       b.addEventListener('click', function(){ curCat=b.getAttribute('data-lc'); lsSet(LS_CAT,curCat); EDIT=null; render(); }); });
