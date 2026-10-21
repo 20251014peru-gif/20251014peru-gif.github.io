@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v311-1021-0800
+   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v312-1021-0830
    달님 : 「개인일지가 있다는 걸 자꾸 잊는다 / 윗줄 아이콘이 구별이 안 된다」
 
    ① 맨 위에 늘 붙어 있는 큰 전환 바 (어느 탭에서도 보인다)
@@ -65,12 +65,19 @@
   /* 개인일지에서는 업무용 줄(점검일지~폴더탭관리·업무 검색)을 감춘다 */
   + 'html[data-wl-mode="personal"] #v43Tabs,html[data-wl-mode="personal"] #v43TabsRow2Wrap,'
   +   'html[data-wl-mode="personal"] #wlTopRow,html[data-wl-mode="personal"] .v43-search-wrap{display:none !important}'
+  /* 여섯 단추는 모두 같은 크기·한 줄 — 글자 크기에 가깝게 작게 */
+  + '#wlModeBar{align-items:center;gap:6px;padding:6px 16px}'
+  + '#wlModeBar .wlm-seg{display:contents}'
+  + '#wlModeBar .wlm-btn,#wlModeBar .wlm-habit{flex:0 0 118px;width:118px;min-width:0;box-sizing:border-box;height:38px;padding:0 6px;font-size:15px;font-weight:800;'
+  +   'border-radius:12px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;white-space:nowrap;box-shadow:none;line-height:1}'
+  + '#wlModeBar .wlm-btn small,#wlModeBar .wlm-habit small{display:none}'
+  + '#wlModeBar .wlm-habit.inv{min-width:0}#wlModeBar .wlm-habit.diary{min-width:0}'
+  + '#wlModeBar .wlm-habit.book{background:#0f766e;border-color:#0f766e}'
+  + '#wlModeBar .wlm-habit.book:hover{background:#115e59;border-color:#115e59}'
   + '@media (max-width:640px){'
-  +   '#wlModeBar{padding:6px 10px;gap:6px}'
-  +   '#wlModeBar .wlm-seg{flex:1 1 100%}'
-  +   '#wlModeBar .wlm-habit,#wlModeBar .wlm-habit.diary,#wlModeBar .wlm-habit.inv{flex:1 1 28%;min-width:0;padding:11px 8px;font-size:17px}'
+  +   '#wlModeBar{display:grid;grid-template-columns:repeat(3,1fr);padding:6px 8px;gap:6px}'
+  +   '#wlModeBar .wlm-btn,#wlModeBar .wlm-habit{flex:none;width:auto;font-size:14px;height:40px;padding:0 2px}'
   +   '#wlModeBar .wlm-now{display:none}'
-  +   '#wlModeBar .wlm-btn{font-size:15px;padding:9px 4px}'
   + '}';
   var st = document.createElement('style');
   st.id = 'wlModeBarCss';
@@ -108,11 +115,16 @@
       + '<button type="button" class="wlm-habit" id="wlmHabit">🌱 습관 만들기<small>매일 체크</small></button>'
       + '<button type="button" class="wlm-habit diary" id="wlmDiary">📓 일기<small>하루 정리</small></button>'
       + '<button type="button" class="wlm-habit inv" id="wlmInv">💹 투자<small>생각 · 자료 · 사진</small></button>'
+      + '<button type="button" class="wlm-habit book" id="wlmBook">📚 독서<small>읽은 책 기록</small></button>'
       + '<div class="wlm-now" id="wlModeNow"></div>';
     hd.parentNode.insertBefore(bar, hd);
     bar.addEventListener('click', function(ev){
       if(ev.target.closest && ev.target.closest('#wlmHabit')){
         if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen('day');
+        return;
+      }
+      if(ev.target.closest && ev.target.closest('#wlmBook')){
+        if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen('book');
         return;
       }
       if(ev.target.closest && ev.target.closest('#wlmInv')){
