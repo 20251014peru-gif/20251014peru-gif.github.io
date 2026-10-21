@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v301-1021-0200';
+window.PERSONAL_BUILD = 'v302-1021-0300';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -8784,7 +8784,7 @@ window.PERSONAL_BUILD = 'v301-1021-0200';
   }
 
   /* ══════ 렌더 ══════ */
-  var TABS=[['rec','📋 기록'],['hab','✅ 체크리스트'],['car','🚗 차계부'],['ct','📞 연락처'],['stat','📊 결산'],['safe','🛟 안전']];
+  var TABS=[['hab','🌱 습관 만들기'],['dia','📓 일기'],['rec','📋 기록'],['car','🚗 차계부'],['ct','📞 연락처'],['stat','📊 결산'],['safe','🛟 안전']];
 
   /* ✅ 체크리스트 — 창 전체를 쓰는 화면(habits.js)을 연다. 이 자리에는 다시 여는 단추만 둔다.
      습관·기록은 habits.js 가 Firestore(habit_defs / habit_logs)에 따로 저장한다. 이 파일의 다른 저장과 섞이지 않는다. */
@@ -8835,8 +8835,6 @@ window.PERSONAL_BUILD = 'v301-1021-0200';
              : '<span style="flex:1 1 auto"></span>')
       +   (cur==='safe' ? '<span class="lf-pnote">업무일지 · 개인일지 모두</span>' : '')
       /* v234 — 분류 칩이 한 줄에 들어가도록 그림만 (마우스를 올리면 이름) */
-      +   '<button type="button" id="lfGoData" class="lf-pbtn" title="🗃 업무일지 화면으로">🗃</button>'
-      +   '<button type="button" id="lfSeedBtn" class="lf-pbtn dash" title="맛보기 샘플 넣기 · 지우기">🧪</button>'
       + '</div>'
       + body + '</div>';
     bindRender(host);
@@ -9028,9 +9026,11 @@ window.PERSONAL_BUILD = 'v301-1021-0200';
     /* 하위 탭 */
     host.querySelectorAll('[data-lt]').forEach(function(b){
       b.addEventListener('click', function(){
-        cur=b.getAttribute('data-lt'); curQ=''; curCat='전체'; EDIT=null;
+        var t=b.getAttribute('data-lt');
+        /* 🌱 습관 만들기 · 📓 일기 는 화면 전체를 쓰는 창으로 바로 연다 (이 화면은 그대로 둔다) */
+        if(t==='hab'||t==='dia'){ if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen(t==='dia'?'diary':'day'); return; }
+        cur=t; curQ=''; curCat='전체'; EDIT=null;
         lsSet(LS_TAB,cur); render();
-        if(cur==='hab') setTimeout(function(){ if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen(); }, 30);
       });
     });
     var hbo=host.querySelector('#lfHabOpen'); if(hbo) hbo.addEventListener('click', function(){ if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen(); });
