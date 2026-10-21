@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v302-1021-0300';
+window.PERSONAL_BUILD = 'v302-1021-0330';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -8784,7 +8784,7 @@ window.PERSONAL_BUILD = 'v302-1021-0300';
   }
 
   /* ══════ 렌더 ══════ */
-  var TABS=[['hab','🌱 습관 만들기'],['dia','📓 일기'],['rec','📋 기록'],['car','🚗 차계부'],['ct','📞 연락처'],['stat','📊 결산'],['safe','🛟 안전']];
+  var TABS=[['rec','📋 기록'],['car','🚗 차계부'],['ct','📞 연락처'],['stat','📊 결산'],['safe','🛟 안전']];
 
   /* ✅ 체크리스트 — 창 전체를 쓰는 화면(habits.js)을 연다. 이 자리에는 다시 여는 단추만 둔다.
      습관·기록은 habits.js 가 Firestore(habit_defs / habit_logs)에 따로 저장한다. 이 파일의 다른 저장과 섞이지 않는다. */
