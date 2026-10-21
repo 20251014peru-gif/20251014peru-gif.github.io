@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v301-1021-0200
+   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v302-1021-0330
    달님 : 「개인일지가 있다는 걸 자꾸 잊는다 / 윗줄 아이콘이 구별이 안 된다」
 
    ① 맨 위에 늘 붙어 있는 큰 전환 바 (어느 탭에서도 보인다)
@@ -48,9 +48,21 @@
   +   'background:#fff !important;color:#1e3a5f !important;border:1.5px solid #b9cde3 !important;'
   +   'border-radius:10px !important;font-weight:700 !important;box-shadow:none !important}'
   + 'header .nav-btn:not(#btnGCal):not(#btnGcalPull):not(#btnGcalPullCfg):not(.nav-back):hover{background:#eaf2fb !important}'
+  /* 🌱 습관 만들기 — 매일 쓰는 단추라 크게, 개인일지 바로 옆에 */
+  + '#wlModeBar .wlm-habit{flex:0 0 auto;min-width:200px;border:2px solid #16a34a;border-radius:14px;background:#16a34a;color:#fff;'
+  +   'cursor:pointer;font-family:inherit;padding:9px 22px;font-size:18px;font-weight:800;line-height:1.2;touch-action:manipulation;'
+  +   'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-shadow:0 2px 6px rgba(22,163,74,.35)}'
+  + '#wlModeBar .wlm-habit small{font-size:11px;font-weight:600;opacity:.92}'
+  + '#wlModeBar .wlm-habit:hover{background:#15803d;border-color:#15803d}'
+  + '#wlModeBar .wlm-habit.diary{min-width:150px;background:#7c3aed;border-color:#7c3aed;box-shadow:0 2px 6px rgba(124,58,237,.35)}'
+  + '#wlModeBar .wlm-habit.diary:hover{background:#6d28d9;border-color:#6d28d9}'
+  /* 개인일지에서는 업무용 줄(점검일지~폴더탭관리·업무 검색)을 감춘다 */
+  + 'html[data-wl-mode="personal"] #v43Tabs,html[data-wl-mode="personal"] #v43TabsRow2Wrap,'
+  +   'html[data-wl-mode="personal"] #wlTopRow,html[data-wl-mode="personal"] .v43-search-wrap{display:none !important}'
   + '@media (max-width:640px){'
   +   '#wlModeBar{padding:6px 10px;gap:6px}'
   +   '#wlModeBar .wlm-seg{flex:1 1 100%}'
+  +   '#wlModeBar .wlm-habit,#wlModeBar .wlm-habit.diary{flex:1 1 40%;min-width:0;padding:11px 8px;font-size:17px}'
   +   '#wlModeBar .wlm-now{display:none}'
   +   '#wlModeBar .wlm-btn{font-size:15px;padding:9px 4px}'
   + '}';
@@ -87,9 +99,19 @@
       +   '<button type="button" class="wlm-btn" data-wlmode="work" role="tab">🛠 업무일지<small>시설관리 업무</small></button>'
       +   '<button type="button" class="wlm-btn" data-wlmode="personal" role="tab">🏠 개인일지<small>나만의 기록</small></button>'
       + '</div>'
+      + '<button type="button" class="wlm-habit" id="wlmHabit">🌱 습관 만들기<small>매일 체크</small></button>'
+      + '<button type="button" class="wlm-habit diary" id="wlmDiary">📓 일기<small>하루 정리</small></button>'
       + '<div class="wlm-now" id="wlModeNow"></div>';
     hd.parentNode.insertBefore(bar, hd);
     bar.addEventListener('click', function(ev){
+      if(ev.target.closest && ev.target.closest('#wlmHabit')){
+        if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen('day');
+        return;
+      }
+      if(ev.target.closest && ev.target.closest('#wlmDiary')){
+        if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen('diary');
+        return;
+      }
       var b = ev.target.closest && ev.target.closest('.wlm-btn');
       if(!b) return;
       go(b.getAttribute('data-wlmode'));
@@ -105,6 +127,13 @@
       var on = b.getAttribute('data-wlmode')===m;
       b.classList.toggle('on', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    /* 오른쪽 고정 단추(기록추가·일지)는 업무일지에서만 */
+    ['v43FabHeader','v43FabDiary'].forEach(function(id){
+      var f = document.getElementById(id);
+      if(!f) return;
+      if(m==='personal'){ f.setAttribute('data-wlhid','1'); f.style.setProperty('display','none','important'); }
+      else if(f.getAttribute('data-wlhid')){ f.removeAttribute('data-wlhid'); f.style.setProperty('display','flex','important'); }
     });
     var now = document.getElementById('wlModeNow');
     if(now) now.textContent = (m==='personal')
