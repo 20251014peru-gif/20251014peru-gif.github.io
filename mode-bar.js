@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v302-1021-0330
+   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v304-1021-0430
    달님 : 「개인일지가 있다는 걸 자꾸 잊는다 / 윗줄 아이콘이 구별이 안 된다」
 
    ① 맨 위에 늘 붙어 있는 큰 전환 바 (어느 탭에서도 보인다)
@@ -56,13 +56,15 @@
   + '#wlModeBar .wlm-habit:hover{background:#15803d;border-color:#15803d}'
   + '#wlModeBar .wlm-habit.diary{min-width:150px;background:#7c3aed;border-color:#7c3aed;box-shadow:0 2px 6px rgba(124,58,237,.35)}'
   + '#wlModeBar .wlm-habit.diary:hover{background:#6d28d9;border-color:#6d28d9}'
+  + '#wlModeBar .wlm-habit.inv{min-width:150px;background:#d97706;border-color:#d97706;box-shadow:0 2px 6px rgba(217,119,6,.35)}'
+  + '#wlModeBar .wlm-habit.inv:hover{background:#b45309;border-color:#b45309}'
   /* 개인일지에서는 업무용 줄(점검일지~폴더탭관리·업무 검색)을 감춘다 */
   + 'html[data-wl-mode="personal"] #v43Tabs,html[data-wl-mode="personal"] #v43TabsRow2Wrap,'
   +   'html[data-wl-mode="personal"] #wlTopRow,html[data-wl-mode="personal"] .v43-search-wrap{display:none !important}'
   + '@media (max-width:640px){'
   +   '#wlModeBar{padding:6px 10px;gap:6px}'
   +   '#wlModeBar .wlm-seg{flex:1 1 100%}'
-  +   '#wlModeBar .wlm-habit,#wlModeBar .wlm-habit.diary{flex:1 1 40%;min-width:0;padding:11px 8px;font-size:17px}'
+  +   '#wlModeBar .wlm-habit,#wlModeBar .wlm-habit.diary,#wlModeBar .wlm-habit.inv{flex:1 1 28%;min-width:0;padding:11px 8px;font-size:17px}'
   +   '#wlModeBar .wlm-now{display:none}'
   +   '#wlModeBar .wlm-btn{font-size:15px;padding:9px 4px}'
   + '}';
@@ -101,11 +103,16 @@
       + '</div>'
       + '<button type="button" class="wlm-habit" id="wlmHabit">🌱 습관 만들기<small>매일 체크</small></button>'
       + '<button type="button" class="wlm-habit diary" id="wlmDiary">📓 일기<small>하루 정리</small></button>'
+      + '<button type="button" class="wlm-habit inv" id="wlmInv">💹 투자<small>생각 · 자료 · 사진</small></button>'
       + '<div class="wlm-now" id="wlModeNow"></div>';
     hd.parentNode.insertBefore(bar, hd);
     bar.addEventListener('click', function(ev){
       if(ev.target.closest && ev.target.closest('#wlmHabit')){
         if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen('day');
+        return;
+      }
+      if(ev.target.closest && ev.target.closest('#wlmInv')){
+        if(typeof window.wlHabitsOpen==='function') window.wlHabitsOpen('inv');
         return;
       }
       if(ev.target.closest && ev.target.closest('#wlmDiary')){
