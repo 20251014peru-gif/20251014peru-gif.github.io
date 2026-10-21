@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v304-1021-0430
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v305-1021-0500
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -940,7 +940,7 @@ function areaSvg(first,ds,W,H){
 
 /* ───────── 화면 ───────── */
 var ui={tab:'day',date:TODAY,month:TODAY.slice(0,7),year:+TODAY.slice(0,4),armed:null,icon:'✨',color:1,showExport:false,modal:null,pop:null,focusModal:false};
-var TABS=[['day','하루'],['diary','일기'],['inv','💹 투자'],['week','주간'],['month','월간'],['year','년간'],['manage','관리']];
+var TABS=[['diary','일기'],['inv','💹 투자'],['day','하루'],['week','주간'],['month','월간'],['year','년간'],['manage','관리']];
 var FACES=['😣','😕','😐','🙂','😆'];
 var FACE_L=['최악','별로','보통','좋음','최상'];
 
