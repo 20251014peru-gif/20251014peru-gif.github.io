@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v331-1022-1053
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v332-1022-1116
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -1804,57 +1804,25 @@ function rteSpan(el){
     else{for(j=a;j<=b;j++){var c=k2[j];if(c&&(c.classList.contains('ln')||c.classList.contains('tbl')))c.setAttribute('data-sp','1');}}
   });
 }
-/* ── 📄 템플릿: 유튜브·강의 요약 / 뉴스 정리 ── */
-function rteTplBlocks(kind){
-  var H=function(t,hint,o){return Object.assign({k:'n',v:t+(hint?' '+hint:''),h:'<b>'+esc(t)+'</b>'+(hint?' <i>'+esc(hint)+'</i>':''),s:'h3'},o||{});};
-  var E=function(k,o){return Object.assign({k:k||'n',v:''},o||{});};
-  var B=function(o,k){return E(k||'n',Object.assign({l:'b'},o||{}));};
-  var CK=function(k,txt,o){return E(k||'n',Object.assign({l:'k',v:txt||''},o||{}));};
-  var LB=function(t,o){return Object.assign({k:'n',v:t+' — ',l:'b',h:'<b>'+esc(t)+'</b> — '},o||{});};
-  var T=function(w,head,rows,o){var c=head.slice();for(var i=0;i<rows*w;i++)c.push('');return Object.assign({k:'tb',w:w,c:c},o||{});};
-  var SP={sp:1},out=[];
-  if(kind==='yt'){
-    out.push(H('🎯 한 줄 결론','– 이 영상이 말하는 핵심 한 문장',SP),E('n',SP),
-      H('📌 핵심 3줄','',SP),B(SP),B(SP),B(SP),
-      H('📊 핵심 수치','– 숫자는 여기에 모아요',SP),T(4,['항목','수치','시점·출처','뜻'],3,SP),
-      H('① 핵심 내용'),B(),B(),B(),B(),
-      H('② 사례·종목'),T(3,['대상','근거(수치)','내 판단'],3),
-      H('③ 확인 체크리스트','– 순서가 있으면 번호'),CK(),CK(),CK(),CK(),
-      H('④ 용어'),E('n'),E('n'),
-      H('💭 내 생각','',{k:'m'}),E('m'),E('m'),
-      H('✅ 해야 할 행동','',{k:'c'}),CK('c'),CK('c'),
-      H('🔁 복기 질문','– 다시 볼 때 답해 볼 질문'),E('n'));
-  }else if(kind==='news'){
-    out.push(H('📰 한 줄 요약','– 무슨 일이 일어났나',SP),E('n',SP),
-      H('❓ 왜 중요한가','– 나에게·시장에 미치는 의미',SP),E('n',SP),
-      H('📊 핵심 수치','',SP),T(4,['항목','수치','이전','변화'],3,SP),
-      H('① 사실'),LB('누가'),LB('언제'),LB('어디서'),LB('무엇을'),LB('왜'),LB('어떻게'),
-      H('② 영향'),T(3,['대상','영향 (▲▼)','이유'],3),
-      H('③ 내 해석','',{k:'m'}),E('m'),E('m'),
-      H('④ 확인할 것 · 후속','',{k:'c'}),CK('c'),CK('c'),CK('c'),
-      H('⑤ 출처 · 신뢰도'),LB('출처'),LB('1차 자료인가'),CK('n','다른 곳에서도 확인했다'),E('n'));
-  }
-  return out;
-}
-function rteTemplate(el,kind){
-  if(!el||el.getAttribute('contenteditable')!=='true')return;
-  var tpl=rteTplBlocks(kind);if(!tpl.length)return;
-  var bk=el.getAttribute('data-bk')==='1',bl=rteParse(el);
-  var has=bl.some(function(x){return x.k==='tb'||x.k==='i'||x.k==='hr'||(x.v&&String(x.v).trim());});
-  if(has&&!window.confirm('이미 쓴 글이 있어요.\n템플릿을 맨 위에 넣고, 지금 글은 맨 아래 "원본 받아쓰기"로 접어 둘게요.\n(펼쳐서 옮겨 적은 뒤 지워도 돼요) 계속할까요?'))return;
-  rteUndoPush();
-  var out=tpl.slice();
-  if(has){
-    out.push({k:'n',v:'📥 원본 받아쓰기 – 옮긴 뒤 지워도 돼요',h:'<b>📥 원본 받아쓰기</b> <i>– 옮긴 뒤 지워도 돼요</i>',s:'h3',f:1});
-    bl.forEach(function(x){var y=Object.assign({},x);delete y.sp;if(!(y.k==='n'&&!y.v&&!y.l&&bl.length===1))out.push(y);});
-  }
-  var li=0;for(var i=0;i<out.length;i++){if(out[i].k!=='tb'&&out[i].k!=='i'&&out[i].k!=='hr'&&!out[i].v&&out[i].sp){li=i;break;}}
-  el.innerHTML=rteHtml(out);rteNormalize(el,bk);rteSpanFix(el);
-  if(INV[ui.inv]){rteSave(ui.inv,rteParse(el));
-    var g0=INV[ui.inv].g;if(!g0)invSave(ui.inv,{g:kind==='yt'?'▶ 유튜브 요약':'📰 뉴스'});}
-  ui.rpage=0;rteFit(el);rteSetCaret(el,li,0);rteSyncPage(el);
-  RU.cur=rteSnap(el);RU.t=0;
-  var sel=$('.itagsel');if(sel&&INV[ui.inv])sel.value=tagN(INV[ui.inv].g);
+/* 예전에 잠깐 있던 📄 템플릿으로 바뀐 메모를 원래대로 되돌린다.
+   템플릿 틀이 비어 있으면 틀을 지우고 「📥 원본 받아쓰기」 아래의 원래 글만 남기고, 틀에 글을 쓴 적이 있으면 틀은 두고 원본을 펼쳐 둔다. */
+function tplRepair(n){
+  var raw=Array.isArray(n.bl)?n.bl:[],mi=-1,i;
+  for(i=0;i<raw.length;i++){var x=raw[i];if(x&&x.k!=='i'&&x.k!=='hr'&&x.k!=='tb'&&/^📥 원본 받아쓰기/.test(x.v||'')){mi=i;break;}}
+  if(mi<0)return false;
+  var pre=raw.slice(0,mi),post=raw.slice(mi+1).map(function(y){var z=Object.assign({},y);delete z.sp;return z;});
+  var labelRe=/^(🎯|📌|📊|①|②|③|④|⑤|💭|✅|🔁|📰|❓)/,lbRe=/^(누가|언제|어디서|무엇을|왜|어떻게|출처|1차 자료인가) —$/;
+  var pristine=pre.every(function(y){
+    if(y.k==='tb')return (y.c||[]).slice(y.w).every(function(c){return !c;});
+    if(y.k==='i'||y.k==='hr')return false;
+    var v=String(y.v||'').trim();
+    return !v||labelRe.test(v)||lbRe.test(v)||v==='다른 곳에서도 확인했다';
+  });
+  var nb;
+  if(pristine){nb=post.length?post:[{k:'n',v:''}];}
+  else{nb=raw.map(function(y,j){if(j!==mi)return y;var z=Object.assign({},y);delete z.f;return z;});}
+  rteSave(n.id,nb);
+  return true;
 }
 function rteTableNew(el,w){
   if(!el||el.getAttribute('contenteditable')!=='true')return;
@@ -2020,11 +1988,12 @@ function vInv(kind){
   if(!sel){
     ed='<div class="card cfx iempty"><p style="font-size:16px"><b>'+(bk?'📚 독서 기록':'💹 투자 메모')+'</b>가 아직 없어요.</p><div class="iact2">'+newb+'</div>'+(INVERR?'<p class="lkwarn">⚠ '+esc(INVERR)+'</p>':'')+'</div>';
   }else{
+    if(tplRepair(sel)){sel=INV[sel.id]||sel;}
     var im=sel.im||[],u=safeUrl(sel.u),bl=rteBlocks(sel,bk);invImgEnsure(im);
     var ro=editing?'':' readonly';
     var cols='<div class="rtstage"><div class="rtpaper"><div class="rtph" id="rtph">'+rtHeadHtml(sel)+'</div><div class="rtewrap"><div class="rte3" id="rte" contenteditable="'+(editing?'true':'false')+'" spellcheck="true" lang="ko" data-f="rte" data-bk="'+(bk?1:0)+'" data-ph="'+(bk?'읽은 내용을 적어 보세요. 글 중간에 커서를 두고 📷 사진을 넣으면 그 자리에 들어가요.':'복사해 온 자료는 붙여넣고(자동으로 파랑), 내 생각은 그냥 쓰세요(분홍). 사진도 글 사이에 넣을 수 있어요.')+'">'+rteHtml(bl)+'</div></div></div>';
     var row2=(bk?'<label class="mnl">⏱ 읽은 시간 <input type="number" class="mnin" min="0" max="9999" inputmode="numeric" data-f="inv:mn" placeholder="0" value="'+(sel.mn>0?sel.mn:'')+'"'+ro+'> 분</label><button type="button" class="chk'+(sel.dn?' on':'')+'" data-act="bookdone" aria-pressed="'+(!!sel.dn)+'">'+(sel.dn?'✅ 완독':'☐ 완독 표시')+'</button>':'')
-      +(!bk?(editing?'<select class="itagsel" data-f="rttpl" aria-label="템플릿" title="정리 틀을 맨 위에 넣어요(쓴 글은 아래에 접어 둬요)"><option value="">📄 템플릿</option><option value="yt">▶ 유튜브·강의 요약</option><option value="news">📰 뉴스 정리</option></select><select class="itagsel" data-f="invtagsel" aria-label="분류"><option value="">분류 없음</option>'+ITAGS.map(function(t){return '<option value="'+esc(t)+'"'+(tagN(sel.g)===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select>':(sel.g?'<span class="dtg">'+esc(tagN(sel.g))+'</span>':'')):'');
+      +(!bk?(editing?'<select class="itagsel" data-f="invtagsel" aria-label="분류"><option value="">분류 없음</option>'+ITAGS.map(function(t){return '<option value="'+esc(t)+'"'+(tagN(sel.g)===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select>':(sel.g?'<span class="dtg">'+esc(tagN(sel.g))+'</span>':'')):'');
     var tools=(editing
       ?'<label class="btn xs" title="사진 추가">📷 사진<input type="file" accept="image/*" multiple hidden data-f="invfile"></label>'
       :'')+'<button type="button" class="btn xs" data-act="invprint" title="A4 용지로 인쇄">🖨 인쇄</button><button type="button" class="btn xs" data-act="invprint1" title="무조건 A4 한 장에 맞춰 인쇄(글자를 줄여서)">🖨 한 장</button>'+(editing?'<button type="button" class="btn xs pri" data-act="invdone">✔ 완료</button>':'<button type="button" class="btn xs pri" data-act="invedit">✏ 편집</button>');
@@ -2641,7 +2610,6 @@ function onField(e){
   if(f==='recq'){ui.rec.q=el.value;var rb=$('#recbody');if(rb)rb.innerHTML=recBody(recItems(ui.rec.kind),ui.rec.view,ui.rec.kind);var rc=$('.rech2 i');if(rc)rc.textContent=recItems(ui.rec.kind).length+'건';return;}
   if(f==='rte'){rteInput(el);return;}
   if(f==='rtsize'){if(e.type==='change'){var hz=$('.rte3');if(hz)rteSize(hz,el.value);}return;}
-  if(f==='rttpl'){if(e.type==='change'&&el.value){var tk=el.value,th=$('.rte3');el.value='';if(th)rteTemplate(th,tk);}return;}
   if(f==='rttbl'){if(e.type==='change'&&el.value){var ht2=$('.rte3'),w2=el.value;el.value='';if(ht2)rteTableNew(ht2,w2);}return;}
   if(f==='rtfq'){ui.rfq=el.value;ui.rfi=0;ui.rfn=true;rteFindUpdate();return;}
   if(f==='rtfr'){ui.rfr=el.value;return;}
