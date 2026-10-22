@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v328-1022-0928
+   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v329-1022-0946
    달님 : 「개인일지가 있다는 걸 자꾸 잊는다 / 윗줄 아이콘이 구별이 안 된다」
 
    ① 맨 위에 늘 붙어 있는 큰 전환 바 (어느 탭에서도 보인다)
@@ -218,4 +218,36 @@
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start);
   else start();
+})();
+
+/* ✍ 맞춤법 표시: 업무일지 전체의 글 쓰는 곳(글상자·한 줄 입력·편집 영역)에 브라우저 맞춤법 표시(빨간 줄)를 켠다.
+   비밀번호·숫자 코드 칸은 제외. 끄고 싶은 칸은 data-nospell 을 붙인다.
+   ※ 한국어 표시는 크롬 설정 › 언어 › 맞춤법 검사 에서 한국어가 켜져 있어야 보인다. */
+(function(){
+  if(window.__wlSpellOn) return; window.__wlSpellOn=true;
+  var SEL='textarea,input[type=text],input[type=search],input:not([type]),[contenteditable=""],[contenteditable="true"]';
+  function fix(e){
+    try{
+      if(!e||e.nodeType!==1) return;
+      if(e.matches('[type=password],[data-nospell],[inputmode=numeric],[inputmode=tel],[type=tel],[type=number],[type=email],[type=url]')) return;
+      if(e.getAttribute('spellcheck')!=='true') e.setAttribute('spellcheck','true');
+      if(!e.getAttribute('lang')) e.setAttribute('lang','ko');
+    }catch(_){}
+  }
+  function scan(root){
+    if(!root||root.nodeType!==1) return;
+    if(root.matches&&root.matches(SEL)) fix(root);
+    var l=root.querySelectorAll?root.querySelectorAll(SEL):[];
+    for(var i=0;i<l.length;i++) fix(l[i]);
+  }
+  function start(){
+    scan(document.body);
+    new MutationObserver(function(ms){
+      ms.forEach(function(m){
+        if(m.type==='childList') m.addedNodes.forEach(scan);
+        else if(m.type==='attributes') fix(m.target);
+      });
+    }).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['contenteditable']});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
