@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v329-1022-0946
+   mode-bar.js — 🛠 업무일지 ↔ 🏠 개인일지 전환 바            v330-1022-1007
    달님 : 「개인일지가 있다는 걸 자꾸 잊는다 / 윗줄 아이콘이 구별이 안 된다」
 
    ① 맨 위에 늘 붙어 있는 큰 전환 바 (어느 탭에서도 보인다)
@@ -250,4 +250,100 @@
     }).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['contenteditable']});
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+
+/* ✍ 자동 맞춤법·어색한 표현 검사 (업무일지 전체의 글 입력 칸)
+   - 글쓰기를 멈추고 잠시(기본 3.5초) 지나면, 업무일지에 저장한 AI 키로 검사한다. 고칠 곳이 있으면 칸 오른쪽 아래에 ✍ 단추가 뜬다.
+   - 단추를 누르면 수정 제안 목록이 나오고, 체크한 것만 고친다. 글은 사용자가 누르기 전에는 절대 바뀌지 않는다.
+   - 🗂 자료실(개인 글) 칸·비밀번호·검색 칸은 검사하지 않는다(외부로 보내지 않음).
+   - 끄기: 제안 창의 [자동 검사 끄기] 또는 콘솔에서 wlSpellAuto(false) */
+(function(){
+  if(window.__wlSpellAI) return; window.__wlSpellAI=true;
+  var LSK='wl_spell_auto', CFG=window.wlSpellCfg={idle:3500,min:12,max:6000,gap:6000};
+  var timers=new WeakMap(), lastTxt=new WeakMap(), lastCall=0, chip=null, pop=null;
+  function isOn(){ try{return localStorage.getItem(LSK)!=='0';}catch(e){return true;} }
+  window.wlSpellAuto=function(on){ try{localStorage.setItem(LSK,on?'1':'0');}catch(e){} hideChip(); return on; };
+  function aiKey(){ try{return (typeof aiGetKey==='function')?aiGetKey():'';}catch(e){return '';} }
+  var FIELD='textarea,input[type=text],input:not([type]),[contenteditable=""],[contenteditable="true"]';
+  function okField(t){
+    try{
+      if(!t||t.nodeType!==1||!t.matches||!t.matches(FIELD)) return false;
+      if(t.matches('[type=password],[type=search],[data-nospell],[inputmode=numeric],[type=number],[type=tel]')) return false;
+      if(t.closest('.dy,.dcol,#hbCode,#hbSpellPop,#spellCheckOv')) return false;      // 자료실(개인 글)은 제외
+      return true;
+    }catch(e){ return false; }
+  }
+  function textOf(t){ return (t.tagName==='TEXTAREA'||t.tagName==='INPUT')?(t.value||''):(t.innerText||''); }
+  function hideChip(){ if(chip&&chip.parentNode) chip.parentNode.removeChild(chip); chip=null; }
+  function closePop(){ if(pop&&pop.parentNode) pop.parentNode.removeChild(pop); pop=null; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  document.addEventListener('input',function(e){
+    var t=e.target; if(!okField(t)) return;
+    hideChip(); clearTimeout(timers.get(t));
+    if(!isOn()||!aiKey()) return;
+    timers.set(t,setTimeout(function(){check(t);},CFG.idle));
+  },true);
+  window.addEventListener('scroll',hideChip,true); window.addEventListener('resize',hideChip);
+  function check(t){
+    if(!document.body.contains(t)||document.hidden||!isOn()) return;
+    var key=aiKey(); if(!key) return;
+    var txt=textOf(t).trim(); if(txt.length<CFG.min) return;
+    txt=txt.slice(0,CFG.max); if(lastTxt.get(t)===txt) return;
+    var wait=CFG.gap-(Date.now()-lastCall);
+    if(wait>0){ clearTimeout(timers.get(t)); timers.set(t,setTimeout(function(){check(t);},wait)); return; }
+    lastCall=Date.now(); lastTxt.set(t,txt);
+    var prompt='다음 글의 맞춤법, 띄어쓰기, 어색하거나 이상한 표현을 검사해 주세요.\n고칠 곳이 있으면 JSON 으로만 응답하고, 없으면 {"ok":true} 만 응답하세요.\n"original" 은 아래 글에 있는 문장 조각을 한 글자도 바꾸지 말고 그대로(10~40자) 옮기세요. 고유명사·숫자·영어 약어·전문용어는 건드리지 마세요.\n\n'+txt+'\n\n응답 형식: {"ok":false,"items":[{"original":"글 속 조각","corrected":"고친 조각","reason":"짧은 이유"}]}';
+    fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:prompt}]})})
+    .then(function(r){return r.json();}).then(function(d){
+      var raw=(d.content||[]).map(function(x){return x.text||'';}).join('').trim(),res=null;
+      try{res=JSON.parse(raw.replace(/```json|```/g,'').trim());}catch(e){}
+      if(!res||res.ok) return;
+      var now=textOf(t);
+      var items=(res.items||[]).filter(function(it){return it&&it.original&&it.corrected&&it.original!==it.corrected&&now.indexOf(it.original)>=0;}).slice(0,30);
+      if(items.length) showChip(t,items);
+    }).catch(function(){});
+  }
+  function showChip(t,items){
+    hideChip();
+    var r=t.getBoundingClientRect(); if(!r.width||!r.height) return;
+    chip=document.createElement('button'); chip.type='button'; chip.id='wlSpellChip';
+    chip.textContent='✍ 맞춤법 '+items.length+'곳';
+    chip.style.cssText='position:fixed;z-index:2147483500;right:'+Math.max(8,Math.round(innerWidth-r.right+6))+'px;top:'+Math.max(8,Math.min(innerHeight-40,Math.round(r.bottom-34)))+'px;background:#fff3cd;border:1.5px solid #f0b429;color:#7a4b00;border-radius:999px;padding:5px 12px;font:700 12.5px/1 system-ui,sans-serif;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.2)';
+    chip.addEventListener('mousedown',function(e){e.preventDefault();});
+    chip.addEventListener('click',function(){ openPop(t,items); });
+    document.body.appendChild(chip);
+  }
+  function openPop(t,items){
+    hideChip(); closePop();
+    pop=document.createElement('div'); pop.id='hbSpellPop';
+    pop.style.cssText='position:fixed;inset:0;z-index:2147483600;background:rgba(20,20,40,.45);display:flex;align-items:center;justify-content:center;padding:16px;font-family:system-ui,sans-serif';
+    pop.innerHTML='<div style="background:#fff;color:#1a2f45;border-radius:16px;max-width:560px;width:100%;max-height:80vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.3)">'
+      +'<div style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-weight:800">✍ 맞춤법 · 표현 제안 <span style="font-weight:600;color:#64748b;font-size:12px">'+items.length+'곳</span></div>'
+      +'<div style="padding:12px 16px;display:grid;gap:8px">'+items.map(function(it,i){return '<label style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;line-height:1.5;cursor:pointer"><input type="checkbox" class="spk" data-i="'+i+'" checked style="margin-top:4px"><span><s style="color:#c0392b">'+esc(it.original)+'</s> → <b style="color:#0f7a4b">'+esc(it.corrected)+'</b><em style="display:block;font-style:normal;font-size:12px;color:#64748b">💡 '+esc(it.reason||'')+'</em></span></label>';}).join('')+'</div>'
+      +'<div style="padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="spOk" style="flex:1 1 140px;height:42px;border:0;border-radius:10px;background:#3f7cb8;color:#fff;font:800 14px system-ui;cursor:pointer">✅ 체크한 것 고치기</button><button type="button" id="spNo" style="height:42px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#475569;font:700 13px system-ui;cursor:pointer">닫기</button><button type="button" id="spOff" style="height:42px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:10px;background:#fff;color:#94a3b8;font:700 12px system-ui;cursor:pointer">자동 검사 끄기</button></div></div>';
+    document.body.appendChild(pop);
+    pop.querySelector('#spNo').onclick=closePop;
+    pop.querySelector('#spOff').onclick=function(){ window.wlSpellAuto(false); closePop(); };
+    pop.querySelector('#spOk').onclick=function(){
+      var picks=[].slice.call(pop.querySelectorAll('.spk:checked')).map(function(c){return items[+c.getAttribute('data-i')];});
+      apply(t,picks); closePop();
+    };
+  }
+  function apply(t,picks){
+    if(!document.body.contains(t)) return;
+    var isForm=(t.tagName==='TEXTAREA'||t.tagName==='INPUT');
+    picks.forEach(function(it){
+      if(isForm){
+        var at=t.value.indexOf(it.original);
+        if(at>=0) t.value=t.value.slice(0,at)+it.corrected+t.value.slice(at+it.original.length);
+      }else{
+        var w=document.createTreeWalker(t,NodeFilter.SHOW_TEXT,null),nd;
+        while((nd=w.nextNode())){
+          var k=nd.nodeValue.indexOf(it.original);
+          if(k>=0){ nd.nodeValue=nd.nodeValue.slice(0,k)+it.corrected+nd.nodeValue.slice(k+it.original.length); break; }
+        }
+      }
+    });
+    t.dispatchEvent(new Event('input',{bubbles:true})); t.dispatchEvent(new Event('change',{bubbles:true}));
+  }
 })();
