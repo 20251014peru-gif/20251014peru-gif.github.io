@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v337-1022-1700
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v338-1022-1800
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -1284,7 +1284,7 @@ function dyPlain(n){
   return t.join('\n');
 }
 function dyHasImg(n){var o=null;if(!n||!n.bx||isEnc(n.bx))return false;try{o=JSON.parse(n.bx);}catch(e){return false;}return !!(o&&o.im&&o.im.length);}
-function dayAny(n){return n&&n.bx&&!isEnc(n.bx)?(dyPlain(n)||(dyHasImg(n)?'📷':'')):(tx(n&&n.th)+tx(n&&n.sc)+dayD(n||{}));}
+function dayAny(n){return tx(n&&n.th)+tx(n&&n.sc)+dayD(n||{});}
 function diaryListHtml(){
   var q=(ui.dq||'').trim().toLowerCase();
   var ds=Object.keys(S.note).filter(function(d){return d!==ui.date&&dayAny(S.note[d]);}).sort().reverse();
@@ -1345,11 +1345,42 @@ function dySave(id,f){
   n.bxs=json;
   noteSet(d,'bx',json);save();
 }
+/* v335~337 에 잠깐 있던 3단 종이 일기(bx)로 쓴 글은 원래의 하나·둘·셋 세 칸으로 되돌린다. 사진이 든 날은 bx 를 지우지 않고 남겨 둔다 */
+function dyBack(){
+  var ch=false;
+  Object.keys(S.note).forEach(function(d){
+    var n=S.note[d],bx=n&&n.bx;
+    if(typeof bx!=='string'||bx===''||isEnc(bx)||n.bm)return;
+    if(isEnc(n.th)||isEnc(n.d)||isEnc(n.sc))return;
+    var o=null;try{o=JSON.parse(bx);}catch(e){return;}
+    var g=[[],[],[]],gi=0;
+    ((o&&o.bl)||[]).forEach(function(x){
+      if(x.cs&&x.cb){gi=Math.min(2,gi+1);return;}
+      if(x.cb&&gi<2){gi=(x.ct===1||x.ct===2)?Math.max(gi+1,x.ct):gi+1;gi=Math.min(2,gi);}
+      if(x.k==='i'||x.k==='hr')return;
+      if(x.k==='tb'){var tt=(x.c||[]).filter(Boolean).join(' | ');if(tt)g[gi].push(tt);return;}
+      g[gi].push(x.v||'');
+    });
+    var tx3=g.map(function(a){return a.join('\n').replace(/^\n+|\n+$/g,'');});
+    var hasImg=!!(o&&o.im&&o.im.length);
+    noteSet(d,'th',tx3[0]);noteSet(d,'d',tx3[1]);noteSet(d,'sc',tx3[2]);
+    if(hasImg){var nn=S.note[d]=S.note[d]||{};nn.bm='1';}else noteSet(d,'bx','');
+    ch=true;
+  });
+  if(ch)save();
+}
 function vDiary(){
+  dyBack();
   var d=ui.date,a=d.split('-').map(Number),future=d>TODAY,n=S.note[d]||{};
   var nav='<div class="card nav dnav"><button class="nb" data-act="nav" data-v="-1" aria-label="전날">‹</button><div class="nl"><span class="bigd2">'+a[1]+'월 '+a[2]+'일</span><small>'+DOWN[dow(d)]+'요일'+(d===TODAY?' · 오늘':future?' · 아직 오지 않은 날':'')+'</small></div><button class="nb" data-act="nav" data-v="1" aria-label="다음 날">›</button><button class="btn sm" data-act="today">오늘</button><span class="isp"></span><button type="button" class="btn sm" data-act="recopen" data-v="diary">📂 저장된 기록 ('+Object.keys(S.note).filter(function(k){return dayAny(S.note[k]);}).length+')</button><button type="button" class="btn sm" data-act="lkset" aria-pressed="'+(!!ui.lkopen)+'" title="접속 코드 설정">⚙ 설정</button></div>';
+  var cols=DCOLS.map(function(c){
+    var v=n[c[0]],enc=isEnc(v);
+    return '<div class="card sheet dcol"><h2>'+c[1]+'</h2>'+(c[0]==='sc'?lockWarn():'')
+      +'<textarea class="lined dmain" data-f="note:'+c[0]+'" placeholder="'+(enc?'읽을 수 없어요':c[2])+'"'+(enc||future?' readonly':'')+'>'+esc(tx(v))+'</textarea>'
+      +'<div class="note dcnt">'+tx(v).length+'자 · 자동 저장</div></div>';
+  }).join('');
   if(ui.lkopen&&typeof lockCardHtml==='function')return '<div class="dy">'+nav+lockCardHtml()+recHtml()+'</div>';
-  return '<div class="dy">'+nav+vInv('diary')+'</div>';
+  return '<div class="dy">'+nav+'<div class="d3">'+cols+'</div>'+recHtml()+'</div>';
 }
 
 /* ───────── 💹 투자 메모 (일기와 따로) ───────── */
@@ -2150,7 +2181,7 @@ function rtbHtml(bk){
     +'<i class="rts"></i><span class="rtcs" title="글 색">'+sw+'</span><i class="rts"></i>'
     +'<button type="button" data-act="rtalign" data-v="" title="왼쪽 정렬" aria-label="왼쪽 정렬">'+ic('M1 2h14M1 6h9M1 10h12')+'</button><button type="button" data-act="rtalign" data-v="c" title="가운데 정렬" aria-label="가운데 정렬">'+ic('M1 2h14M4 6h8M2 10h12')+'</button><button type="button" data-act="rtalign" data-v="r" title="오른쪽 정렬" aria-label="오른쪽 정렬">'+ic('M1 2h14M6 6h9M3 10h12')+'</button><i class="rts"></i>'
     +'<button type="button" data-act="rtlist" data-v="b" title="글머리 기호(고른 모양으로)">☰ •</button><select id="rtbul" data-f="rtbul" class="rtbulsel" title="글머리 기호 모양 고르기" aria-label="글머리 기호 모양">'+Object.keys(BULS).map(function(k){return '<option value="'+k+'"'+((ui.rbs||'b')===k?' selected':'')+'>'+BULS[k]+'</option>';}).join('')+'</select><button type="button" data-act="rtlist" data-v="n" title="번호 매기기">1.</button><button type="button" data-act="rtlist" data-v="k" title="체크박스 줄(☐ 을 눌러 체크)">☑</button><button type="button" data-act="rtindent" data-v="-1" title="내어쓰기 (Shift+Tab)">⇤</button><button type="button" data-act="rtindent" data-v="1" title="들여쓰기 (Tab, 두 번까지)">⇥</button><i class="rts"></i>'
-    +'<button type="button" data-act="rthr" title="구분선 넣기">― 구분선</button><button type="button" data-act="rtsum" title="요약 박스(결론 + 핵심 3줄)를 커서 아래 단 안에 넣어요. 박스 안에서 다시 누르면 박스를 풀어요">🎯 요약 박스</button><span class="rtcs" title="이 줄을 N단 맨 위에서 시작 (빈 단을 직접 눌러도 거기서 시작돼요)"><button type="button" data-act="rtcol" data-v="0">1단</button><button type="button" data-act="rtcol" data-v="1">2단</button><button type="button" data-act="rtcol" data-v="2">3단</button></span><button type="button" data-act="rtspan" title="맨 위 전체 폭 칸으로(3단을 가로지르는 큰 칸, 요약·큰 표용)">▭ 전체 폭</button><select id="rttbl" data-f="rttbl" class="rtbulsel" title="표 넣기" aria-label="표 넣기"><option value="">▦ 표</option><option value="2">2열 표</option><option value="3">3열 표</option><option value="4">4열 표(넓게)</option></select><button type="button" data-act="rtfind" title="찾기 / 바꾸기" aria-pressed="'+(!!ui.rfind)+'">🔍</button></div>';
+    +'<button type="button" data-act="rthr" title="구분선 넣기">― 구분선</button><button type="button" data-act="rtsum" title="요약 박스(결론 + 핵심 3줄)를 커서 아래 단 안에 넣어요. 박스 안에서 다시 누르면 박스를 풀어요">🎯 요약 박스</button><button type="button" data-act="rtspan" title="맨 위 전체 폭 칸으로(3단을 가로지르는 큰 칸, 요약·큰 표용)">▭ 전체 폭</button><select id="rttbl" data-f="rttbl" class="rtbulsel" title="표 넣기" aria-label="표 넣기"><option value="">▦ 표</option><option value="2">2열 표</option><option value="3">3열 표</option><option value="4">4열 표(넓게)</option></select><button type="button" data-act="rtfind" title="찾기 / 바꾸기" aria-pressed="'+(!!ui.rfind)+'">🔍</button></div>';
 }
 function rtfHtml(){
   return '<div class="irow2 rtfr"><input type="text" id="rtfq" data-f="rtfq" placeholder="찾을 말" value="'+esc(ui.rfq||'')+'"><input type="text" id="rtfr" data-f="rtfr" placeholder="바꿀 말" value="'+esc(ui.rfr||'')+'"><button type="button" class="btn xs" data-act="rtfprev">▲</button><button type="button" class="btn xs" data-act="rtfnext">▼ 다음</button><button type="button" class="btn xs" data-act="rtfrep">바꾸기</button><button type="button" class="btn xs" data-act="rtfall">모두 바꾸기</button><span class="note" id="rtfcnt"></span><span class="isp"></span><button type="button" class="btn xs" data-act="rtfind">닫기</button></div>';
@@ -2278,8 +2309,7 @@ function recItems(kind){
   if(kind==='diary'){
     Object.keys(S.note).sort().reverse().forEach(function(d){
       var n=S.note[d];if(!dayAny(n))return;
-      var dyx=n.bx&&!isEnc(n.bx),dyim=[];
-      if(dyx){try{dyim=(JSON.parse(n.bx).im||[]).slice();}catch(e){}}
+      var dyx=false,dyim=[];
       var parts=dyx?[['📝 일기',dyPlain(n)]]:[['📌 하나',tx(n.th)],['📄 둘',dayD(n)],['📎 셋',tx(n.sc)]],txt=parts.map(function(p){return p[1];}).join(' ');
       if(q&&txt.toLowerCase().indexOf(q)<0&&d.indexOf(q)<0)return;
       out.push({id:d,date:d,title:d.slice(0,4)+'.'+d.slice(5,7)+'.'+d.slice(8)+' ('+DOWN[dow(d)]+')',sub:'',tag:'',parts:parts,snip:txt.replace(/\s+/g,' ').slice(0,100),img:dyim[0]||'',imgs:dyim,mn:0,dn:false});
@@ -2410,7 +2440,7 @@ function invAddFiles(files){
   }).catch(function(){ui.invmsg='사진을 읽지 못했어요.';render();});
 }
 function invPaste(e){
-  if((ui.tab!=='inv'&&ui.tab!=='book'&&ui.tab!=='diary')||!ui.inv||!INV[ui.inv]||!ui.redit)return;   /* 읽기 화면에서는 붙여넣어도 사진이 들어가지 않는다 */
+  if((ui.tab!=='inv'&&ui.tab!=='book')||!ui.inv||!INV[ui.inv]||!ui.redit)return;   /* 읽기 화면에서는 붙여넣어도 사진이 들어가지 않는다 */
   var cd=e.clipboardData;if(!cd)return;
   var files=[];if(cd.items)for(var i=0;i<cd.items.length;i++){var it=cd.items[i];if(it.kind==='file'&&/^image\//.test(it.type)){var f=it.getAsFile();if(f)files.push(f);}}
   var host=e.target&&e.target.closest?e.target.closest('.rte3'):null;
@@ -2594,7 +2624,7 @@ function autofit(){
   rteFitAll();
   var fit=FIT_MQ&&FIT_MQ.matches&&ROOT().classList.contains('fit');
   if(!fit){fb.style.removeProperty('--k');fb.removeAttribute('data-dn');layoutCards();drawCharts();return;}
-  var kmax=(ui.tab==='inv'||ui.tab==='book'||ui.tab==='diary')?1:1.5,start=Math.min(kmax,(kmemo[ui.tab]||kmax)+0.09),k;
+  var kmax=(ui.tab==='inv'||ui.tab==='book')?1:ui.tab==='diary'?1.15:1.5,start=Math.min(kmax,(kmemo[ui.tab]||kmax)+0.09),k;
   if(ui.tab==='month'){
     /* 체크 표는 체크만 보면 되니, 전체를 줄이기 전에 표만 먼저 촘촘하게 줄인다 */
     for(var d=0;d<=2;d++){fb.setAttribute('data-dn',d);k=searchK(fb,d===0?start:1.5);if(k>=0.95||d===2)break;}
@@ -2628,7 +2658,6 @@ function arm(key){ui.armed=key;render();setTimeout(function(){if(ui.armed===key)
 
 var onClick=function(e){
   if(rteMarkClick(e))return;
-  if(rteBlankClick(e))return;
   var b=e.target.closest&&e.target.closest('[data-act]');if(!b||b.disabled)return;
   var a=b.dataset.act,id=b.dataset.id,v=b.dataset.v,h=id?habitById(id):null;
   if(lockAct(a,b))return;
