@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v335-1022-1500
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v336-1022-1600
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -2161,7 +2161,7 @@ function vBook(){return vInv('book');}
 function vInv(kind){
   var dk=kind==='diary',bk=kind==='book'||dk,kd=dk?'diary':bk?'book':'inv',all=dk?[]:invSorted(kd);
   var sel=dk?dyNote(ui.date):(ui.inv&&INV[ui.inv]&&!INV[ui.inv].del&&INV[ui.inv].k!=='diary'&&(isBookN(INV[ui.inv])===bk)?INV[ui.inv]:null);
-  if(dk){ui.inv=sel?sel.id:'';ui.redit=!ui.dview&&ui.date<=TODAY;}                  /* 일기는 열면 바로 쓸 수 있다(완료를 누르면 읽기 화면) */
+  if(dk){ui.inv=sel?sel.id:'';ui.redit=!ui.dview;}                  /* 일기는 열면 바로 쓸 수 있다(완료를 누르면 읽기 화면) */
   else if(!sel&&all.length){sel=all[0];ui.inv=sel.id;ui.redit=false;ui.rpage=0;}     /* 닫았다 열어도 가장 최근 기록이 그대로 보인다 */
   var editing=!!ui.redit&&!!sel;
   var pick=(!bk&&ui.newpick)?'<span class="newpick" role="group" aria-label="새 메모 분류">'+ITAGS.map(function(t){return '<button type="button" class="btn xs" data-act="invnewtag" data-v="'+esc(t)+'">'+t+'</button>';}).join('')+'<button type="button" class="btn xs" data-act="invnewtag" data-v="">분류 없이</button><button type="button" class="btn xs" data-act="invnewcancel" aria-label="취소">✕</button></span>':'';
@@ -2410,7 +2410,7 @@ function invAddFiles(files){
   }).catch(function(){ui.invmsg='사진을 읽지 못했어요.';render();});
 }
 function invPaste(e){
-  if((ui.tab!=='inv'&&ui.tab!=='book'&&ui.tab!=='diary')||!ui.inv||!INV[ui.inv])return;
+  if((ui.tab!=='inv'&&ui.tab!=='book'&&ui.tab!=='diary')||!ui.inv||!INV[ui.inv]||!ui.redit)return;   /* 읽기 화면에서는 붙여넣어도 사진이 들어가지 않는다 */
   var cd=e.clipboardData;if(!cd)return;
   var files=[];if(cd.items)for(var i=0;i<cd.items.length;i++){var it=cd.items[i];if(it.kind==='file'&&/^image\//.test(it.type)){var f=it.getAsFile();if(f)files.push(f);}}
   var host=e.target&&e.target.closest?e.target.closest('.rte3'):null;
@@ -2604,6 +2604,7 @@ function autofit(){
 }
 function tabsNow(){return ui.sp==='diary'?[['diary','🗂 자료실']]:TABS.filter(function(t){return t[0]!=='diary';});}
 function render(){
+  var t0=ymd(new Date());if(t0!==TODAY){TODAY=t0;}                          /* 화면을 켜 둔 채 날짜가 바뀌면 오늘을 새로 잡는다 */
   if(ui.sp==='diary')ui.tab='diary';else if(ui.tab==='diary')ui.tab='day';
   if(!ROOT())return;
   ensureFrom(viewStart());
