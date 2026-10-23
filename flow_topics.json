@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-10-23T21:15:31.535972+09:00",
+ "updated_at": "2026-10-24T02:34:07.797477+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 13,
+   "video_count": 12,
    "channel_count": 8,
-   "total_views": 2630477,
-   "latest": "2026-10-23T20:00:13+09:00",
+   "total_views": 1729386,
+   "latest": "2026-10-23T21:25:28+09:00",
    "video_ids": [
+    "E4iYYFaa3P4",
     "Zf1zPKS3gmU",
     "-7VPwauiOvk",
     "STwhCT_j0Yc",
@@ -19,9 +20,7 @@
     "BR-M6hFHUII",
     "h6NyILhYreI",
     "9ElhZBfJKPY",
-    "TiPzSgeqISE",
-    "92mEdPLMlFY",
-    "FLpdD66BKRU"
+    "TiPzSgeqISE"
    ],
    "channels": [
     "815머니톡",
@@ -72,7 +71,7 @@
    "name": "반도체",
    "video_count": 12,
    "channel_count": 8,
-   "total_views": 746002,
+   "total_views": 1006169,
    "latest": "2026-10-23T21:00:14+09:00",
    "video_ids": [
     "6esEt4-hjqw",
@@ -135,9 +134,9 @@
   {
    "id": "국내증시",
    "name": "국내증시",
-   "video_count": 8,
+   "video_count": 7,
    "channel_count": 6,
-   "total_views": 290985,
+   "total_views": 354200,
    "latest": "2026-10-23T18:00:24+09:00",
    "video_ids": [
     "STwhCT_j0Yc",
@@ -146,8 +145,7 @@
     "UPAqMz0beIE",
     "m8vmdDf4lgY",
     "qNPxRnb0w9g",
-    "TiPzSgeqISE",
-    "lhYvgDJUKNM"
+    "TiPzSgeqISE"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
@@ -160,7 +158,7 @@
    "subtopics": [
     {
      "word": "코스피",
-     "videos": 7,
+     "videos": 6,
      "channels": 5
     },
     {
@@ -187,50 +185,11 @@
    "active": true
   },
   {
-   "id": "실적시즌",
-   "name": "실적시즌",
-   "video_count": 5,
-   "channel_count": 4,
-   "total_views": 346573,
-   "latest": "2026-10-23T20:00:13+09:00",
-   "video_ids": [
-    "Zf1zPKS3gmU",
-    "C6bBp6Uosdo",
-    "ce-C_sDQKmY",
-    "KiR1dKJaGqM",
-    "lhYvgDJUKNM"
-   ],
-   "channels": [
-    "815머니톡",
-    "경제사냥꾼",
-    "삼프로TV 3PROTV",
-    "증시각도기TV"
-   ],
-   "subtopics": [
-    {
-     "word": "아직",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "실적",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "10월",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "금리_연준",
    "name": "금리·연준",
    "video_count": 5,
    "channel_count": 4,
-   "total_views": 248694,
+   "total_views": 266424,
    "latest": "2026-10-23T12:05:32+09:00",
    "video_ids": [
     "Fkre3EZkhrY",
@@ -255,11 +214,65 @@
    "active": true
   },
   {
+   "id": "미국증시",
+   "name": "미국증시",
+   "video_count": 4,
+   "channel_count": 4,
+   "total_views": 514843,
+   "latest": "2026-10-23T21:56:32+09:00",
+   "video_ids": [
+    "ms1ITohsmZM",
+    "m8vmdDf4lgY",
+    "z0FgZXJGalc",
+    "4sdi2vGvY8k"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "내일은 투자왕 - 김단테",
+    "미주은 (미국주식으로 은퇴하기)",
+    "증시각도기TV"
+   ],
+   "subtopics": [],
+   "active": true
+  },
+  {
+   "id": "실적시즌",
+   "name": "실적시즌",
+   "video_count": 4,
+   "channel_count": 3,
+   "total_views": 589099,
+   "latest": "2026-10-23T20:00:13+09:00",
+   "video_ids": [
+    "Zf1zPKS3gmU",
+    "C6bBp6Uosdo",
+    "ce-C_sDQKmY",
+    "KiR1dKJaGqM"
+   ],
+   "channels": [
+    "815머니톡",
+    "삼프로TV 3PROTV",
+    "증시각도기TV"
+   ],
+   "subtopics": [
+    {
+     "word": "아직",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "10월",
+     "videos": 2,
+     "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "중국경제",
    "name": "중국경제",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 627894,
+   "total_views": 681029,
    "latest": "2026-10-23T19:30:36+09:00",
    "video_ids": [
     "XJ7weq65k1Q",
@@ -307,31 +320,11 @@
    "active": true
   },
   {
-   "id": "미국증시",
-   "name": "미국증시",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 495460,
-   "latest": "2026-10-23T09:55:45+09:00",
-   "video_ids": [
-    "m8vmdDf4lgY",
-    "z0FgZXJGalc",
-    "4sdi2vGvY8k"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "내일은 투자왕 - 김단테",
-    "증시각도기TV"
-   ],
-   "subtopics": [],
-   "active": true
-  },
-  {
    "id": "배당_ETF",
    "name": "배당·ETF",
    "video_count": 5,
    "channel_count": 2,
-   "total_views": 277880,
+   "total_views": 358818,
    "latest": "2026-10-23T19:00:59+09:00",
    "video_ids": [
     "meeQyZ-FhWo",
@@ -378,7 +371,7 @@
    "name": "코인",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 53001,
+   "total_views": 92932,
    "latest": "2026-10-23T19:00:35+09:00",
    "video_ids": [
     "7OLFwra5cuI",
