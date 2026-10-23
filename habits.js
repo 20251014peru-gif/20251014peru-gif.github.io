@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v369-1024-1600
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v370-1024-1700
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -1680,15 +1680,22 @@ function krFetch(force){
   var list=stkParse(stkText()).kr;if(!list.length||KR.busy)return;
   if(!force&&Date.now()-KR.at<KR_MS-2000)return;
   KR.busy=true;
-  var base='https://polling.finance.naver.com/api/realtime/domestic/stock/'+list.map(function(x){return x.code;}).join(',');
+  var codes=list.map(function(x){return x.code;}),A='https://polling.finance.naver.com/api/realtime/domestic/stock/'+codes.join(',');
+  function B(c){return 'https://m.stock.naver.com/api/stock/'+c+'/basic';}
+  function relay(kind,u){return kind==='corsproxy'?'https://corsproxy.io/?'+encodeURIComponent(u):'https://api.allorigins.win/raw?url='+encodeURIComponent(u);}
   function get(u){
     var ac=window.AbortController?new AbortController():null,tm=setTimeout(function(){if(ac)ac.abort();},10000);
-    return fetch(u,ac?{signal:ac.signal,cache:'no-store'}:{cache:'no-store'}).then(function(r){clearTimeout(tm);if(!r.ok)throw new Error('HTTP '+r.status);return r.json();},function(e){clearTimeout(tm);throw e;});
+    return fetch(u,ac?{signal:ac.signal,cache:'no-store'}:{cache:'no-store'}).then(function(r){clearTimeout(tm);if(!r.ok)throw new Error('HTTP '+r.status);return r.json();},function(e){clearTimeout(tm);throw new Error(e&&e.name==='AbortError'?'시간 초과':'접근 막힘');});
   }
-  function ok(j,via){var d=krParse(j,list);if(!d)throw new Error('형식');KR.data=d;KR.at=Date.now();KR.err='';KR.via=via;}
-  get(base).then(function(j){ok(j,'네이버');},function(){return get('https://api.allorigins.win/raw?url='+encodeURIComponent(base)).then(function(j){ok(j,'네이버(중계)');});})
-    .catch(function(){KR.err='네이버 시세를 받지 못했어요';})
-    .then(function(){KR.busy=false;krPaint();});
+  function many(rel){return Promise.all(codes.map(function(c){return get(rel?relay(rel,B(c)):B(c)).then(function(j){if(j&&!j.itemCode)j.itemCode=c;return j;});})).then(function(a){return {datas:a};});}
+  var tries=[['네이버',function(){return get(A);}],['네이버(종목별)',function(){return many('');}],['중계1',function(){return get(relay('allorigins',A));}],['중계2',function(){return get(relay('corsproxy',A));}],['중계1(종목별)',function(){return many('allorigins');}]];
+  var fails=[],i=0;
+  function next(){
+    if(i>=tries.length){KR.err='네이버 시세를 받지 못했어요 — '+fails.join(' · ');return Promise.resolve();}
+    var t=tries[i++];
+    return t[1]().then(function(j){var d=krParse(j,list);if(!d||!d.some(function(x){return x.p!=null;}))throw new Error('형식 달라서 못 읽음');KR.data=d;KR.at=Date.now();KR.err='';KR.via=t[0];},function(e){fails.push(t[0]+' '+e.message);return next();}).catch(function(e){fails.push(t[0]+' '+e.message);return next();});
+  }
+  next().then(function(){KR.busy=false;krPaint();});
 }
 function krFmt(n,dec){return n==null?'–':n.toLocaleString('ko-KR',{minimumFractionDigits:dec||0,maximumFractionDigits:dec||0});}
 function krHtml(){
