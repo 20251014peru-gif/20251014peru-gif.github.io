@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v351-1023-2200
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v352-1023-2300
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -1121,7 +1121,7 @@ function bodyHtml(x,d,future){
   if(m==='avoid'){
     var lim=limOf(x),bad=n>lim,clean=rawN(x,d)===-1;
     s+='<div class="mbig'+(bad?' bad':(n>0||clean)?' ok':'')+'"><b>'+n+'</b><span>/ 한도 '+lim+u+'</span></div>'
-      +(bad?'<div class="mflag bad">⚠ 한도를 넘었어요</div>':clean?'<div class="mflag ok">✓ 안 했다고 확인했어요</div>':n>0?'<div class="mflag ok">한도 안이에요</div>':'<div class="mflag">'+(d===TODAY?'아직 확인 전이에요':future?'':'확인 안 한 날')+'</div>')
+      +(bad?'<div class="mflag bad">⚠ 한도를 넘었어요</div>':clean?'<div class="mflag ok">✓ 안 했다고 확인했어요</div>':n>0?'':'<div class="mflag">'+(d===TODAY?'아직 확인 전이에요':future?'':'확인 안 한 날')+'</div>')
       +'<div class="mact"><button type="button" class="mbtn2 bad" data-act="avplus"'+at+dis+'>＋ 했어요</button>'
       +(n===0?'<button type="button" class="mbtn2 ok'+(clean?' on':'')+'" data-act="avclean"'+at+dis+'>'+(clean?'✓ 확인함 (취소)':'✓ 오늘 안 했어요')+'</button>':'')+'</div>';
   }else if(m==='count'){
@@ -1156,7 +1156,7 @@ function cardHtml(x,d,future){
   if(x.type!=='daily')sub+=' · '+(x.type==='week'?'이 주 ':'이 달 ')+cnt(x,pStart(x,d),pEnd(x,d))+'/'+x.n;
   return '<article class="hcard c'+colOf(x)+'"><div class="hh"><span class="hico">'+esc(x.icon)+'</span><div class="hhw"><div class="hnm">'+esc(x.name)+'</div><div class="hsub">'+esc(sub)+'</div></div></div>'
     +bodyHtml(x,d,future)
-    +'<div class="hft">'+dots7(x,d)+'<span class="stk">'+(sk&&sk.c>1?'🔥 '+sk.c+sk.u:'')+'</span>'
+    +'<div class="hft">'+dots7(x,d)+'<span class="stk"></span>'
     +'<button class="mbtn'+(has?' has':'')+'" data-act="detail" data-id="'+x.id+'" data-date="'+d+'" title="'+esc(has?memoText(mm):'시간 수정 · 메모')+'" aria-label="'+esc(x.name)+' 시간 수정·메모">💬</button></div></article>';
 }
 
