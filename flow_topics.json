@@ -1,12 +1,12 @@
 {
- "updated_at": "2026-10-26T01:54:10.851449+09:00",
+ "updated_at": "2026-10-26T06:18:33.513504+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 10,
    "channel_count": 7,
-   "total_views": 711282,
+   "total_views": 726338,
    "latest": "2026-10-25T18:00:37+09:00",
    "video_ids": [
     "GZmdLoUvljU",
@@ -68,7 +68,7 @@
    "name": "반도체",
    "video_count": 10,
    "channel_count": 4,
-   "total_views": 396618,
+   "total_views": 434716,
    "latest": "2026-10-25T21:29:55+09:00",
    "video_ids": [
     "tB_noYst2v8",
@@ -127,7 +127,7 @@
    "name": "중국경제",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 137571,
+   "total_views": 149990,
    "latest": "2026-10-25T16:00:37+09:00",
    "video_ids": [
     "5v_OgboQYx8",
@@ -153,7 +153,7 @@
    "name": "배당·ETF",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 126902,
+   "total_views": 131850,
    "latest": "2026-10-25T11:00:27+09:00",
    "video_ids": [
     "SuGP5dZdXQM",
@@ -171,11 +171,12 @@
   {
    "id": "환율_달러",
    "name": "환율·달러",
-   "video_count": 4,
+   "video_count": 5,
    "channel_count": 2,
-   "total_views": 177819,
-   "latest": "2026-10-25T22:02:26+09:00",
+   "total_views": 213987,
+   "latest": "2026-10-26T06:05:23+09:00",
    "video_ids": [
+    "UTOJ4uLE4h4",
     "CGQOhDcRYa0",
     "ZF1u1QKNs40",
     "fDQqjxfSh8Y",
@@ -192,22 +193,77 @@
      "channels": 2
     },
     {
+     "word": "스테이블코인",
+     "videos": 2,
+     "channels": 2
+    },
+    {
      "word": "세계",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "돈까지",
+     "word": "정구태x김동환x김광석",
      "videos": 2,
      "channels": 1
     },
     {
-     "word": "이하경",
+     "word": "토론합시다",
      "videos": 2,
      "channels": 1
     },
     {
-     "word": "작가",
+     "word": "3자토론",
+     "videos": 2,
+     "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "코인",
+   "name": "코인",
+   "video_count": 3,
+   "channel_count": 2,
+   "total_views": 115345,
+   "latest": "2026-10-26T06:05:23+09:00",
+   "video_ids": [
+    "UTOJ4uLE4h4",
+    "ZF1u1QKNs40",
+    "X_vx1kLpQC4"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "이효석아카데미"
+   ],
+   "subtopics": [
+    {
+     "word": "스테이블코인",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "달러",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "미국",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "정구태x김동환x김광석",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "토론합시다",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "3자토론",
      "videos": 2,
      "channels": 1
     }
