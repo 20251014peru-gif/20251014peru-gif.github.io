@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-10-26T06:18:33.513504+09:00",
+ "updated_at": "2026-10-26T08:40:54.013654+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 10,
    "channel_count": 7,
-   "total_views": 726338,
-   "latest": "2026-10-25T18:00:37+09:00",
+   "total_views": 754164,
+   "latest": "2026-10-26T08:25:14+09:00",
    "video_ids": [
+    "jfZON11dz_Q",
     "GZmdLoUvljU",
     "J8Qnl4T2AxQ",
     "h9DMmWGKzks",
@@ -17,8 +18,7 @@
     "zEgdlB7vj8U",
     "s6ttaY4WvjU",
     "JpEdwOIJ7JU",
-    "d_H9Nrl9jHs",
-    "Cjj0X-d15oY"
+    "d_H9Nrl9jHs"
    ],
    "channels": [
     "815머니톡",
@@ -31,17 +31,17 @@
    ],
    "subtopics": [
     {
+     "word": "10월",
+     "videos": 3,
+     "channels": 2
+    },
+    {
      "word": "SK하이닉스",
      "videos": 2,
      "channels": 2
     },
     {
      "word": "삼성전자",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "10월",
      "videos": 2,
      "channels": 2
     },
@@ -54,11 +54,6 @@
      "word": "7월",
      "videos": 2,
      "channels": 2
-    },
-    {
-     "word": "대표",
-     "videos": 2,
-     "channels": 2
     }
    ],
    "active": true
@@ -66,11 +61,12 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 10,
-   "channel_count": 4,
-   "total_views": 434716,
-   "latest": "2026-10-25T21:29:55+09:00",
+   "video_count": 11,
+   "channel_count": 5,
+   "total_views": 454350,
+   "latest": "2026-10-26T07:48:48+09:00",
    "video_ids": [
+    "e8Mcd3RK1L8",
     "tB_noYst2v8",
     "b2my6Nq32rs",
     "Xxu5sqHcCbA",
@@ -84,6 +80,7 @@
    ],
    "channels": [
     "815머니톡",
+    "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
     "염블리와 함께 (염승환)",
     "체슬리TV (박세익)"
@@ -123,11 +120,37 @@
    "active": true
   },
   {
+   "id": "유가_에너지",
+   "name": "유가·에너지",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 108508,
+   "latest": "2026-10-26T08:25:14+09:00",
+   "video_ids": [
+    "jfZON11dz_Q",
+    "_ciNDHDHu9Q",
+    "CGQOhDcRYa0"
+   ],
+   "channels": [
+    "삼프로TV 3PROTV",
+    "이효석아카데미",
+    "증시각도기TV"
+   ],
+   "subtopics": [
+    {
+     "word": "이란",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "중국경제",
    "name": "중국경제",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 149990,
+   "total_views": 156728,
    "latest": "2026-10-25T16:00:37+09:00",
    "video_ids": [
     "5v_OgboQYx8",
@@ -149,31 +172,11 @@
    "active": true
   },
   {
-   "id": "배당_ETF",
-   "name": "배당·ETF",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 131850,
-   "latest": "2026-10-25T11:00:27+09:00",
-   "video_ids": [
-    "SuGP5dZdXQM",
-    "wXCq4YzxSGg",
-    "K-AVUvVUFm4"
-   ],
-   "channels": [
-    "미주은 (미국주식으로 은퇴하기)",
-    "삼프로TV 3PROTV",
-    "홍춘욱의 경제강의노트"
-   ],
-   "subtopics": [],
-   "active": true
-  },
-  {
    "id": "환율_달러",
    "name": "환율·달러",
    "video_count": 5,
    "channel_count": 2,
-   "total_views": 213987,
+   "total_views": 239889,
    "latest": "2026-10-26T06:05:23+09:00",
    "video_ids": [
     "UTOJ4uLE4h4",
@@ -225,7 +228,7 @@
    "name": "코인",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 115345,
+   "total_views": 124665,
    "latest": "2026-10-26T06:05:23+09:00",
    "video_ids": [
     "UTOJ4uLE4h4",
