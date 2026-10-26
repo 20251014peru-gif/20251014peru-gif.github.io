@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v376-1026-1100
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v377-1026-1200
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -3181,7 +3181,7 @@ function recHtml(){
   return '<div class="recmod" data-act="recbg"><div class="recsheet" role="dialog" aria-label="저장된 기록">'
     +'<div class="rech2"><h2>📂 저장된 기록 · '+ttl+' <i>'+items.length+'건</i></h2>'
     +'<div class="rv" role="group" aria-label="보기 방식">'+RVIEWS.map(function(v){return '<button type="button" data-act="recview" data-v="'+v[0]+'" aria-pressed="'+((r.view||'card')===v[0])+'">'+v[1]+'</button>';}).join('')+'</div>'
-    +'<input type="text" id="recq" data-f="recq" placeholder="🔍 검색" value="'+esc(r.q||'')+'">'+extra+'<span class="isp"></span>'+(k==='diary'?'':'<button type="button" class="btn sm" data-act="rectrash">🗑 휴지통 ('+invTrash(k).length+')</button>')+'<button type="button" class="btn sm" data-act="recclose">닫기 ✕</button></div>'
+    +'<input type="text" id="recq" data-f="recq" placeholder="🔍 검색" value="'+esc(r.q||'')+'">'+extra+'<span class="isp"></span>'+(k==='diary'?'':'<button type="button" class="btn pri sm" data-act="'+(k==='book'?'invnew':'invnewtag')+'" data-v="">＋ 새 '+(k==='book'?'독서 기록':'메모')+'</button>')+(k==='diary'?'':'<button type="button" class="btn sm" data-act="rectrash">🗑 휴지통 ('+invTrash(k).length+')</button>')+'<button type="button" class="btn sm" data-act="recclose">닫기 ✕</button></div>'
     +'<div class="recbody" id="recbody">'+recBody(items,r.view,k)+'</div></div></div>';
 }
 function shrinkImg(file,max,q){
