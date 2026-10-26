@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v375-1026-1000
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v376-1026-1100
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -3111,7 +3111,7 @@ function recBody(items,view,kind){
   if(view==='cal')return recCal(items,kind);
   if(!items.length)return '<p class="note" style="padding:12px">'+(r.q||r.tag||r.done?'찾는 기록이 없어요.':'저장된 기록이 아직 없어요.')+'</p>';
   var at=function(it){return ' data-act="recgo" data-id="'+it.id+'" data-date="'+it.date+'" data-kind="'+kind+'"';};
-  var bad=function(it){return (it.dn?'<span class="dtg done">✅ 완독</span>':'')+(it.mn>0?'<span class="dtg">⏱ '+fmtMin(it.mn)+'</span>':'')+(it.tag?'<span class="dtg">'+esc(it.tag)+'</span>':'')+(it.sub?'<span class="dtg">'+esc(it.sub)+'</span>':'');};
+  var bad=function(it){return (it.dn?'<span class="dtg done">✅ 완독</span>':'')+(it.mn>0?'<span class="dtg">⏱ '+fmtMin(it.mn)+'</span>':'')+(it.tag?'<span class="dtg">'+esc(it.tag)+'</span>':'')+(it.sub&&!/^(https?:|www\.)/i.test(it.sub)&&it.sub.length<=24?'<span class="dtg">'+esc(it.sub)+'</span>':'');};   /* 출처 주소(링크)는 카드·목록에 보이지 않는다 */
   var prev=function(it,n,len){return it.parts.slice(0,n).map(function(p){return p[1]?'<div class="rp '+(p[2]||'')+'"><i>'+p[0]+'</i> '+esc(String(p[1]).replace(/\s+/g,' ').slice(0,len))+'</div>':'';}).join('');};
   if(view==='list'){
     return '<div class="rlist"><div class="rrow head"><span>날짜</span><span>제목</span><span>정보</span><span>미리보기</span></div>'+items.map(function(it){
