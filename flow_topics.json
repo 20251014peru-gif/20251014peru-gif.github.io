@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-10-29T22:48:52.697544+09:00",
+ "updated_at": "2026-10-30T05:43:50.825463+09:00",
  "topics": [
   {
    "id": "반도체",
    "name": "반도체",
    "video_count": 20,
    "channel_count": 9,
-   "total_views": 1420172,
-   "latest": "2026-10-29T22:07:40+09:00",
+   "total_views": 1652757,
+   "latest": "2026-10-30T05:37:32+09:00",
    "video_ids": [
+    "WDX1JXz6Uf8",
     "FpisXhruTgQ",
     "OUyHhEQ3Y9o",
     "fKb-mxpwg9M",
@@ -25,7 +26,6 @@
     "VOYsRHgkpA0",
     "LZ2s9nu5MGs",
     "Y9swE_f18p0",
-    "2-_oRteP2wU",
     "bY3coG2ZIWg",
     "Y0F_jJLTpmo",
     "zwqoiAGKEaU"
@@ -44,11 +44,11 @@
    "subtopics": [
     {
      "word": "삼성전자",
-     "videos": 15,
+     "videos": 14,
      "channels": 7
     },
     {
-     "word": "SK하이닉스",
+     "word": "실적",
      "videos": 6,
      "channels": 4
     },
@@ -58,7 +58,7 @@
      "channels": 3
     },
     {
-     "word": "실적",
+     "word": "SK하이닉스",
      "videos": 5,
      "channels": 3
     },
@@ -78,11 +78,12 @@
   {
    "id": "실적시즌",
    "name": "실적시즌",
-   "video_count": 12,
+   "video_count": 13,
    "channel_count": 7,
-   "total_views": 1082016,
-   "latest": "2026-10-29T19:11:48+09:00",
+   "total_views": 1228325,
+   "latest": "2026-10-30T05:37:32+09:00",
    "video_ids": [
+    "WDX1JXz6Uf8",
     "OUyHhEQ3Y9o",
     "fKb-mxpwg9M",
     "TBTKBtof3Ts",
@@ -107,12 +108,12 @@
    ],
    "subtopics": [
     {
-     "word": "삼성전자",
-     "videos": 7,
-     "channels": 4
+     "word": "실적",
+     "videos": 8,
+     "channels": 5
     },
     {
-     "word": "실적",
+     "word": "삼성전자",
      "videos": 7,
      "channels": 4
     },
@@ -144,7 +145,7 @@
    "name": "국내증시",
    "video_count": 8,
    "channel_count": 6,
-   "total_views": 321050,
+   "total_views": 464104,
    "latest": "2026-10-29T20:00:34+09:00",
    "video_ids": [
     "6J9-sIGZ828",
@@ -199,18 +200,66 @@
    "active": true
   },
   {
+   "id": "금리_연준",
+   "name": "금리·연준",
+   "video_count": 7,
+   "channel_count": 6,
+   "total_views": 275464,
+   "latest": "2026-10-29T23:00:36+09:00",
+   "video_ids": [
+    "9JAv6eHUUG8",
+    "mL0MHyxl99Y",
+    "lAztrWZ4TEo",
+    "VOYsRHgkpA0",
+    "j99JLzJY1CM",
+    "HVZrbE1rMlc",
+    "gPOTrxSYK-E"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "경제사냥꾼",
+    "김영익의 경제스쿨",
+    "삼프로TV 3PROTV",
+    "슈퍼개미 이세무사TV",
+    "홍춘욱의 경제강의노트"
+   ],
+   "subtopics": [
+    {
+     "word": "인상",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "미국",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "동결",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "FOMC",
+     "videos": 2,
+     "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 8,
    "channel_count": 5,
-   "total_views": 477804,
-   "latest": "2026-10-29T20:00:09+09:00",
+   "total_views": 489917,
+   "latest": "2026-10-30T05:37:32+09:00",
    "video_ids": [
+    "WDX1JXz6Uf8",
     "XmXsCpHMMH8",
     "OmwPEbrKVqg",
     "hEDTrwiTCx0",
     "qSWE9tyk-2k",
-    "2-_oRteP2wU",
     "xXn0JDvpAVw",
     "dWrNQ6oPObo",
     "A_hNNPNYOw0"
@@ -229,6 +278,11 @@
      "channels": 2
     },
     {
+     "word": "성장",
+     "videos": 2,
+     "channels": 2
+    },
+    {
      "word": "데이터센터",
      "videos": 2,
      "channels": 1
@@ -242,47 +296,11 @@
    "active": true
   },
   {
-   "id": "금리_연준",
-   "name": "금리·연준",
-   "video_count": 6,
-   "channel_count": 5,
-   "total_views": 155898,
-   "latest": "2026-10-29T21:52:12+09:00",
-   "video_ids": [
-    "mL0MHyxl99Y",
-    "lAztrWZ4TEo",
-    "VOYsRHgkpA0",
-    "j99JLzJY1CM",
-    "HVZrbE1rMlc",
-    "gPOTrxSYK-E"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "김영익의 경제스쿨",
-    "삼프로TV 3PROTV",
-    "슈퍼개미 이세무사TV",
-    "홍춘욱의 경제강의노트"
-   ],
-   "subtopics": [
-    {
-     "word": "동결",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "FOMC",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "유가_에너지",
    "name": "유가·에너지",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 243954,
+   "total_views": 336878,
    "latest": "2026-10-29T18:05:33+09:00",
    "video_ids": [
     "OmwPEbrKVqg",
@@ -310,7 +328,7 @@
    "name": "정책·정치",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 1189899,
+   "total_views": 1374499,
    "latest": "2026-10-29T18:00:25+09:00",
    "video_ids": [
     "BKzLXVeXD0s",
@@ -346,16 +364,15 @@
   {
    "id": "고용_경기",
    "name": "고용·경기",
-   "video_count": 5,
+   "video_count": 4,
    "channel_count": 3,
-   "total_views": 140074,
+   "total_views": 376385,
    "latest": "2026-10-29T21:52:12+09:00",
    "video_ids": [
     "mL0MHyxl99Y",
     "5IRbXRR73Q0",
     "k6CDRTmyAHo",
-    "nDeGYXPaMd8",
-    "gUSn1eiLMuU"
+    "nDeGYXPaMd8"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
@@ -370,7 +387,7 @@
    "name": "일본·엔화",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 255356,
+   "total_views": 456390,
    "latest": "2026-10-29T19:07:50+09:00",
    "video_ids": [
     "k6CDRTmyAHo",
@@ -390,7 +407,7 @@
    "name": "미국증시",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 217642,
+   "total_views": 267526,
    "latest": "2026-10-29T19:40:19+09:00",
    "video_ids": [
     "MXwB5P9mJxA",
