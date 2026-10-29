@@ -8,9 +8,10 @@
  *
  * 호출: <웹앱URL>?codes=005930,000660&us=AAPL,NVDA  →  {"datas":[{itemCode,closePrice,compareToPreviousClosePrice,fluctuationsRatio,compareToPreviousPrice:{name}}]}
  * 한국(codes): 네이버 모바일 증권을 먼저, 안 되면 야후. 미국(us): 야후. 모두 서버(구글) 쪽에서 대신 불러온다.
- * (v3: ^TNX·CL=F·^SOX 같은 지수·금리·원자재 허용 / v2: 미국 종목 us= 추가 — 이 파일로 바꾼 뒤 「배포 관리 → 수정 → 새 버전」으로 올려야 반영된다)
+ * (v4: ?chart=코드&range=1d|5d|1mo|3mo|1y 그래프용 시계열 추가 / v3: ^TNX·CL=F·^SOX 같은 지수·금리·원자재 허용 / v2: 미국 종목 us= 추가 — 이 파일로 바꾼 뒤 「배포 관리 → 수정 → 새 버전」으로 올려야 반영된다)
  */
 function doGet(e) {
+  if (e && e.parameter && e.parameter.chart) return chartOut_(String(e.parameter.chart), String(e.parameter.range || '1d'));
   var codes = String((e && e.parameter && e.parameter.codes) || '').split(',')
     .filter(function (c) { return /^\d{6}$/.test(c); }).slice(0, 20);
   var us = String((e && e.parameter && e.parameter.us) || '').split(',')
@@ -90,4 +91,39 @@ function fromYahooUS_(sym) {
 function test() {
   var r = doGet({ parameter: { codes: '005930', us: 'AAPL,NVDA,^TNX,CL=F,^SOX' } });
   Logger.log(r.getContent());
+}
+
+// ───── v4: 그래프용 시계열 (?chart=NQ%3DF&range=1d) ─────
+function chartOut_(sym, range) {
+  var RG = { '1d': ['1d', '5m'], '5d': ['5d', '30m'], '1mo': ['1mo', '1d'], '3mo': ['3mo', '1d'], '1y': ['1y', '1wk'] };
+  var rg = RG[range] || RG['1d'];
+  var u = sym.toUpperCase(), cands;
+  if (/^\d{6}$/.test(u)) cands = [u + '.KS', u + '.KQ'];
+  else if (/^[\^A-Z][A-Z0-9.\-=]{0,11}$/.test(u)) cands = [/[\^=]/.test(u) ? u : u.replace('.', '-')];
+  else return json_({ chart: { err: 'bad' } });
+  for (var i = 0; i < cands.length; i++) {
+    try {
+      var r = UrlFetchApp.fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(cands[i]) + '?range=' + rg[0] + '&interval=' + rg[1],
+        { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (r.getResponseCode() !== 200) continue;
+      var res = JSON.parse(r.getContentText()).chart.result[0], ts = res.timestamp || [], cl = res.indicators.quote[0].close || [], pts = [];
+      for (var k = 0; k < ts.length; k++) if (cl[k] != null) pts.push([ts[k], cl[k]]);
+      if (pts.length < 2) continue;
+      var step = Math.ceil(pts.length / 240), out = [];
+      for (var q = 0; q < pts.length; q += step) out.push(pts[q]);
+      if (out[out.length - 1] !== pts[pts.length - 1]) out.push(pts[pts.length - 1]);
+      var prev = res.meta.chartPreviousClose;
+      if (cands[i] === '^TNX' && out[0][1] > 20) { out = out.map(function (x) { return [x[0], x[1] / 10]; }); if (prev) prev = prev / 10; }
+      return json_({ chart: { sym: sym, pts: out, prev: prev == null ? null : prev, name: res.meta.shortName || sym } });
+    } catch (err) { /* 다음 후보 */ }
+  }
+  return json_({ chart: { err: 'none' } });
+}
+
+function json_(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function testChart() {
+  Logger.log(chartOut_('NQ=F', '1d').getContent().slice(0, 300));
 }
