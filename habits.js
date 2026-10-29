@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v384-1029-1500
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v385-1029-1600
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -1790,10 +1790,11 @@ function krFetch(force){
   function many(rel){return Promise.all(codes.map(function(c){return get(rel?relay(rel,B(c)):B(c)).then(function(j){if(j&&!j.itemCode)j.itemCode=c;return j;});})).then(function(a){return {datas:a};});}
   var tries=[],U=krUrl();
   var phase1=[],phase2=[];
-  if(U)phase1.push(['내 시세 주소',function(){return get(U+(U.indexOf('?')<0?'?':'&')+'codes='+codes.join(',')+(usc.length?'&us='+encodeURIComponent(usc.join(',')):''));}]);
+  var phase0=[];
+  if(U)phase0.push(['내 시세 주소',function(){return get(U+(U.indexOf('?')<0?'?':'&')+'codes='+codes.join(',')+(usc.length?'&us='+encodeURIComponent(usc.join(',')):''));}]);
   if(codes.length)phase1.push(['네이버',function(){return get(A);}],['네이버(종목별)',function(){return many('');}]);
   if(codes.length)phase2.push(['중계1',function(){return get(relay('allorigins',A));}],['중계2',function(){return get(relay('corsproxy',A));}],['중계1(종목별)',function(){return many('allorigins');}]);
-  tries=[phase1,phase2].filter(function(x){return x.length;});
+  tries=[phase0,phase1,phase2].filter(function(x){return x.length;});   /* 내 시세 주소가 있으면 그것만 먼저 시도하고, 실패할 때만 예비 경로(네이버 직접·중계)를 쓴다 */
   var fails=[],i=0;
   function one(t){                                              /* 한 경로: 성공하면 값, 실패하면 거절 */
     return t[1]().then(function(j){var d=krParse(j,list);if(!d||!d.some(function(x){return x.p!=null;}))throw new Error('형식 달라서 못 읽음');return {d:d,via:t[0]};},function(e){throw new Error(t[0]+' '+e.message+(t[0]==='내 시세 주소'&&/접근 막힘/.test(e.message)?' (시크릿 창에서 이 주소를 열었을 때 로그인 화면이 나오면 배포의 액세스 권한을 「모든 사용자」로 바꿔 주세요)':''));});
@@ -1805,7 +1806,7 @@ function krFetch(force){
     });
   }
   function next(){
-    if(i>=tries.length){KR.err='네이버 시세를 받지 못했어요 — '+fails.join(' · ');return Promise.resolve();}
+    if(i>=tries.length){KR.err='네이버 시세를 받지 못했어요 — '+fails.join(' · ');KR.failAt=Date.now();return Promise.resolve();}
     return race(tries[i++]).then(function(v){
       var old={};(KR.data||[]).forEach(function(x){if(x.p!=null)old[x.code]=x;});
       KR.data=v.d.map(function(x){return x.p==null&&old[x.code]?old[x.code]:x;});          /* 이번에 못 받은 종목은 지난 값을 남긴다 */
@@ -1876,7 +1877,7 @@ function stkBuild(){
 function stkMount(){
   var r=ROOT(),on=r&&isOpen()&&dayBoard(),slot=on?$('#stkSlot'):null;
   if(!on){if(STK.el)STK.el.style.display='none';return;}
-  krStart();if(!KR.at&&!KR.busy)krFetch(true);
+  krStart();if(!KR.at&&!KR.busy&&Date.now()-(KR.failAt||0)>KR_MS)krFetch(true);   /* 실패했을 때 화면이 다시 그려질 때마다 바로 재시도하지 않는다(30초 뒤 또는 「다시」) */
   stkBuild();
   if(!slot){STK.el.style.display='none';return;}
   if(STK.el.parentNode!==r)r.appendChild(STK.el);
@@ -3597,7 +3598,7 @@ var onClick=function(e){
   if(a==='stkedit'){ui.stkEdit=!ui.stkEdit;render();return;}
   if(a==='stkdef'){var ta0=$('#stkTa');if(ta0)ta0.value=STK_DEF;return;}
   if(a==='stksave'){var ta=$('#stkTa');if(ta){STK.txt=ta.value.slice(0,1500);try{localStorage.setItem('hb_stk',STK.txt);}catch(e){}}var ui0=$('#stkUrl');if(ui0){var uv=ui0.value.trim();if(/googleusercontent\.com\/macros\/echo/i.test(uv)){alert('이 주소는 구글이 한 번 보여 준 결과의 복사본이라 종목을 바꿔도 계속 같은 빈 결과만 나와요.\n\n배포 관리의 「웹 앱 URL」(https://script.google.com/macros/s/…/exec 로 끝나는 주소)을 복사해서 넣어 주세요.');return;}if(uv&&!/^https:\/\//.test(uv))uv='';KR.url=uv;KR.usMiss=false;try{localStorage.setItem('hb_krurl',uv);}catch(e){}}
-    ui.stkEdit=false;KR.at=0;render();return;}
+    ui.stkEdit=false;KR.at=0;KR.failAt=0;render();return;}
   if(a==='calopen'){ui.cal={m:ui.date.slice(0,7)};render();return;}
   if(a==='calmon'){ui.cal.m=shiftMonth(ui.cal.m,+v);render();return;}
   if(a==='calpick'){ui.date=b.dataset.date;ui.month=ui.date.slice(0,7);ui.cal=null;ui.dview=false;ui.rpage=0;render();return;}
