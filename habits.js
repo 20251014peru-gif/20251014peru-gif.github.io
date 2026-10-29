@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v377-1026-1200
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v378-1029-0900
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -1733,7 +1733,9 @@ function tmInner(){
 function tmHtml(){return '<div class="dstack"><div class="dcol dtm'+(TM.st==='done'?' tm-done':'')+'"><div id="tmBox">'+tmInner()+'</div></div><div class="dcol dmore">'+stkInner()+'</div></div>';}
 
 /* ───────── 주식 시세 (3열 아래칸) — TradingView 무료 위젯을 그대로 붙인다. 위젯은 화면을 다시 그려도 새로고침되지 않게 따로 두고 칸 위에 겹쳐 놓는다 ───────── */
-var STK_DEF='KRX:005930 삼성전자\nKRX:000660 SK하이닉스\nKRX:005380 현대차\nNASDAQ:AAPL 애플\nNASDAQ:NVDA 엔비디아\nNASDAQ:TSLA 테슬라';
+var STK_DEF='KRX:005930 삼성전자\nKRX:000660 SK하이닉스\nKRX:005380 현대차\nNASDAQ:AAPL 애플\nNASDAQ:NVDA 엔비디아\nNASDAQ:TSLA 테슬라\nTVC:US10Y 미국10년물\nTVC:USOIL WTI유가\nNASDAQ:SOX 필라델피아반도체';
+/* 지수·금리·원자재: TradingView 표기로 적으면 내 시세 주소(야후)에서는 아래 야후 기호로 바꿔 받는다(unit=값 뒤에 붙일 단위, dec=소수 자리) */
+var STK_MAC={'TVC:US10Y':{y:'^TNX',unit:'%',dec:3},'TVC:USOIL':{y:'CL=F',dec:2},'NYMEX:CL1!':{y:'CL=F',dec:2},'NASDAQ:SOX':{y:'^SOX',dec:2},'TVC:SOX':{y:'^SOX',dec:2},'SP:SPX':{y:'^GSPC',dec:2},'NASDAQ:NDX':{y:'^NDX',dec:2},'TVC:DJI':{y:'^DJI',dec:2},'TVC:VIX':{y:'^VIX',dec:2},'FX_IDC:USDKRW':{y:'KRW=X',dec:2},'TVC:GOLD':{y:'GC=F',dec:2}};
 var STK={el:null,key:'',txt:null},STK_SC=0.72,STK_HDR=36,STK_MINW=620;   /* 위젯을 0.72배로 줄여 더 많은 종목이 들어가게 하고, 맨 위 「이름·값」 제목 줄(약 36px)은 잘라 낸다 */
 function stkText(){if(STK.txt!==null)return STK.txt;var t='';try{t=localStorage.getItem('hb_stk')||'';}catch(e){}STK.txt=t.trim()?t:STK_DEF;return STK.txt;}
 function stkOwnUS(){return !!krUrl()&&!KR.usMiss;}   /* 내 시세 주소(Apps Script)가 미국도 주면 미국도 우리 표로 보여 준다 */
@@ -1743,6 +1745,8 @@ function stkParse(t){                       /* 한국 6자리 코드(kr)·미국
     var m=/^\s*([A-Za-z0-9._\-]+:[A-Za-z0-9._\-!]+)\s*(.*)$/.exec(l);if(!m)return;
     var k=/^(KRX|KOSDAQ|KOSPI):(\d{6})$/i.exec(m[1]),nm=m[2].trim().slice(0,20);
     if(k){kr.push({code:k[2],name:nm||k[2]});return;}
+    var mc=STK_MAC[m[1].toUpperCase()];
+    if(mc&&own){us.push({code:mc.y,name:nm||m[1],us:1,tv:m[1].toUpperCase(),unit:mc.unit||'',dec:mc.dec});return;}
     var u=/^(NASDAQ|NYSE|AMEX|ARCA|NYSEARCA|BATS):([A-Za-z][A-Za-z0-9.\-]{0,9})$/i.exec(m[1]);
     if(u&&own){us.push({code:u[2].toUpperCase(),name:nm||u[2].toUpperCase(),us:1,tv:m[1].toUpperCase()});return;}
     var o={name:m[1]};if(nm)o.displayName=nm;w.push(o);
@@ -1763,11 +1767,11 @@ function krParse(j,list){
   var by={};arr.forEach(function(x){if(x&&(x.itemCode||x.cd))by[x.itemCode||x.cd]=x;});
   var out=[];
   list.forEach(function(it){
-    var x=by[it.code];if(!x){out.push({code:it.code,name:it.name,p:null,us:it.us,tv:it.tv});return;}
+    var x=by[it.code];if(!x){out.push({code:it.code,name:it.name,p:null,us:it.us,tv:it.tv,unit:it.unit,dec:it.dec});return;}
     var price=krNum(x.closePrice!==undefined?x.closePrice:x.nv),chg=krNum(x.compareToPreviousClosePrice!==undefined?x.compareToPreviousClosePrice:x.cv),rt=krNum(x.fluctuationsRatio!==undefined?x.fluctuationsRatio:x.cr);
     var dn=String(x.compareToPreviousPrice&&x.compareToPreviousPrice.name||'').toUpperCase(),dir=/FALL|LOWER/.test(dn)?-1:/RIS|UPPER/.test(dn)?1:0;
     if(!dir){if(rt!=null&&rt!==0)dir=rt<0?-1:1;else if(chg)dir=chg<0?-1:1;}
-    out.push({code:it.code,name:it.name,p:price,c:chg==null?null:Math.abs(chg),r:rt==null?null:Math.abs(rt),d:dir,us:it.us,tv:it.tv});
+    out.push({code:it.code,name:it.name,p:price,c:chg==null?null:Math.abs(chg),r:rt==null?null:Math.abs(rt),d:dir,us:it.us,tv:it.tv,unit:it.unit,dec:it.dec});
   });
   return out;
 }
@@ -1785,7 +1789,7 @@ function krFetch(force){
   function many(rel){return Promise.all(codes.map(function(c){return get(rel?relay(rel,B(c)):B(c)).then(function(j){if(j&&!j.itemCode)j.itemCode=c;return j;});})).then(function(a){return {datas:a};});}
   var tries=[],U=krUrl();
   var phase1=[],phase2=[];
-  if(U)phase1.push(['내 시세 주소',function(){return get(U+(U.indexOf('?')<0?'?':'&')+'codes='+codes.join(',')+(usc.length?'&us='+usc.join(','):''));}]);
+  if(U)phase1.push(['내 시세 주소',function(){return get(U+(U.indexOf('?')<0?'?':'&')+'codes='+codes.join(',')+(usc.length?'&us='+encodeURIComponent(usc.join(',')):''));}]);
   if(codes.length)phase1.push(['네이버',function(){return get(A);}],['네이버(종목별)',function(){return many('');}]);
   if(codes.length)phase2.push(['중계1',function(){return get(relay('allorigins',A));}],['중계2',function(){return get(relay('corsproxy',A));}],['중계1(종목별)',function(){return many('allorigins');}]);
   tries=[phase1,phase2].filter(function(x){return x.length;});
@@ -1816,11 +1820,11 @@ function krFmt(n,dec){return n==null?'–':n.toLocaleString('ko-KR',{minimumFrac
 function krHtml(){
   krLoad();var P1=stkParse(stkText()),list=P1.kr.concat(P1.us);if(!list.length)return '';
   var have={};(KR.data||[]).forEach(function(x){have[x.code]=x;});
-  var d=list.map(function(x){return have[x.code]?Object.assign({},have[x.code],{name:x.name,us:x.us,tv:x.tv}):{code:x.code,name:x.name,p:null,us:x.us,tv:x.tv};});
+  var d=list.map(function(x){return have[x.code]?Object.assign({},have[x.code],{name:x.name,us:x.us,tv:x.tv,unit:x.unit,dec:x.dec}):{code:x.code,name:x.name,p:null,us:x.us,tv:x.tv,unit:x.unit,dec:x.dec};});
   var rows='<div class="krr krh"><span>종목</span><span>현재가</span><span>전일대비</span><span>등락률</span></div>'+d.map(function(x){
-    var cls=x.d>0?' up':x.d<0?' dn':'',ar=x.d>0?'▲':x.d<0?'▼':'',dc=x.us?2:0;
+    var cls=x.d>0?' up':x.d<0?' dn':'',ar=x.d>0?'▲':x.d<0?'▼':'',dc=x.dec!=null?x.dec:(x.us?2:0);
     var href=x.us?'https://www.tradingview.com/chart/?symbol='+encodeURIComponent(x.tv||x.code):'https://finance.naver.com/item/main.naver?code='+x.code;
-    return '<a class="krr'+cls+(x.us?' usr':'')+'" href="'+href+'" target="_blank" rel="noopener noreferrer" title="'+(x.us?'차트 보기':'네이버 증권에서 차트 보기')+'"><span class="krn">'+esc(x.name)+'</span><b>'+krFmt(x.p,dc)+'</b><span>'+(x.p==null?'':ar+krFmt(x.c,dc))+'</span><span>'+(x.p==null?'':krFmt(x.r,2)+'%')+'</span></a>';
+    return '<a class="krr'+cls+(x.us?' usr':'')+'" href="'+href+'" target="_blank" rel="noopener noreferrer" title="'+(x.us?'차트 보기':'네이버 증권에서 차트 보기')+'"><span class="krn">'+esc(x.name)+'</span><b>'+krFmt(x.p,dc)+(x.p!=null&&x.unit?x.unit:'')+'</b><span>'+(x.p==null?'':ar+krFmt(x.c,dc))+'</span><span>'+(x.p==null?'':krFmt(x.r,2)+'%')+'</span></a>';
   }).join('');
   var at=KR.at?new Date(KR.at):null,sv=!at&&KR.savedAt?new Date(KR.savedAt):null;
   var st=KR.err?'<span class="kre">⚠ '+esc(KR.err)+(KR.data?' (이전 값'+(KR.at?'':' · 저장된 값')+')':'')+' · <button type="button" class="dchip set" data-act="krref">다시</button></span>':(at?esc(KR.via)+' · '+KR_MS/1000+'초마다 · '+pad(at.getHours())+':'+pad(at.getMinutes())+':'+pad(at.getSeconds())+' 갱신':sv?'저장된 값('+(sv.getMonth()+1)+'/'+sv.getDate()+' '+pad(sv.getHours())+':'+pad(sv.getMinutes())+') · 새로 받는 중…':'불러오는 중…');
@@ -1834,7 +1838,7 @@ function krStart(){
 function stkInner(){
   var ed=!!ui.stkEdit,P=stkParse(stkText());
   return '<h3>📈 주식 '+(P.groups.length?'<span class="note stkleg">종목 · 현재가 · 전일대비 · 등락률</span>':'')+'<button type="button" class="dchip set stked" data-act="stkedit">'+(ed?'닫기':'✎ 종목')+'</button></h3>'
-    +(ed?'<p class="note">한 줄에 하나: 거래소:종목코드 이름 (예: KRX:005930 삼성전자, NASDAQ:AAPL 애플, 지수는 SP:SPX). 한국 6자리 코드는 네이버, 나머지는 TradingView에서 받아요.</p><textarea id="stkTa" class="stkta" rows="8" spellcheck="false">'+esc(stkText())+'</textarea><p class="note">한국 시세가 안 뜨면, 직접 만든 시세 주소(Google Apps Script 웹 앱, 선택)를 넣으세요:</p><input type="text" id="stkUrl" class="stkurl" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec" value="'+esc(krUrl())+'"><div class="stkbt"><button type="button" class="btn sm" data-act="stkdef">기본값</button><button type="button" class="btn pri sm" data-act="stksave">저장</button></div>'
+    +(ed?'<p class="note">한 줄에 하나: 거래소:종목코드 이름 (예: KRX:005930 삼성전자, NASDAQ:AAPL 애플, 지수·금리·유가는 TVC:US10Y, TVC:USOIL, NASDAQ:SOX 처럼). 한국 6자리 코드는 네이버, 나머지는 TradingView에서 받아요.</p><textarea id="stkTa" class="stkta" rows="8" spellcheck="false">'+esc(stkText())+'</textarea><p class="note">한국 시세가 안 뜨면, 직접 만든 시세 주소(Google Apps Script 웹 앱, 선택)를 넣으세요:</p><input type="text" id="stkUrl" class="stkurl" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec" value="'+esc(krUrl())+'"><div class="stkbt"><button type="button" class="btn sm" data-act="stkdef">기본값</button><button type="button" class="btn pri sm" data-act="stksave">저장</button></div>'
       :'<div id="stkKr" class="stkkr">'+krHtml()+'</div>'+(P.groups.length?'<div class="stkslot" id="stkSlot"></div>':''));
 }
 function stkBuild(){
