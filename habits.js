@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v383-1029-1400
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v384-1029-1500
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -1796,7 +1796,7 @@ function krFetch(force){
   tries=[phase1,phase2].filter(function(x){return x.length;});
   var fails=[],i=0;
   function one(t){                                              /* 한 경로: 성공하면 값, 실패하면 거절 */
-    return t[1]().then(function(j){var d=krParse(j,list);if(!d||!d.some(function(x){return x.p!=null;}))throw new Error('형식 달라서 못 읽음');return {d:d,via:t[0]};},function(e){throw new Error(t[0]+' '+e.message);});
+    return t[1]().then(function(j){var d=krParse(j,list);if(!d||!d.some(function(x){return x.p!=null;}))throw new Error('형식 달라서 못 읽음');return {d:d,via:t[0]};},function(e){throw new Error(t[0]+' '+e.message+(t[0]==='내 시세 주소'&&/접근 막힘/.test(e.message)?' (시크릿 창에서 이 주소를 열었을 때 로그인 화면이 나오면 배포의 액세스 권한을 「모든 사용자」로 바꿔 주세요)':''));});
   }
   function race(ph){                                            /* 같은 단계의 경로들을 동시에 시도해 먼저 성공한 것을 쓴다 */
     return new Promise(function(res,rej){
