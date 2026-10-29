@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v382-1029-1300
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v383-1029-1400
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -3596,7 +3596,7 @@ var onClick=function(e){
   if(a==='krref'){krFetch(true);return;}
   if(a==='stkedit'){ui.stkEdit=!ui.stkEdit;render();return;}
   if(a==='stkdef'){var ta0=$('#stkTa');if(ta0)ta0.value=STK_DEF;return;}
-  if(a==='stksave'){var ta=$('#stkTa');if(ta){STK.txt=ta.value.slice(0,1500);try{localStorage.setItem('hb_stk',STK.txt);}catch(e){}}var ui0=$('#stkUrl');if(ui0){var uv=ui0.value.trim();if(uv&&!/^https:\/\//.test(uv))uv='';KR.url=uv;KR.usMiss=false;try{localStorage.setItem('hb_krurl',uv);}catch(e){}}
+  if(a==='stksave'){var ta=$('#stkTa');if(ta){STK.txt=ta.value.slice(0,1500);try{localStorage.setItem('hb_stk',STK.txt);}catch(e){}}var ui0=$('#stkUrl');if(ui0){var uv=ui0.value.trim();if(/googleusercontent\.com\/macros\/echo/i.test(uv)){alert('이 주소는 구글이 한 번 보여 준 결과의 복사본이라 종목을 바꿔도 계속 같은 빈 결과만 나와요.\n\n배포 관리의 「웹 앱 URL」(https://script.google.com/macros/s/…/exec 로 끝나는 주소)을 복사해서 넣어 주세요.');return;}if(uv&&!/^https:\/\//.test(uv))uv='';KR.url=uv;KR.usMiss=false;try{localStorage.setItem('hb_krurl',uv);}catch(e){}}
     ui.stkEdit=false;KR.at=0;render();return;}
   if(a==='calopen'){ui.cal={m:ui.date.slice(0,7)};render();return;}
   if(a==='calmon'){ui.cal.m=shiftMonth(ui.cal.m,+v);render();return;}
