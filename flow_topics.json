@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-10-31T22:10:47.606077+09:00",
+ "updated_at": "2026-11-01T04:37:31.797517+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 14,
+   "video_count": 15,
    "channel_count": 12,
-   "total_views": 1305378,
-   "latest": "2026-10-31T18:00:02+09:00",
+   "total_views": 1395348,
+   "latest": "2026-11-01T02:10:49+09:00",
    "video_ids": [
+    "BbcxxMtijlM",
     "ET41_ENzq7w",
     "T3NkFvkAmJs",
     "0cnjoy6sf0E",
@@ -77,7 +78,7 @@
    "name": "반도체",
    "video_count": 11,
    "channel_count": 7,
-   "total_views": 874904,
+   "total_views": 1078569,
    "latest": "2026-10-31T20:00:35+09:00",
    "video_ids": [
     "SCFvaPwtFfs",
@@ -140,7 +141,7 @@
    "name": "미국증시",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 641460,
+   "total_views": 785642,
    "latest": "2026-10-31T20:00:35+09:00",
    "video_ids": [
     "SCFvaPwtFfs",
@@ -192,7 +193,7 @@
    "name": "정책·정치",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 335172,
+   "total_views": 417420,
    "latest": "2026-10-31T18:05:21+09:00",
    "video_ids": [
     "JO6eVjTxPqo",
@@ -218,7 +219,7 @@
    "name": "배당·ETF",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 546686,
+   "total_views": 623128,
    "latest": "2026-10-31T14:00:22+09:00",
    "video_ids": [
     "QTyvpMtOsF4",
@@ -238,7 +239,7 @@
    "name": "국내증시",
    "video_count": 4,
    "channel_count": 2,
-   "total_views": 432946,
+   "total_views": 491488,
    "latest": "2026-10-31T10:10:43+09:00",
    "video_ids": [
     "mW7c9jFN6VY",
@@ -285,41 +286,11 @@
    "active": true
   },
   {
-   "id": "금리_연준",
-   "name": "금리·연준",
-   "video_count": 3,
-   "channel_count": 2,
-   "total_views": 90749,
-   "latest": "2026-10-31T18:05:21+09:00",
-   "video_ids": [
-    "JO6eVjTxPqo",
-    "SR9Bmbw4CCQ",
-    "9JAv6eHUUG8"
-   ],
-   "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "경제사냥꾼"
-   ],
-   "subtopics": [
-    {
-     "word": "국채금리",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "경읽남",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "채권_크레딧",
    "name": "채권·크레딧",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 100995,
+   "total_views": 159959,
    "latest": "2026-10-31T18:05:21+09:00",
    "video_ids": [
     "JO6eVjTxPqo",
@@ -349,7 +320,7 @@
    "name": "실적시즌",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 172129,
+   "total_views": 175454,
    "latest": "2026-10-30T18:00:25+09:00",
    "video_ids": [
     "txzZDSZRCPE",
@@ -387,7 +358,7 @@
      "channels": 1
     }
    ],
-   "active": false
+   "active": true
   }
  ]
 }
