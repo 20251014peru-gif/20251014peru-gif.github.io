@@ -1,14 +1,16 @@
 {
- "updated_at": "2026-11-01T04:37:31.797517+09:00",
+ "updated_at": "2026-11-01T09:32:58.300200+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 15,
-   "channel_count": 12,
-   "total_views": 1395348,
-   "latest": "2026-11-01T02:10:49+09:00",
+   "channel_count": 10,
+   "total_views": 1058455,
+   "latest": "2026-11-01T09:00:01+09:00",
    "video_ids": [
+    "mW9C3mEEwgg",
+    "06k8hYNkTHs",
     "BbcxxMtijlM",
     "ET41_ENzq7w",
     "T3NkFvkAmJs",
@@ -21,13 +23,10 @@
     "lE2zaItUmoQ",
     "jfNU1Nbkb28",
     "DBm1cqv3avc",
-    "txzZDSZRCPE",
-    "VxJzFAFdoDU",
-    "6d4-1IjWW-c"
+    "txzZDSZRCPE"
    ],
    "channels": [
     "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
     "경제사냥꾼",
     "내일은 투자왕 - 김단테",
     "삼프로TV 3PROTV",
@@ -36,22 +35,16 @@
     "언더스탠딩",
     "염블리와 함께 (염승환)",
     "이효석아카데미",
-    "증시각도기TV",
     "티타임즈TV"
    ],
    "subtopics": [
-    {
-     "word": "쇼크",
-     "videos": 4,
-     "channels": 4
-    },
     {
      "word": "빅테크",
      "videos": 3,
      "channels": 3
     },
     {
-     "word": "아마존",
+     "word": "쇼크",
      "videos": 3,
      "channels": 3
     },
@@ -61,14 +54,19 @@
      "channels": 2
     },
     {
-     "word": "10월",
+     "word": "실적",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "30일",
+     "word": "대표",
      "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "주식",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -76,50 +74,34 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 11,
-   "channel_count": 7,
-   "total_views": 1078569,
-   "latest": "2026-10-31T20:00:35+09:00",
+   "video_count": 7,
+   "channel_count": 5,
+   "total_views": 792716,
+   "latest": "2026-11-01T08:30:36+09:00",
    "video_ids": [
+    "2u_IBpeKLrc",
     "SCFvaPwtFfs",
     "7e5MI8QiHIQ",
     "FgMNYoPEenQ",
     "1I0ZiVPLUPs",
-    "6iCJIoH8fnE",
-    "QInbZ9oPWrg",
     "V_mxGn5kd14",
-    "16Vn1r39RF8",
-    "vZ9LGDYj8Ao",
-    "Z4K4_JqOkXE",
-    "6d4-1IjWW-c"
+    "16Vn1r39RF8"
    ],
    "channels": [
     "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
     "달란트투자",
     "미주은 (미국주식으로 은퇴하기)",
     "슈퍼개미 이세무사TV",
-    "증시각도기TV",
-    "체슬리TV (박세익)"
+    "증시각도기TV"
    ],
    "subtopics": [
-    {
-     "word": "삼성전자",
-     "videos": 4,
-     "channels": 3
-    },
-    {
-     "word": "한국",
-     "videos": 4,
-     "channels": 3
-    },
     {
      "word": "인텔",
      "videos": 3,
      "channels": 3
     },
     {
-     "word": "SK하이닉스",
+     "word": "삼성전자",
      "videos": 2,
      "channels": 2
     },
@@ -132,6 +114,101 @@
      "word": "나스닥",
      "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "현금",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "한국",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "국내증시",
+   "name": "국내증시",
+   "video_count": 5,
+   "channel_count": 3,
+   "total_views": 509386,
+   "latest": "2026-11-01T08:30:36+09:00",
+   "video_ids": [
+    "2u_IBpeKLrc",
+    "mW7c9jFN6VY",
+    "AyN3mFL3WAE",
+    "jLvo_44Sxn8",
+    "X5FGnBk5ff4"
+   ],
+   "channels": [
+    "815머니톡",
+    "삼프로TV 3PROTV",
+    "슈퍼개미 이세무사TV"
+   ],
+   "subtopics": [
+    {
+     "word": "코스피",
+     "videos": 5,
+     "channels": 3
+    },
+    {
+     "word": "투자회담",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "장우진",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "빈센트",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "박가영",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "이형수",
+     "videos": 2,
+     "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "정책_정치",
+   "name": "정책·정치",
+   "video_count": 4,
+   "channel_count": 3,
+   "total_views": 453238,
+   "latest": "2026-11-01T06:05:24+09:00",
+   "video_ids": [
+    "BVzxT_fOvWE",
+    "JO6eVjTxPqo",
+    "0qzb-muWqu0",
+    "BylETcYBDWU"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "언더스탠딩",
+    "체슬리TV (박세익)"
+   ],
+   "subtopics": [
+    {
+     "word": "중간선거",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "국채금리",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -141,7 +218,7 @@
    "name": "미국증시",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 785642,
+   "total_views": 816994,
    "latest": "2026-10-31T20:00:35+09:00",
    "video_ids": [
     "SCFvaPwtFfs",
@@ -189,25 +266,30 @@
    "active": true
   },
   {
-   "id": "정책_정치",
-   "name": "정책·정치",
+   "id": "실적시즌",
+   "name": "실적시즌",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 417420,
-   "latest": "2026-10-31T18:05:21+09:00",
+   "total_views": 85377,
+   "latest": "2026-11-01T09:00:01+09:00",
    "video_ids": [
-    "JO6eVjTxPqo",
-    "0qzb-muWqu0",
-    "BylETcYBDWU"
+    "mW9C3mEEwgg",
+    "EKkLPmHo4yY",
+    "txzZDSZRCPE"
    ],
    "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "언더스탠딩",
-    "체슬리TV (박세익)"
+    "삼프로TV 3PROTV",
+    "염블리와 함께 (염승환)",
+    "이효석아카데미"
    ],
    "subtopics": [
     {
-     "word": "중간선거",
+     "word": "실적",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "쇼크",
      "videos": 2,
      "channels": 2
     }
@@ -219,7 +301,7 @@
    "name": "배당·ETF",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 623128,
+   "total_views": 662183,
    "latest": "2026-10-31T14:00:22+09:00",
    "video_ids": [
     "QTyvpMtOsF4",
@@ -235,64 +317,14 @@
    "active": true
   },
   {
-   "id": "국내증시",
-   "name": "국내증시",
-   "video_count": 4,
-   "channel_count": 2,
-   "total_views": 491488,
-   "latest": "2026-10-31T10:10:43+09:00",
-   "video_ids": [
-    "mW7c9jFN6VY",
-    "AyN3mFL3WAE",
-    "jLvo_44Sxn8",
-    "X5FGnBk5ff4"
-   ],
-   "channels": [
-    "삼프로TV 3PROTV",
-    "슈퍼개미 이세무사TV"
-   ],
-   "subtopics": [
-    {
-     "word": "코스피",
-     "videos": 4,
-     "channels": 2
-    },
-    {
-     "word": "투자회담",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "장우진",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "빈센트",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "박가영",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "이형수",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "채권_크레딧",
    "name": "채권·크레딧",
-   "video_count": 3,
+   "video_count": 4,
    "channel_count": 2,
-   "total_views": 159959,
-   "latest": "2026-10-31T18:05:21+09:00",
+   "total_views": 186913,
+   "latest": "2026-11-01T06:05:24+09:00",
    "video_ids": [
+    "BVzxT_fOvWE",
     "JO6eVjTxPqo",
     "SR9Bmbw4CCQ",
     "yEZt6t6Fwd8"
@@ -304,6 +336,16 @@
    "subtopics": [
     {
      "word": "국채금리",
+     "videos": 3,
+     "channels": 1
+    },
+    {
+     "word": "중간선거",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "바뀐다",
      "videos": 2,
      "channels": 1
     },
@@ -316,49 +358,43 @@
    "active": true
   },
   {
-   "id": "실적시즌",
-   "name": "실적시즌",
+   "id": "금리_연준",
+   "name": "금리·연준",
    "video_count": 3,
-   "channel_count": 2,
-   "total_views": 175454,
-   "latest": "2026-10-30T18:00:25+09:00",
+   "channel_count": 1,
+   "total_views": 151792,
+   "latest": "2026-11-01T06:05:24+09:00",
    "video_ids": [
-    "txzZDSZRCPE",
-    "Z4K4_JqOkXE",
-    "6d4-1IjWW-c"
+    "BVzxT_fOvWE",
+    "JO6eVjTxPqo",
+    "SR9Bmbw4CCQ"
    ],
    "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "염블리와 함께 (염승환)"
+    "경제 읽어주는 남자 (김광석)"
    ],
    "subtopics": [
     {
-     "word": "아마존",
-     "videos": 2,
-     "channels": 2
+     "word": "국채금리",
+     "videos": 3,
+     "channels": 1
     },
     {
-     "word": "쇼크",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "실적",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "삼성전자",
+     "word": "중간선거",
      "videos": 2,
      "channels": 1
     },
     {
-     "word": "즉시분석",
+     "word": "바뀐다",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "경읽남",
      "videos": 2,
      "channels": 1
     }
    ],
-   "active": true
+   "active": false
   }
  ]
 }
