@@ -8,10 +8,10 @@
  *
  * 호출: <웹앱URL>?codes=005930,000660&us=AAPL,NVDA  →  {"datas":[{itemCode,closePrice,compareToPreviousClosePrice,fluctuationsRatio,compareToPreviousPrice:{name}}]}
  * 한국(codes): 네이버 모바일 증권을 먼저, 안 되면 야후. 미국(us): 야후. 모두 서버(구글) 쪽에서 대신 불러온다.
- * (v4: ?chart=코드&range=1d|5d|1mo|3mo|1y 그래프용 시계열 추가 / v3: ^TNX·CL=F·^SOX 같은 지수·금리·원자재 허용 / v2: 미국 종목 us= 추가 — 이 파일로 바꾼 뒤 「배포 관리 → 수정 → 새 버전」으로 올려야 반영된다)
+ * (v5: 일반 미국 종목은 시간외·프리 가격과 시간외 포함 그래프 / v4: ?chart=코드&range=1d|5d|1mo|3mo|1y 그래프용 시계열 추가 / v3: ^TNX·CL=F·^SOX 같은 지수·금리·원자재 허용 / v2: 미국 종목 us= 추가 — 이 파일로 바꾼 뒤 「배포 관리 → 수정 → 새 버전」으로 올려야 반영된다)
  */
 function doGet(e) {
-  if (e && e.parameter && e.parameter.chart) return chartOut_(String(e.parameter.chart), String(e.parameter.range || '1d'));
+  if (e && e.parameter && e.parameter.chart) return chartOut_(String(e.parameter.chart), String(e.parameter.range || '1d'), e.parameter.ext === '1');
   var codes = String((e && e.parameter && e.parameter.codes) || '').split(',')
     .filter(function (c) { return /^\d{6}$/.test(c); }).slice(0, 20);
   var us = String((e && e.parameter && e.parameter.us) || '').split(',')
@@ -71,30 +71,43 @@ function fromYahooUS_(sym) {
   try {
     var u = sym.toUpperCase();
     var y = /[\^=]/.test(u) ? u : u.replace('.', '-');
-    var r = UrlFetchApp.fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(y) + '?range=1d&interval=1d',
+    var plain = !/[\^=]/.test(u);   // 일반 미국 종목·ETF만 프리/시간외 가격을 함께 본다
+    var r = UrlFetchApp.fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(y) + (plain ? '?range=1d&interval=5m&includePrePost=true' : '?range=1d&interval=1d'),
       { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (r.getResponseCode() !== 200) return null;
     var m = JSON.parse(r.getContentText()).chart.result[0].meta;
     var p = m.regularMarketPrice, pv = m.chartPreviousClose;
     if (p == null || pv == null) return null;
     if (u === '^TNX' && p > 20) { p = p / 10; pv = pv / 10; }   // 예전 표기(금리×10) 대비
+    var regP = p, session = '';
+    if (plain) {                       // 마지막 정규장 거래 이후의 값이 있으면 시간외(POST)·프리마켓(PRE) 가격으로 본다
+      var res = JSON.parse(r.getContentText()).chart.result[0], ts = res.timestamp || [], cl = res.indicators.quote[0].close || [];
+      for (var k = ts.length - 1; k >= 0; k--) {
+        if (cl[k] == null) continue;
+        var rt = m.regularMarketTime;
+        if (rt && ts[k] > rt + 60) { session = (ts[k] - rt < 6 * 3600) ? 'POST' : 'PRE'; p = cl[k]; }
+        break;
+      }
+    }
     var d = p - pv, dec = Math.abs(p) < 20 ? 3 : 2;
-    return {
+    var o = {
       itemCode: sym.toUpperCase(), stockName: m.shortName || sym,
       closePrice: String(p), compareToPreviousClosePrice: String(Math.abs(d).toFixed(dec)),
       fluctuationsRatio: pv ? String(Math.abs(d / pv * 100).toFixed(2)) : '0',
       compareToPreviousPrice: { name: d > 0 ? 'RISING' : d < 0 ? 'FALLING' : 'UNCHANGED' }
     };
+    if (session) { o.session = session; o.regularClose = String(regP); }
+    return o;
   } catch (err) { return null; }
 }
 
 function test() {
-  var r = doGet({ parameter: { codes: '005930', us: 'AAPL,NVDA,^TNX,CL=F,^SOX' } });
+  var r = doGet({ parameter: { codes: '005930', us: 'AAPL,NVDA,SOXS,^TNX,CL=F,^SOX,NQ=F' } });
   Logger.log(r.getContent());
 }
 
 // ───── v4: 그래프용 시계열 (?chart=NQ%3DF&range=1d) ─────
-function chartOut_(sym, range) {
+function chartOut_(sym, range, ext) {
   var RG = { '1d': ['1d', '5m'], '5d': ['5d', '30m'], '1mo': ['1mo', '1d'], '3mo': ['3mo', '1d'], '1y': ['1y', '1wk'] };
   var rg = RG[range] || RG['1d'];
   var u = sym.toUpperCase(), cands;
@@ -103,7 +116,7 @@ function chartOut_(sym, range) {
   else return json_({ chart: { err: 'bad' } });
   for (var i = 0; i < cands.length; i++) {
     try {
-      var r = UrlFetchApp.fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(cands[i]) + '?range=' + rg[0] + '&interval=' + rg[1],
+      var r = UrlFetchApp.fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(cands[i]) + '?range=' + rg[0] + '&interval=' + rg[1] + (ext && /^[A-Z]{1,5}$/.test(u) ? '&includePrePost=true' : ''),
         { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
       if (r.getResponseCode() !== 200) continue;
       var res = JSON.parse(r.getContentText()).chart.result[0], ts = res.timestamp || [], cl = res.indicators.quote[0].close || [], pts = [];
@@ -114,7 +127,13 @@ function chartOut_(sym, range) {
       if (out[out.length - 1] !== pts[pts.length - 1]) out.push(pts[pts.length - 1]);
       var prev = res.meta.chartPreviousClose;
       if (cands[i] === '^TNX' && out[0][1] > 20) { out = out.map(function (x) { return [x[0], x[1] / 10]; }); if (prev) prev = prev / 10; }
-      return json_({ chart: { sym: sym, pts: out, prev: prev == null ? null : prev, name: res.meta.shortName || sym } });
+      var reg = null, cp = res.meta.currentTradingPeriod;           // 정규장 시간대(시간외 구간을 연하게 칠하는 데 씀)
+      if (ext && cp && cp.regular) {
+        var tEnd = pts[pts.length - 1][0];
+        if (tEnd >= cp.pre.start && tEnd <= cp.post.end) reg = [cp.regular.start, cp.regular.end];
+        else if (res.meta.regularMarketTime) reg = [res.meta.regularMarketTime - 23400, res.meta.regularMarketTime];
+      }
+      return json_({ chart: { sym: sym, pts: out, prev: prev == null ? null : prev, name: res.meta.shortName || sym, reg: reg } });
     } catch (err) { /* 다음 후보 */ }
   }
   return json_({ chart: { err: 'none' } });
