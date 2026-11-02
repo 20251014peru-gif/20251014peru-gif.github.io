@@ -8,7 +8,7 @@
  *
  * 호출: <웹앱URL>?codes=005930,000660&us=AAPL,NVDA  →  {"datas":[{itemCode,closePrice,compareToPreviousClosePrice,fluctuationsRatio,compareToPreviousPrice:{name}}]}
  * 한국(codes): 네이버 모바일 증권을 먼저, 안 되면 야후. 미국(us): 야후. 모두 서버(구글) 쪽에서 대신 불러온다.
- * (v5: 일반 미국 종목은 시간외·프리 가격과 시간외 포함 그래프 / v4: ?chart=코드&range=1d|5d|1mo|3mo|1y 그래프용 시계열 추가 / v3: ^TNX·CL=F·^SOX 같은 지수·금리·원자재 허용 / v2: 미국 종목 us= 추가 — 이 파일로 바꾼 뒤 「배포 관리 → 수정 → 새 버전」으로 올려야 반영된다)
+ * (v6: 네이버 해외주식 폐장후(주간거래 포함) 가격 우선 / v5: 일반 미국 종목은 시간외·프리 가격과 시간외 포함 그래프 / v4: ?chart=코드&range=1d|5d|1mo|3mo|1y 그래프용 시계열 추가 / v3: ^TNX·CL=F·^SOX 같은 지수·금리·원자재 허용 / v2: 미국 종목 us= 추가 — 이 파일로 바꾼 뒤 「배포 관리 → 수정 → 새 버전」으로 올려야 반영된다)
  */
 function doGet(e) {
   if (e && e.parameter && e.parameter.chart) return chartOut_(String(e.parameter.chart), String(e.parameter.range || '1d'), e.parameter.ext === '1');
@@ -90,15 +90,56 @@ function fromYahooUS_(sym) {
       }
     }
     var d = p - pv, dec = Math.abs(p) < 20 ? 3 : 2;
+    var ratio = pv ? Math.abs(d / pv * 100) : 0, base = pv;
+    if (plain) {                       // 네이버 해외주식의 「폐장후」(한국 낮 주간거래 포함) 가격이 있으면 그것을 우선한다 — 정규장 종가 대비 등락
+      var nv = naverOver_(u);
+      if (nv && (nv.status === 'OPEN' || session)) {
+        session = /PRE/i.test(nv.type) ? 'PRE' : 'POST';
+        regP = nv.reg != null ? nv.reg : regP;
+        p = nv.price; d = nv.chg != null ? nv.chg : (p - regP); ratio = nv.ratio != null ? Math.abs(nv.ratio) : (regP ? Math.abs(d / regP * 100) : 0);
+        if (nv.dir) d = nv.dir === 'FALLING' ? -Math.abs(d) : nv.dir === 'RISING' ? Math.abs(d) : d;
+      }
+    }
     var o = {
       itemCode: sym.toUpperCase(), stockName: m.shortName || sym,
       closePrice: String(p), compareToPreviousClosePrice: String(Math.abs(d).toFixed(dec)),
-      fluctuationsRatio: pv ? String(Math.abs(d / pv * 100).toFixed(2)) : '0',
+      fluctuationsRatio: String(ratio.toFixed(2)),
       compareToPreviousPrice: { name: d > 0 ? 'RISING' : d < 0 ? 'FALLING' : 'UNCHANGED' }
     };
     if (session) { o.session = session; o.regularClose = String(regP); }
     return o;
   } catch (err) { return null; }
+}
+
+// ───── v6: 네이버 해외주식 「폐장후」 가격(overMarketPriceInfo) ─────
+function num_(v) { var n = parseFloat(String(v == null ? '' : v).replace(/,/g, '')); return isFinite(n) ? n : null; }
+function naverOver_(sym) {
+  var sfx = ['.O', '.K', '.N'];   // 나스닥 · NYSE Arca · NYSE (네이버 종목코드 끝글자)
+  var reqs = sfx.map(function (s) { return { url: 'https://api.stock.naver.com/stock/' + sym + s + '/basic', muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } }; });
+  try {
+    var rs = UrlFetchApp.fetchAll(reqs);
+    for (var i = 0; i < rs.length; i++) {
+      if (rs[i].getResponseCode() !== 200) continue;
+      var j = JSON.parse(rs[i].getContentText());
+      if (!j || j.closePrice == null) continue;
+      var o = j.overMarketPriceInfo;
+      if (!o || o.overPrice == null) return null;
+      return {
+        price: num_(o.overPrice), chg: num_(o.compareToPreviousClosePrice), ratio: num_(o.fluctuationsRatio),
+        dir: (o.compareToPreviousPrice || {}).name || '', type: String(o.tradingSessionType || ''), status: String(o.overMarketStatus || ''),
+        reg: num_(j.closePrice)
+      };
+    }
+  } catch (err) { /* 네이버 실패 → 야후 값 사용 */ }
+  return null;
+}
+
+function testNaverWorld() {          // 로그에 네이버 원본과 해석 결과가 나온다(항목 이름이 다르면 이 로그를 알려 주세요)
+  ['SOXS.O', 'SOXS.K', 'SOXS.N'].forEach(function (c) {
+    var r = UrlFetchApp.fetch('https://api.stock.naver.com/stock/' + c + '/basic', { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
+    Logger.log(c + ' → ' + r.getResponseCode() + ' ' + r.getContentText().slice(0, 1800));
+  });
+  Logger.log('해석: ' + JSON.stringify(naverOver_('SOXS')));
 }
 
 function test() {
