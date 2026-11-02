@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v389-1102-1000
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v390-1102-1100
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -1826,7 +1826,7 @@ function krBuild(list,status,head){
   var rows='<div class="krr krh"><span>'+head+'</span><span>현재가</span><span>전일대비</span><span>등락률</span></div>'+d.map(function(x){
     var cls=x.d>0?' up':x.d<0?' dn':'',ar=x.d>0?'▲':x.d<0?'▼':'',dc=x.dec!=null?x.dec:(x.us?2:0);
     var href=x.us?'https://www.tradingview.com/chart/?symbol='+encodeURIComponent(x.tv||x.code):'https://finance.naver.com/item/main.naver?code='+x.code;
-    return '<a class="krr'+cls+(x.us?' usr':'')+(MC.sel&&MC.sel.code===x.code?' chon':'')+(MC.cmp&&MC.cmp.code===x.code?' chon2':'')+'" data-act="chsel" data-code="'+esc(x.code)+'" data-name="'+esc(x.name)+'" data-href="'+esc(href)+'" href="'+href+'" target="_blank" rel="noopener noreferrer" title="'+(x.us?'차트 보기':'네이버 증권에서 차트 보기')+'"><span class="krn">'+esc(x.name)+'</span><b'+(x.sess?' title="정규장 종가 '+krFmt(x.rc,dc)+'"':'')+'>'+(x.sess?'<i class="krx">'+(x.sess==='PRE'?'프리':'시간외')+'</i>':'')+krFmt(x.p,dc)+(x.p!=null&&x.unit?x.unit:'')+'</b><span>'+(x.p==null?'':ar+krFmt(x.c,dc))+'</span><span>'+(x.p==null?'':krFmt(x.r,2)+'%')+'</span></a>';
+    return '<a class="krr'+cls+(x.us?' usr':'')+(MC.sel&&MC.sel.code===x.code?' chon':'')+(MC.cmp&&MC.cmp.code===x.code?' chon2':'')+'" data-act="chsel" data-code="'+esc(x.code)+'" data-name="'+esc(x.name)+'" data-href="'+esc(href)+'" href="'+href+'" target="_blank" rel="noopener noreferrer" title="'+(x.us?'차트 보기':'네이버 증권에서 차트 보기')+'"><span class="krn">'+esc(x.name)+'</span><b'+(x.sess?' title="정규장 종가 '+krFmt(x.rc,dc)+'"':'')+'>'+(x.sess?'<i class="krx">'+(x.sess==='PRE'?'프리':'폐장후')+'</i>':'')+krFmt(x.p,dc)+(x.p!=null&&x.unit?x.unit:'')+'</b><span>'+(x.p==null?'':ar+krFmt(x.c,dc))+'</span><span>'+(x.p==null?'':krFmt(x.r,2)+'%')+'</span></a>';
   }).join('');
   var at=KR.at?new Date(KR.at):null,sv=!at&&KR.savedAt?new Date(KR.savedAt):null;
   var st=KR.err?'<span class="kre">⚠ '+esc(KR.err)+(KR.data?' (이전 값'+(KR.at?'':' · 저장된 값')+')':'')+' · <button type="button" class="dchip set" data-act="krref">다시</button></span>':(at?esc(KR.via)+' · '+KR_MS/1000+'초마다 · '+pad(at.getHours())+':'+pad(at.getMinutes())+':'+pad(at.getSeconds())+' 갱신':sv?'저장된 값('+(sv.getMonth()+1)+'/'+sv.getDate()+' '+pad(sv.getHours())+':'+pad(sv.getMinutes())+') · 새로 받는 중…':'불러오는 중…');
