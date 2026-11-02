@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   habits.js — ✅ 습관 체크리스트 (개인일지)                    v387-1029-1800
+   habits.js — ✅ 습관 체크리스트 (개인일지)                    v388-1102-0900
    · 개인 → 「✅ 체크리스트」 탭을 누르면 창 전체를 쓰는 화면이 열린다
    · 저장: Firestore (이 앱이 이미 쓰는 db)
        habit_defs/{습관id}        습관 정의 (이름·주기·하루 횟수·예정 시각·색·시작일·종료일)
@@ -1733,12 +1733,12 @@ function tmInner(){
 function tmHtml(){return '<div class="dstack"><div class="dcol dtm'+(TM.st==='done'?' tm-done':'')+'"><div id="tmBox">'+tmInner()+'</div></div><div class="dcol dmore">'+stkInner()+'</div></div>';}
 
 /* ───────── 주식 시세 (3열 아래칸) — TradingView 무료 위젯을 그대로 붙인다. 위젯은 화면을 다시 그려도 새로고침되지 않게 따로 두고 칸 위에 겹쳐 놓는다 ───────── */
-var STK_DEF='KRX:005930 삼성전자\nKRX:000660 SK하이닉스\nKRX:005380 현대차\nNASDAQ:AAPL 애플\nNASDAQ:NVDA 엔비디아\nNASDAQ:TSLA 테슬라\nNASDAQ:NDX 나스닥100\nCME_MINI:NQ1! 나스닥100 선물\nSP:SPX S&P500\nTVC:DJI 다우\nNASDAQ:SOX 필라델피아반도체\nTVC:VIX 변동성(VIX)\nKRX:KOSPI 코스피\nKRX:KOSDAQ 코스닥\nTVC:US10Y 미국10년물\nTVC:USOIL WTI유가\nTVC:GOLD 금\nFX_IDC:USDKRW 원/달러';
+var STK_DEF='KRX:005930 삼성전자\nKRX:000660 SK하이닉스\nKRX:005380 현대차\nNASDAQ:AAPL 애플\nNASDAQ:NVDA 엔비디아\nNASDAQ:TSLA 테슬라\nNASDAQ:NDX 나스닥100\nCME_MINI:NQ1! 나스닥100 선물\nNASDAQ:SOXX SOXX(반도체 ETF)\nNASDAQ:SOX 필라델피아반도체\nSP:SPX S&P500\nTVC:DJI 다우\nTVC:VIX 변동성(VIX)\nKRX:KOSPI 코스피\nKRX:KOSDAQ 코스닥\nTVC:US10Y 미국10년물\nTVC:USOIL WTI유가\nTVC:GOLD 금\nFX_IDC:USDKRW 원/달러';
 /* 지수·금리·원자재: TradingView 표기로 적으면 내 시세 주소(야후)에서는 아래 야후 기호로 바꿔 받는다(unit=값 뒤에 붙일 단위, dec=소수 자리) */
-var STK_MAC={'CME_MINI:NQ1!':{y:'NQ=F',dec:2},'CAPITALCOM:US100':{y:'NQ=F',dec:2},'KRX:KOSPI':{y:'^KS11',dec:2},'KRX:KOSDAQ':{y:'^KQ11',dec:2},'TVC:US10Y':{y:'^TNX',unit:'%',dec:3},'TVC:USOIL':{y:'CL=F',dec:2},'NYMEX:CL1!':{y:'CL=F',dec:2},'NASDAQ:SOX':{y:'^SOX',dec:2},'TVC:SOX':{y:'^SOX',dec:2},'SP:SPX':{y:'^GSPC',dec:2},'NASDAQ:NDX':{y:'^NDX',dec:2},'TVC:DJI':{y:'^DJI',dec:2},'TVC:VIX':{y:'^VIX',dec:2},'FX_IDC:USDKRW':{y:'KRW=X',dec:2},'TVC:GOLD':{y:'GC=F',dec:2}};
+var STK_MAC={'NASDAQ:SOXX':{y:'SOXX',dec:2},'CME_MINI:NQ1!':{y:'NQ=F',dec:2},'CAPITALCOM:US100':{y:'NQ=F',dec:2},'KRX:KOSPI':{y:'^KS11',dec:2},'KRX:KOSDAQ':{y:'^KQ11',dec:2},'TVC:US10Y':{y:'^TNX',unit:'%',dec:3},'TVC:USOIL':{y:'CL=F',dec:2},'NYMEX:CL1!':{y:'CL=F',dec:2},'NASDAQ:SOX':{y:'^SOX',dec:2},'TVC:SOX':{y:'^SOX',dec:2},'SP:SPX':{y:'^GSPC',dec:2},'NASDAQ:NDX':{y:'^NDX',dec:2},'TVC:DJI':{y:'^DJI',dec:2},'TVC:VIX':{y:'^VIX',dec:2},'FX_IDC:USDKRW':{y:'KRW=X',dec:2},'TVC:GOLD':{y:'GC=F',dec:2}};
 var STK={el:null,key:'',txt:null},STK_SC=0.72,STK_HDR=36,STK_MINW=620;   /* 위젯을 0.72배로 줄여 더 많은 종목이 들어가게 하고, 맨 위 「이름·값」 제목 줄(약 36px)은 잘라 낸다 */
 function stkText(){if(STK.txt!==null)return STK.txt;var t='';try{t=localStorage.getItem('hb_stk')||'';}catch(e){}STK.txt=t.trim()?t:STK_DEF;return STK.txt;}
-var STK_GRP=[['미국 증시',['^NDX','NQ=F','^GSPC','^DJI','^SOX','^VIX']],['한국 증시',['^KS11','^KQ11']],['금리·원자재·환율',['^TNX','CL=F','GC=F','KRW=X']]];   /* 서로 연관된 지표끼리 묶는다(나스닥·S&P·다우·반도체·VIX / 코스피·코스닥 / 금리·유가·금·환율) */
+var STK_GRP=[['미국 증시',['^NDX','NQ=F','SOXX','^SOX','^GSPC','^DJI','^VIX']],['한국 증시',['^KS11','^KQ11']],['금리·원자재·환율',['^TNX','CL=F','GC=F','KRW=X']]];   /* 서로 연관된 지표끼리 묶는다(나스닥·S&P·다우·반도체·VIX / 코스피·코스닥 / 금리·유가·금·환율) */
 function stkOwnUS(){return !!krUrl()&&!KR.usMiss;}   /* 내 시세 주소(Apps Script)가 미국도 주면 미국도 우리 표로 보여 준다 */
 function stkParse(t){                       /* 한국 6자리 코드(kr)·미국 종목(us)은 우리 표로, 나머지는 TradingView 위젯으로(groups) */
   var kr=[],us=[],idx=[],w=[],own=stkOwnUS();
@@ -1837,7 +1837,7 @@ function mktHtml(){                             /* 지수·금리·원자재 표
   krLoad();var P1=stkParse(stkText());if(!P1.idx.length)return '';
   var used={},out='';
   STK_GRP.forEach(function(g){
-    var sub=P1.idx.filter(function(x){return g[1].indexOf(x.code)>=0;});
+    var sub=[];g[1].forEach(function(c){P1.idx.forEach(function(x){if(x.code===c)sub.push(x);});});   /* 묶음 안 순서는 STK_GRP 순서(목록에 적은 순서와 상관없이) */
     sub.forEach(function(x){used[x.code]=1;});
     if(sub.length)out+='<div class="mktg">'+krBuild(sub,false,g[0])+'</div>';
   });
