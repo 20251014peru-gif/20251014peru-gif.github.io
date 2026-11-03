@@ -12660,6 +12660,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   function scWhere(el){
     if(!el || !el.dataset) return null;
     if(el.dataset.nr) return {nr:el.dataset.nr};
+    if(el.dataset.anew!=null) return {an:1};
     if(el.dataset.glabel!=null) return {gl:el.dataset.glabel};
     var tr=el.closest ? el.closest('tr[data-sg]') : null;
     if(!tr || !el.dataset.col) return null;
@@ -12669,6 +12670,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var box=scBox(); if(!box||!w) return;
     var el=null, all, i;
     if(w.nr){ el=box.querySelector('input[data-nr="'+w.nr+'"]'); }
+    else if(w.an){ el=box.querySelector('input[data-anew]'); }
     else if(w.gl!=null){
       all=box.querySelectorAll('input[data-glabel]');
       for(i=0;i<all.length;i++){ if(all[i].dataset.glabel===w.gl){ el=all[i]; break; } }
@@ -12715,7 +12717,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var tr=trs[i], gk=tr.dataset.sg, e=(d.map[gk]||[])[+tr.dataset.si]||null;
       var real=!!(e&&e.id&&!e.__virtual);
       if((real?e.id:'')!==(tr.dataset.settleid||'')) return false;
-      var wantEdit = real || (!e && !!addSpec(gk));
+      var wantEdit = real && !FIXEDK[gk];            /* 계정 블록의 실제 줄만 입력 칸 — 월정산·수도광열비·기타는 예전 방식 */
       if((wantEdit?'1':'0')!==tr.dataset.ed) return false;
       var v=e?rowVals(e,gk):{sup:0,tax:0,amount:0};
       if(!sub[gk]) sub[gk]=[0,0,0];
@@ -12773,18 +12775,55 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     }catch(err){ console.error('[정산표 삭제]',err); scToast('지우기 오류: '+(err.message||err)); return; }
     window.__scWant=null; window.renderExpSettle(); scRefreshOthers();
   }
-  /* 블록 이름(계정)을 고치면 그 계정으로 적힌 지출이 모두 새 이름으로 바뀐다 (오타 고치기) */
-  function scCommitLabel(inp, want){
-    var old=inp.dataset.glabel, val=inp.value.trim(), orig=inp.dataset.orig||'';
-    if(inp.value===orig) return;
-    if(!val || LEGACYK[val] || val==='수도광열비'){ scToast('그 이름은 계정으로 쓸 수 없어요'); inp.value=orig; return; }
+  var scAcctOpen=false;
+  function scAcctIsOpen(){ return scAcctOpen; }
+  /* 계정 이름 바꾸기 — 그 계정으로 적힌 지출이 모두 새 이름으로 바뀐다. 이미 있는 이름이면 합쳐진다 */
+  function scRenameAcct(old, val){
     var n=0;
     (typeof entries!=='undefined'?entries:[]).slice().forEach(function(e){
       if(e && e.kind==='expense' && String(e.settleGrp||'').trim()===old){ updateRecord(e.id,{settleGrp:val}); n++; }
     });
+    var st=acctStored(); if(st.indexOf(old)<0) st.push(old); acctSave(st);
     acctRename(old,val);
+    return n;
+  }
+  function scAcctBad(val){ return !val || LEGACYK[val] || val==='수도광열비' || val===NOACCT; }
+  function scAcctUse(name){
+    return (typeof entries!=='undefined'?entries:[]).filter(function(e){ return e && e.kind==='expense' && String(e.settleGrp||'').trim()===name; }).length;
+  }
+  /* 블록 이름(계정)을 고치면 */
+  function scCommitLabel(inp, want){
+    var old=inp.dataset.glabel, val=inp.value.trim(), orig=inp.dataset.orig||'';
+    if(inp.value===orig) return;
+    if(scAcctBad(val)){ scToast('그 이름은 계정으로 쓸 수 없어요'); inp.value=orig; return; }
+    var n=scRenameAcct(old,val);
     scToast('✏️ 계정 이름을 「'+val+'」 로 바꿨어요 ('+n+'건)');
     window.__scWant=want||null; window.renderExpSettle(); scRefreshOthers();
+  }
+  /* ⚙ 계정 목록 관리 — 이름 고치기 · 지우기 · 새로 추가 */
+  function scAcctEdit(inp){
+    var old=inp.dataset.aedit, val=inp.value.trim(), orig=inp.dataset.orig||'';
+    if(inp.value===orig) return;
+    if(scAcctBad(val)){ scToast('그 이름은 계정으로 쓸 수 없어요'); inp.value=orig; return; }
+    var n=scRenameAcct(old,val);
+    scToast('✏️ 「'+old+'」 → 「'+val+'」'+(n?' ('+n+'건 함께 바뀜)':''));
+    window.__scWant=null; window.renderExpSettle(); scRefreshOthers();
+  }
+  function scAcctDel(name){
+    var n=scAcctUse(name);
+    if(n>0){ scToast('「'+name+'」 은 지출 '+n+'건이 쓰고 있어요 — 이름을 다른 계정으로 고치면 합쳐지고, 그 뒤에 지울 수 있어요'); return; }
+    acctSave(acctStored().filter(function(x){ return x!==name; }));
+    window.__scWant=null; window.renderExpSettle();
+    scToast('🗑 계정 「'+name+'」 을 목록에서 지웠어요');
+  }
+  function scAcctAdd(){
+    var box=scBox(), inp=box&&box.querySelector('input[data-anew]'); if(!inp) return;
+    var val=inp.value.trim();
+    if(scAcctBad(val)){ scToast(val?'그 이름은 계정으로 쓸 수 없어요':'새 계정 이름을 적어 주세요'); inp.focus(); return; }
+    if(acctList().indexOf(val)>=0){ scToast('이미 있는 계정이에요'); inp.focus(); return; }
+    var st=acctStored(); st.push(val); acctSave(st);
+    window.__scWant={an:1}; window.renderExpSettle();
+    scToast('＋ 계정 「'+val+'」 을 추가했어요');
   }
   /* 맨 위 입력 줄 — 계정을 고르고(또는 새로 적고) 내용·금액을 적어 Enter 하면 그 계정 블록에 들어간다 */
   var scLastAcct='';
@@ -12812,6 +12851,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   function scCommit(inp, want){
     var box=scBox(); if(!box || box._scBusy) return;
     if(inp.dataset.glabel!=null){ scCommitLabel(inp, want); return; }
+    if(inp.dataset.aedit!=null){ scAcctEdit(inp); return; }
     var orig=inp.dataset.orig==null?'':inp.dataset.orig;
     if(inp.value===orig) return;                       /* 안 건드린 칸 */
     var tr=inp.closest('tr[data-sg]'); if(!tr) return;
@@ -12876,6 +12916,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var t=ev.target; if(!t || !t.classList || !t.classList.contains('sc-in')) return;
       if(ev.isComposing || ev.keyCode===229) return;       /* 한글 조합 중 Enter 는 글자 확정용 */
       var k=ev.key;
+      if(t.dataset.anew!=null){ if(k==='Enter'){ ev.preventDefault(); scAcctAdd(); } return; }
+      if(t.dataset.aedit!=null && k==='Enter'){ ev.preventDefault(); t.blur(); return; }
       if(t.dataset.nr){                                    /* 맨 위 입력 줄 */
         if(k==='Enter'){
           ev.preventDefault();
@@ -12924,10 +12966,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         return;
       }
       if(t.closest('#expSettleNewBtn')){ scNewSave(); return; }
-      if((b=t.closest('tr[data-settleadd]'))){
-        var k2=b.getAttribute('data-settleadd')||'';
-        if(SETTLE_NOADD[k2]) scToast('🔒 '+SETTLE_NOADD[k2]);
-      }
+      if(t.closest('#expSettleAcctBtn')){ scAcctOpen=!scAcctOpen; window.__scWant=null; window.renderExpSettle(); return; }
+      if((b=t.closest('[data-adel]'))){ scAcctDel(b.dataset.adel); return; }
+      if(t.closest('[data-aadd]')){ scAcctAdd(); return; }
     });
   }
 
@@ -12938,7 +12979,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var _ae=document.activeElement, _fd=null;
     if(_ae && box.contains(_ae) && _ae.classList && _ae.classList.contains('sc-in')){
       if(!window.__scWant){
-        if(_ae.dataset.nr){ var _dirty=false; box.querySelectorAll('input[data-nr]').forEach(function(x){ if(x.dataset.nr!=='acct' && x.value) _dirty=true; }); if(_dirty) return; }
+        if(_ae.dataset.anew!=null){ if(_ae.value) return; }
+        else if(_ae.dataset.nr){ var _dirty=false; box.querySelectorAll('input[data-nr]').forEach(function(x){ if(x.dataset.nr!=='acct' && x.value) _dirty=true; }); if(_dirty) return; }
         else if(_ae.dataset.orig!=null && _ae.value!==_ae.dataset.orig) return;
       }
       _fd=scWhere(_ae);
@@ -13055,6 +13097,23 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     function nrIn(n, ph, num, sx){
       return '<input class="sc-in" data-nr="'+n+'" autocomplete="off" placeholder="'+esc(ph)+'"'+(num?' inputmode="numeric" style="text-align:right;font-weight:600"':'')+(sx?(' style="'+sx+'"'):'')+'>';
     }
+    /* v247 — ⚙ 계정 목록 관리 (이름 고치기 · 지우기 · 추가) */
+    html+='<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button type="button" id="expSettleAcctBtn" style="height:30px;padding:0 12px;border-radius:9px;border:1.5px solid '+(scAcctIsOpen()?'#3f7cb8':'#dbe6f4')+';background:'+(scAcctIsOpen()?'#eef5ff':'#fff')+';color:#3f7cb8;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 계정 목록 관리 '+(scAcctIsOpen()?'▲':'▼')+'</button></div>';
+    if(scAcctIsOpen()){
+      html+='<div style="margin-bottom:12px;padding:10px 12px;border:1.5px solid #dbe6f4;background:#f8fbff;border-radius:10px">'
+        +'<div style="font-size:11.5px;color:#8ba0b6;line-height:1.7;margin-bottom:8px">이름을 눌러 고치면 그 계정으로 적힌 지출도 모두 바뀌고, 이미 있는 이름으로 고치면 합쳐집니다. 지출이 쓰고 있는 계정은 지울 수 없어요(먼저 합치세요).</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">'
+        +acctList().map(function(x){
+          var n=scAcctUse(x);
+          return '<span style="display:inline-flex;align-items:center;border:1.5px solid #dbe6f4;background:#fff;border-radius:9px;overflow:hidden">'
+            +'<input class="sc-in" data-aedit="'+esc(x)+'" value="'+esc(x)+'" data-orig="'+esc(x)+'" size="9" autocomplete="off" style="width:112px;padding:6px 8px;font-weight:700">'
+            +'<span style="font-size:11px;color:#94a3b8;padding:0 6px;white-space:nowrap">'+(n?n+'건':'')+'</span>'
+            +'<button type="button" data-adel="'+esc(x)+'" title="'+(n?'지출이 쓰고 있어 지울 수 없어요':'목록에서 지웁니다')+'" style="border:none;border-left:1px solid #eef3fa;background:#fff;color:'+(n?'#d3dbe5':'#b52929')+';width:28px;height:30px;cursor:pointer;font-family:inherit;font-size:12px">✕</button></span>';
+        }).join('')
+        +'<span style="display:inline-flex;align-items:center;gap:6px"><input class="sc-in" data-anew="1" placeholder="새 계정 이름" autocomplete="off" size="10" style="width:130px;padding:6px 8px;border:1.5px dashed #9fb8d4;border-radius:9px;background:#fff">'
+        +'<button type="button" data-aadd="1" style="height:30px;padding:0 12px;border:none;border-radius:8px;background:#3f7cb8;color:#fff;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer">＋ 추가</button></span>'
+        +'</div></div>';
+    }
     html+='<datalist id="scAcctList">'+acctList().map(function(x){ return '<option value="'+esc(x)+'">'; }).join('')+'</datalist>';
     html+='<tr data-newrow="1">'
       +'<td style="'+NY+'"><input class="sc-in" data-nr="acct" list="scAcctList" autocomplete="off" placeholder="계정 ▾ (적으면 새로 생겨요)" style="font-weight:800;color:#7a5b00;font-size:12px"></td>'
@@ -13079,23 +13138,42 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
           var e=arr[i]||null;
           var v=e?rowVals(e,grp.key):{sup:0,tax:0,amount:0};
           if(e){ s+=v.sup; t+=v.tax; a+=v.amount; }
-          /* v247 — 칸에 바로 적는다 (창 없음). 월정산·자동 줄은 읽기만 */
+          /* v247 — 계정 블록은 칸에 바로 적는다 (창 없음). 월정산·수도광열비·기타는 예전 방식 그대로 */
           var real = !!(e && e.id && !e.__virtual);
-          var edit = real || (!e && canAdd);
-          html+='<tr data-sg="'+esc(grp.key)+'" data-si="'+i+'" data-ed="'+(edit?1:0)+'"'
-            +(real?' data-settleid="'+esc(e.id)+'"':'')
-            +(!e&&!canAdd?' data-settleadd="'+esc(grp.key)+'" class="settle-add" style="cursor:default"':'')
-            +'>'
-            +(i===0?glabelCell(grp,need):'')
-            +'<td'+(real?' class="sc-no" data-open="'+esc(e.id)+'" title="눌러서 자세히 열기 (사진·거래처 등)" style="'+TD+';text-align:center;color:#94a3b8;cursor:pointer"'
-                         :' style="'+TD+';text-align:center;color:#94a3b8"')+'>'+(i+1)+'</td>'
-            +(edit ? inCell('title', e?titleVal(e):'', e?'':'＋ 여기에 적기', '')
-                   : '<td style="'+TD+'">'+(e?esc(rowTitle(e)):'')+'</td>')
-            +(edit ? inCell('sup', e?cell(v.sup):'', '', 'num') : '<td style="'+TDR+'">'+(e?cell(v.sup):'')+'</td>')
-            +(edit ? inCell('tax', e?cell(v.tax):'', '', 'num;color:#94a3b8') : '<td style="'+TDR+';color:#94a3b8">'+(e?cell(v.tax):'')+'</td>')
-            +(edit ? inCell('amt', e?cell(v.amount):'', '', 'num;font-weight:800') : '<td style="'+TDR+';font-weight:800">'+(e?cell(v.amount):'')+'</td>')
-            +noteCell(e, real, edit)
-            +'</tr>';
+          if(grp.acct){
+            html+='<tr data-sg="'+esc(grp.key)+'" data-si="'+i+'" data-ed="1"'
+              +(real?' data-settleid="'+esc(e.id)+'"':'')
+              +'>'
+              +(i===0?glabelCell(grp,need):'')
+              +'<td'+(real?' class="sc-no" data-open="'+esc(e.id)+'" title="눌러서 자세히 열기 (사진·거래처 등)" style="'+TD+';text-align:center;color:#94a3b8;cursor:pointer"'
+                           :' style="'+TD+';text-align:center;color:#94a3b8"')+'>'+(i+1)+'</td>'
+              +inCell('title', titleVal(e), '', '')
+              +inCell('sup', cell(v.sup), '', 'num')
+              +inCell('tax', cell(v.tax), '', 'num;color:#94a3b8')
+              +inCell('amt', cell(v.amount), '', 'num;font-weight:800')
+              +noteCell(e, real, true)
+              +'</tr>';
+          } else {
+            /* 예전 방식 — 행을 누르면 상세 창, 빈 줄을 누르면 새 지출 창, 🗑 는 확인 후 삭제 */
+            var canAdd0 = !e && !!SETTLE_ADD[grp.key];
+            html+='<tr data-sg="'+esc(grp.key)+'" data-si="'+i+'" data-ed="0" data-fx="1"'
+              +(e&&e.id?' data-settleid="'+esc(e.id)+'" style="cursor:pointer"':'')
+              +(!e?' data-settleadd="'+esc(grp.key)+'" class="settle-add" style="cursor:'+(canAdd0?'pointer':'default')+'"':'')
+              +'>'
+              +(i===0?'<td rowspan="'+(need+1)+'" style="'+TD+';background:'+grp.bg+';color:'+grp.color+';font-weight:800;text-align:center;vertical-align:middle;white-space:nowrap">'+esc(grp.shown)+'</td>':'')
+              +'<td style="'+TD+';text-align:center;color:#94a3b8">'+(i+1)+'</td>'
+              +'<td style="'+TD+'">'+(e?esc(rowTitle(e))
+                  : (canAdd0?'<span class="settle-addhint" style="color:#b8c6d6;font-size:12px">＋ 여기에 적기</span>':''))+'</td>'
+              +'<td style="'+TDR+'">'+(e?cell(v.sup):'')+'</td>'
+              +'<td style="'+TDR+';color:#94a3b8">'+(e?cell(v.tax):'')+'</td>'
+              +'<td style="'+TDR+';font-weight:800">'+(e?cell(v.amount):'')+'</td>'
+              +'<td style="'+TD+';font-size:12px;color:#64748b">'
+                + (e?esc(rowNote(e)):'')
+                + (e&&e.autoFromWork?AUTO_BADGE:'')
+                + (e&&e.id&&!e.__virtual?' <button type="button" data-settledel0="'+esc(e.id)+'" title="이 줄을 지웁니다 (휴지통으로)" style="float:right;width:26px;height:26px;border:none;border-radius:7px;background:#fde8e8;color:#b52929;cursor:pointer;font-family:inherit;font-size:12px">🗑</button>':'')
+                +'</td>'
+              +'</tr>';
+          }
         }
         gSum+=s; gTax+=t; gAmt+=a;
         if(grp.key==='수도광열비') uSum+=s;
@@ -13206,7 +13284,68 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       });
     });
 
-    /* v247 — 행 클릭·🗑·추가 단추는 scInit() 의 위임 처리기가 맡는다 (창을 띄우지 않는다) */
+    /* v237 — 빈 줄 클릭 → 그 칸에 맞는 지출을 바로 새로 만든다 */
+    box.querySelectorAll('[data-settleadd]').forEach(function(tr){
+      tr.addEventListener('click', function(){
+        var k = tr.getAttribute('data-settleadd') || '';
+        if(SETTLE_NOADD[k]){ if(typeof toast==='function') toast('🔒 ' + SETTLE_NOADD[k]); return; }
+        var pre = SETTLE_ADD[k]; if(!pre) return;
+        /* 날짜 — 보고 있는 달이 이번 달이면 오늘, 아니면 그 달 1일 */
+        var ymv = (g('expSettleMonthSel')||{}).value || '';
+        var t0  = kstNow().toISOString().slice(0,10);
+        var dv  = (ymv && t0.slice(0,7)===ymv) ? t0 : (ymv ? (ymv+'-01') : t0);
+        var obj = { date: dv };
+        for(var kk in pre) obj[kk] = pre[kk];
+        try{
+          if(typeof window.wlNewPageWith === 'function'){
+            window.wlNewPageWith('expense', obj, true);
+          } else if(typeof window._openExpV2 === 'function'){
+            window._openExpV2(null);
+          } else {
+            if(typeof toast==='function') toast('입력창을 못 찾았어요 — worklog.js 를 올렸는지 확인하세요');
+            return;
+          }
+        }catch(err){ console.error('[정산표 추가]', err);
+          if(typeof toast==='function') toast('오류: ' + (err.message||err)); return; }
+        if(typeof toast==='function') toast('📝 ' + k + ' 로 새 지출을 엽니다');
+        /* 창을 닫으면 정산표를 다시 그린다 (넣은 것이 바로 보이게) */
+        var n=0, iv=setInterval(function(){
+          if(++n > 60){ clearInterval(iv); return; }
+          if(!document.getElementById('lfPageOv')){
+            clearInterval(iv);
+            try{ if(typeof window.renderExpSettle==='function') window.renderExpSettle(); }
+            catch(e2){ console.warn('[정산표] 다시 그리기 실패', e2); }
+          }
+        }, 500);
+      });
+    });
+
+    /* 행 클릭 → 상세 */
+    box.querySelectorAll('tr[data-fx][data-settleid]').forEach(function(tr){
+      tr.addEventListener('click',function(){
+        var id=tr.dataset.settleid;
+        /* v178 — 노션식 상세 창을 먼저 쓴다 (옛 「지출 조회」 창은 못 열 때만) */
+        try{
+          if(typeof window.wlOpenPage==='function'){ window.wlOpenPage(id); return; }
+        }catch(err){ console.warn('[정산표] 노션 상세 열기 실패 — 옛 창으로', err); }
+        if(typeof window.openExpenseEditor==='function') window.openExpenseEditor(id);
+      });
+    });
+    /* v178 — 정산표에서 바로 지우기 */
+    box.querySelectorAll('[data-settledel0]').forEach(function(btn){
+      btn.addEventListener('click',function(ev){
+        ev.stopPropagation();
+        var id=btn.dataset.settledel0;
+        var rec=(typeof entries!=='undefined'?entries:[]).filter(function(x){return x.id===id;})[0];
+        var nm=rec?(rec.title||'(내역없음)'):'이 줄';
+        if(!confirm('「'+nm+'」 을(를) 지울까요?\n휴지통으로 갑니다 — 🛟 안전 → 휴지통에서 되살릴 수 있어요.')) return;
+        try{
+          if(typeof deleteWithUndo==='function') deleteWithUndo(id,'지출');
+          else if(typeof deleteRecord==='function') deleteRecord(id);
+        }catch(err){ console.error('[정산표 삭제]',err); if(typeof toast==='function') toast('지우기 오류: '+(err.message||err)); return; }
+        setTimeout(function(){ try{ window.renderExpSettle(); }catch(e){} }, 350);
+      });
+    });
     /* 그룹별 복사: 내용 행만 (지출내용·금액·부가세·합계, 빈 행 포함 고정 행수) */
     box.querySelectorAll('[data-gcopy]').forEach(function(btn){
       btn.addEventListener('click',function(ev){
