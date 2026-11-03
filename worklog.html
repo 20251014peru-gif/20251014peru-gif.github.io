@@ -12638,6 +12638,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
      +'.sc-in::placeholder{color:#b8c6d6;font-weight:500}'
      +'.sc-num{text-align:right;font-weight:600}'
      +'.sc-no:hover{background:#eef5ff!important;color:#3f7cb8!important}'
+     +'td.sc-sel{background:#cfe3fb!important;box-shadow:inset 0 0 0 1px #3f7cb8}'
      +'.sc-mv{position:relative;display:inline-block;flex:none;width:26px;height:26px}'
      +'.sc-mv select{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}';
     document.head.appendChild(st);
@@ -12890,16 +12891,204 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     addRecord(obj);
     scAfter(want);
   }
+  /* ══ v248 — 엑셀처럼 드래그해서 복사 · 붙여넣기 · 지우기 ══
+     달님 : 「9월 것을 드래그 복사해서 10월에 드래그 붙여넣기」
+     · 계정 블록의 칸을 마우스로 끌면 여러 칸이 파랗게 잡힌다 (지출내용·금액·부가세·합계·비고)
+     · Ctrl+C → 엑셀에 붙여넣어도 되는 탭 구분 글자로 복사된다
+     · 달을 바꾼 뒤 칸(또는 맨 위 노란 줄의 지출내용)에서 Ctrl+V → 그 칸부터 채우고, 모자라는 줄은 새 지출로 만든다
+     · 엑셀에서 복사한 것도 똑같이 붙는다
+     · 잡아 둔 칸에서 Delete → 그 칸 비우기 (줄이 전부 비면 휴지통으로 — 되돌리기 있음)
+     🔴 월정산·관리인건비·중식대는 인건비·중식 화면이 채우는 칸이라 여기서 붙여넣지 않는다. */
+  var SC_COLS=['title','sup','tax','amt','note'];
+  var scSel=null, scDrag=null, scClipMeta=null;   /* scClipMeta: 마지막으로 복사한 글자와 줄마다의 계정 — 같은 글자를 붙여넣으면 계정도 따라간다 */
+  function scRows(){ var box=scBox(); return box?Array.prototype.slice.call(box.querySelectorAll('tr[data-ed="1"][data-sg]')):[]; }
+  function scCellOf(target){
+    var td=(target&&target.closest)?target.closest('td'):null; if(!td) return null;
+    var tr=td.parentNode; if(!tr||!tr.dataset||tr.dataset.ed!=='1') return null;
+    var inp=td.querySelector('input[data-col]'); if(!inp) return null;
+    var r=scRows().indexOf(tr); if(r<0) return null;
+    return {r:r, c:SC_COLS.indexOf(inp.dataset.col)};
+  }
+  function scClearSel(){
+    var box=scBox(); if(box) box.querySelectorAll('td.sc-sel').forEach(function(td){ td.classList.remove('sc-sel'); });
+    scSel=null;
+  }
+  function scSetSel(a,b){
+    scClearSel();
+    var r1=Math.min(a.r,b.r), r2=Math.max(a.r,b.r), c1=Math.min(a.c,b.c), c2=Math.max(a.c,b.c);
+    scSel={r1:r1,r2:r2,c1:c1,c2:c2};
+    var rows=scRows();
+    for(var r=r1;r<=r2;r++) for(var c=c1;c<=c2;c++){
+      var inp=rows[r]&&rows[r].querySelector('input[data-col="'+SC_COLS[c]+'"]');
+      if(inp) inp.closest('td').classList.add('sc-sel');
+    }
+  }
+  function scSelText(){
+    var rows=scRows(), out=[];
+    for(var r=scSel.r1;r<=scSel.r2;r++){
+      var line=[];
+      for(var c=scSel.c1;c<=scSel.c2;c++){
+        var inp=rows[r]&&rows[r].querySelector('input[data-col="'+SC_COLS[c]+'"]');
+        line.push(inp?inp.value:'');
+      }
+      out.push(line.join('\t'));
+    }
+    return out.join('\n');
+  }
+  function scParse(txt){
+    var t=String(txt).replace(/\r/g,''); if(t.charAt(t.length-1)==='\n') t=t.slice(0,-1);
+    var rows=t.split('\n').map(function(r){ return r.split('\t'); });
+    if(rows.length && rows.every(function(r){ return r.length>=7; })) rows=rows.map(function(r){ return r.slice(2); });   /* 「엑셀 복사」 7열 (구분·NO 떼기) */
+    return rows;
+  }
+  /* 붙여넣을 값으로 지출 한 줄의 바꿀 내용(patch)을 만든다. 숫자가 아니면 null */
+  function scPatchFrom(rec, vals, gk){
+    var patch={}, cur=rec?rowVals(rec,gk):{sup:0,tax:0,amount:0};
+    function has(k){ return (k in vals) && String(vals[k]).trim()!==''; }
+    if('title' in vals) patch.title=String(vals.title).trim();
+    if('note' in vals){ var tx=String(vals.note).trim(); patch.memo=(rec&&/\[전표\]/.test(rec.memo||''))?(tx+' [전표]').trim():tx; }
+    if(('sup' in vals)||('tax' in vals)||('amt' in vals)){
+      var sN=has('sup')?scNum(vals.sup):undefined, tN=has('tax')?scNum(vals.tax):undefined, aN=has('amt')?scNum(vals.amt):undefined;
+      if(sN===null||tN===null||aN===null) return null;
+      var s=cur.sup, t=cur.tax, a;
+      if(sN===undefined && tN===undefined && aN===undefined){ s=0; t=0; a=0; }
+      else{
+        if(tN!==undefined) t=tN;
+        if(sN!==undefined){ s=sN; a=s+t; } else if(aN!==undefined){ a=aN; s=a-t; } else { a=s+t; }
+      }
+      patch.supplyAmt=s; patch.taxAmt=t; patch.amount=a;
+      if(t>0 && (!rec||rec.expType==='개인지출') && !(rec&&rec.taxInline)) patch.taxInline=true;
+    }
+    return patch;
+  }
+  function scCreateRaw(acct, patch, k){
+    var now=Date.now()+k;
+    var obj={ kind:'expense', date:scNewDate(scYm()), expType:'개인지출', title:'', amount:0, supplyAmt:0, taxAmt:0,
+              vendor:'', memo:'', purpose:'', purposes:[], isCost:true, isJeonpyo:false, isIssued:false, expSubType:'',
+              settleGrp:(acct===NOACCT?'':acct), createdAt:now, inlineAt:now };
+    for(var kx in patch) obj[kx]=patch[kx];
+    if(scEmpty(obj)) return false;
+    addRecord(obj);
+    return true;
+  }
+  function scPaste(txt, anchor, mode){
+    var M=scParse(txt), rows=scRows(), upd=0, add=0, bad=0, k=0, box=scBox();
+    var acct='';
+    if(mode==='new'){
+      var ai=box.querySelector('input[data-nr="acct"]'); acct=ai?ai.value.trim():'';
+      if(acct && LEGACYK[acct]){ scToast('「'+acct+'」 은 계정 이름으로 쓸 수 없어요'); return; }
+    } else {
+      var bt=rows[anchor.r]; acct=bt?bt.dataset.sg:NOACCT;
+    }
+    var meta=(scClipMeta && scClipMeta.text===String(txt).replace(/\r/g,'').replace(/\n$/,'')) ? scClipMeta.accts : null;
+    M.forEach(function(line,i){
+      var vals={};
+      line.forEach(function(cell,j){ var c=anchor.c+j; if(c<=4) vals[SC_COLS[c]]=cell; });
+      var tr=(mode==='grid')?rows[anchor.r+i]:null;
+      if(tr){
+        var rec=scRec(tr.dataset.settleid); if(!rec) return;
+        var pt=scPatchFrom(rec, vals, tr.dataset.sg);
+        if(pt===null){ bad++; return; }
+        if(Object.keys(pt).length){ updateRecord(rec.id, pt); upd++; }
+      } else {
+        var pn=scPatchFrom(null, vals, acct);
+        if(pn===null){ bad++; return; }
+        var ac=(meta && meta[i]!==undefined && !FIXEDK[meta[i]]) ? meta[i] : acct;     /* 복사해 온 줄은 원래 계정 그대로 */
+        if(ac && ac!==NOACCT) acctAdd(ac);
+        if(scCreateRaw(ac, pn, k++)) add++;
+      }
+    });
+    if(acct) acctAdd(acct);
+    if(mode==='new' && acct) scLastAcct=(acct===NOACCT?'':acct);
+    scClearSel();
+    window.__scClearNr=(mode==='new'); window.__scWant=null;
+    window.renderExpSettle(); scRefreshOthers();
+    scToast('📋 붙여넣었어요 — 고친 줄 '+upd+' · 새로 만든 줄 '+add+(meta&&add?' (계정도 그대로)':'')+(bad?(' · 숫자가 아니라 건너뜀 '+bad):''));
+  }
+  /* 잡아 둔 칸 비우기 (Delete) — 줄이 전부 비면 휴지통으로, 되돌리기 한 번에 모두 */
+  function scClearCells(){
+    var rows=scRows(), gone=[], n=0;
+    for(var r=scSel.r1;r<=scSel.r2;r++){
+      var tr=rows[r]; if(!tr) continue;
+      var rec=scRec(tr.dataset.settleid); if(!rec) continue;
+      var vals={}; for(var c=scSel.c1;c<=scSel.c2;c++) vals[SC_COLS[c]]='';
+      var pt=scPatchFrom(rec, vals, tr.dataset.sg); if(!pt) continue;
+      var before=JSON.parse(JSON.stringify(rec));
+      updateRecord(rec.id, pt); n++;
+      if(scEmpty(scRec(rec.id))) gone.push(before);
+    }
+    if(gone.length){
+      try{ if(typeof saveTempBackup==='function') saveTempBackup(); }catch(e){}
+      gone.forEach(function(bk){ deleteRecord(bk.id); });
+      var snap=gone.map(function(x){ return x; });
+      toastAction('칸을 비우고 빈 줄 '+gone.length+'개를 지웠습니다','되돌리기',function(){
+        snap.forEach(function(x){ restoreRecord(x); });
+        try{ if(typeof renderAll==='function') renderAll(); }catch(e){}
+        window.__scWant=null; window.renderExpSettle(); scRefreshOthers(); scToast('✅ 되돌렸습니다');
+      }, 6000);
+      try{ if(typeof renderAll==='function') renderAll(); }catch(e){}
+    } else if(n){ scToast('🧹 '+n+'줄의 칸을 비웠어요'); }
+    scClearSel(); window.__scWant=null; window.renderExpSettle(); scRefreshOthers();
+  }
+  var scDocInit=false;
+  function scDocInitOnce(){
+    if(scDocInit) return; scDocInit=true;
+    document.addEventListener('mouseup', function(){ scDrag=null; });
+    function live(){ var b=scBox(); return !!(b && b.offsetParent!==null && window._expFinUnlocked); }
+    document.addEventListener('keydown', function(ev){
+      if(!scSel || !live()) return;
+      var mod=ev.ctrlKey||ev.metaKey, k=ev.key;
+      if(mod && (k==='c'||k==='C')){
+        ev.preventDefault();
+        var tx=scSelText(), n=scSel.r2-scSel.r1+1;
+        (function(){ var rs=scRows(), ac=[]; for(var r=scSel.r1;r<=scSel.r2;r++) ac.push(rs[r]?rs[r].dataset.sg:NOACCT); scClipMeta={text:tx, accts:ac}; })();
+        function done(){ scToast('📋 '+n+'줄 복사했어요 — 달을 바꿔 칸을 누르고 Ctrl+V'); }
+        if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(tx).then(done).catch(function(){ fallbackCopy(tx); done(); }); }
+        else { fallbackCopy(tx); done(); }
+      } else if(k==='Escape'){ scClearSel(); }
+      else if(k==='Delete'||k==='Backspace'){ ev.preventDefault(); scClearCells(); }
+    });
+    document.addEventListener('paste', function(ev){
+      if(!live()) return;
+      var cd=ev.clipboardData||window.clipboardData; if(!cd) return;
+      var txt=cd.getData('text'); if(!txt) return;
+      var box=scBox(), ae=document.activeElement, anchor=null, mode=null;
+      if(scSel){ anchor={r:scSel.r1,c:scSel.c1}; mode='grid'; }
+      else if(ae && ae.classList && ae.classList.contains('sc-in') && box.contains(ae)){
+        if(ae.dataset.col){
+          var tr=ae.closest('tr[data-sg]');
+          if(tr && tr.dataset.ed==='1'){ anchor={r:scRows().indexOf(tr), c:SC_COLS.indexOf(ae.dataset.col)}; mode='grid'; }
+        } else if(ae.dataset.nr && ae.dataset.nr!=='acct'){ anchor={c:SC_COLS.indexOf(ae.dataset.nr)}; mode='new'; }
+      }
+      if(!mode) return;
+      var multi=/[\t\n]/.test(String(txt).replace(/\r?\n$/,''));
+      if(!multi && !scSel) return;                    /* 한 칸 붙여넣기는 평소대로 */
+      ev.preventDefault();
+      scPaste(txt, anchor, mode);
+    });
+  }
+
   function scInit(box){
     if(box._scInit) return;
     box._scInit=true;
+    scDocInitOnce();
     /* 칸을 처음 누르면 안의 글자가 전부 선택된다 (그대로 치면 덮어쓰기, 엑셀처럼). 이미 들어간 칸을 다시 누르면 그 자리에 커서가 놓인다 */
     box.addEventListener('mousedown', function(ev){
       var t=ev.target;
+      if(ev.button===0){ var info=scCellOf(t); scClearSel(); scDrag=info?{a:info,moved:false}:null; }
       if(t && t.classList && t.classList.contains('sc-in') && document.activeElement!==t){
         ev.preventDefault();
         try{ t.focus(); t.select(); }catch(e){}
       }
+    });
+    box.addEventListener('mouseover', function(ev){
+      if(!scDrag || ev.buttons!==1) return;
+      var info=scCellOf(ev.target); if(!info) return;
+      if(!scDrag.moved && info.r===scDrag.a.r && info.c===scDrag.a.c) return;
+      scDrag.moved=true;
+      var ae=document.activeElement; if(ae && box.contains(ae) && ae.blur) ae.blur();
+      try{ window.getSelection().removeAllRanges(); }catch(e){}
+      scSetSel(scDrag.a, info);
     });
     box.addEventListener('focusin', function(ev){
       var t=ev.target;
@@ -12966,6 +13155,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         return;
       }
       if(t.closest('#expSettleNewBtn')){ scNewSave(); return; }
+      if(t.closest('[data-prevmo]')){ if(window.wlMonthly&&window.wlMonthly.fromPrev) window.wlMonthly.fromPrev(scYm()); else scToast('월정산 가져오기 기능을 못 찾았어요'); return; }
       if(t.closest('#expSettleAcctBtn')){ scAcctOpen=!scAcctOpen; window.__scWant=null; window.renderExpSettle(); return; }
       if((b=t.closest('[data-adel]'))){ scAcctDel(b.dataset.adel); return; }
       if(t.closest('[data-aadd]')){ scAcctAdd(); return; }
@@ -13012,6 +13202,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
              + 'cursor:'+(go?'pointer':'default')+'">'
              + (ok?'\u2705':'\u274C') + ' ' + esc(txt) + (go?' <span style="opacity:.55;font-weight:700">\u203A</span>':'') + '</button>';
       };
+      var _pvMo=''; try{ _pvMo=(window.wlMonthly&&window.wlMonthly.prevYm)?window.wlMonthly.prevYm(ym):''; }catch(e){}
       var _miss = [];
       if(!_mN)      _miss.push('월정산');
       if(!_hasLab)  _miss.push('관리인건비');
@@ -13021,6 +13212,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         + '<b style="font-size:12.5px;color:#33567d">\uD83D\uDCCB '+esc(ym)+' 에 들어온 것</b>'
         + _chip(_expN>0, '지출 기록 '+_expN+'건', '지출 목록에서 넣습니다', 'list')
         + _chip(_mN>0,   '월정산 '+_mN+'줄',      '인건비+정기분 화면의 월정산 표에서 넣습니다', 'labor')
+        + ((!_mN && _pvMo) ? '<button type="button" data-prevmo="1" title="지난달 월정산을 그대로 가져와 인건비 화면에서 확인·저장합니다" style="height:26px;padding:0 10px;border-radius:8px;border:1.5px solid #ea580c;background:#fff;color:#c2410c;font-size:11.5px;font-weight:800;font-family:inherit;cursor:pointer">⬅ '+esc(_pvMo)+' 월정산 가져오기</button>' : '')
         + _chip(_hasLab, '관리인건비',            '인건비+정기분 화면의 도급비 산출 내역에서 넣습니다', 'labor')
         + _chip(_hasMeal,'중식대',                '중식 화면에서 넣습니다', 'meal')
         + (_miss.length
@@ -13218,8 +13410,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       +'<td style="'+TD+';background:#475569"></td>'
       +'</tr>';
     html+='</tbody></table>';
-    html+='<div style="margin-top:10px;font-size:11.5px;color:#8ba0b6;line-height:1.7">맨 위 노란 줄에 적고 Enter(또는 추가) · 적힌 칸은 눌러서 바로 고치고 Tab/Enter/↑↓ 로 이동 · 각 줄 ⇄ 로 계정 바꾸기 · 계정 이름을 누르면 이름 고치기 · 번호를 누르면 자세히 열려요. 이 달에 없는 계정은 블록이 안 보입니다.</div>';
+    html+='<div style="margin-top:10px;font-size:11.5px;color:#8ba0b6;line-height:1.7">맨 위 노란 줄에 적고 Enter(또는 추가) · 적힌 칸은 눌러서 바로 고치고 Tab/Enter/↑↓ 로 이동 · 마우스로 끌어 여러 칸을 잡고 Ctrl+C → 달을 바꿔 Ctrl+V (엑셀과도 주고받기) · 잡은 칸 Delete 로 비우기 · 각 줄 ⇄ 로 계정 바꾸기 · 계정 이름을 누르면 이름 고치기 · 번호를 누르면 자세히 열려요. 이 달에 없는 계정은 블록이 안 보입니다.</div>';
     box._scBusy=true;
+    scSel=null;
     box.innerHTML=html;
     box._scBusy=false;
     (function(){
