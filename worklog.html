@@ -12640,7 +12640,11 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
      +'.sc-no:hover{background:#eef5ff!important;color:#3f7cb8!important}'
      +'td.sc-sel{background:#cfe3fb!important;box-shadow:inset 0 0 0 1px #3f7cb8}'
      +'.sc-mv{position:relative;display:inline-block;flex:none;width:26px;height:26px}'
-     +'.sc-mv select{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}';
+     +'.sc-mv select{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}'
+     +'#scAcctPop{position:absolute;left:0;top:100%;min-width:100%;z-index:60;background:#fff;border:1.5px solid #9fb8d4;border-radius:8px;box-shadow:0 8px 22px rgba(30,60,100,.2);max-height:260px;overflow:auto;padding:3px;box-sizing:border-box}'
+     +'.sc-pk{padding:7px 12px;font-size:13px;font-weight:700;color:#1a2f45;cursor:pointer;border-radius:6px;white-space:nowrap}'
+     +'.sc-pk:hover,.sc-pk.on{background:#eef5ff;color:#3f7cb8}'
+     +'.sc-pkn{padding:7px 12px;font-size:11.5px;color:#8ba0b6;white-space:nowrap}';
     document.head.appendChild(st);
   }
   function scBox(){ return g('expSettleArea'); }
@@ -13068,6 +13072,33 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     });
   }
 
+  /* v249 — 맨 위 줄 「계정」 목록. 브라우저 기본 목록은 칸에 적힌 글자로 걸러서 하나(임차료)만 남았다.
+     여기서는 눌렀을 때 계정 전체를 항상 보여 주고, 글자를 새로 칠 때만 걸러서 보여 준다. */
+  var scPopIdx=-1;
+  function scAcctPop(show, filter){
+    var box=scBox(); if(!box) return;
+    var old=box.querySelector('#scAcctPop'); if(old && old.parentNode) old.parentNode.removeChild(old);
+    scPopIdx=-1;
+    if(!show) return;
+    var inp=box.querySelector('input[data-nr="acct"]'); if(!inp || !inp.closest('td')) return;
+    var q=String(filter||'').trim();
+    var list=acctList().filter(function(x){ return !q || x.indexOf(q)>=0; });
+    var h='';
+    list.forEach(function(x){ h+='<div class="sc-pk" data-pick="'+esc(x)+'">'+esc(x)+'</div>'; });
+    if(!q) h+='<div class="sc-pk" data-pick="'+esc(NOACCT)+'" style="color:#94a3b8">'+esc(NOACCT)+' (계정 없음)</div>';
+    if(q && list.indexOf(q)<0) h+='<div class="sc-pkn">「'+esc(q)+'」 은(는) 새 계정으로 만들어져요 — Enter</div>';
+    if(!h) return;
+    var pop=document.createElement('div'); pop.id='scAcctPop'; pop.innerHTML=h;
+    inp.closest('td').appendChild(pop);
+  }
+  function scPick(v){
+    var box=scBox(); if(!box) return;
+    var inp=box.querySelector('input[data-nr="acct"]'); if(inp) inp.value=(v===NOACCT?'':v);
+    scLastAcct=(v===NOACCT?'':v);
+    scAcctPop(false);
+    var tt=box.querySelector('input[data-nr="title"]'); if(tt) tt.focus();
+  }
+
   function scInit(box){
     if(box._scInit) return;
     box._scInit=true;
@@ -13075,6 +13106,16 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     /* 칸을 처음 누르면 안의 글자가 전부 선택된다 (그대로 치면 덮어쓰기, 엑셀처럼). 이미 들어간 칸을 다시 누르면 그 자리에 커서가 놓인다 */
     box.addEventListener('mousedown', function(ev){
       var t=ev.target;
+      if(t && t.closest){
+        var pk=t.closest('[data-pick]');
+        if(pk){ ev.preventDefault(); scPick(pk.dataset.pick); return; }
+        if(t.closest('[data-acctarrow]')){
+          ev.preventDefault();
+          var was=!!box.querySelector('#scAcctPop'), ai0=box.querySelector('input[data-nr="acct"]');
+          if(ai0){ ai0.focus(); try{ ai0.select(); }catch(e){} scAcctPop(!was); }
+          return;
+        }
+      }
       if(ev.button===0){ var info=scCellOf(t); scClearSel(); scDrag=info?{a:info,moved:false}:null; }
       if(t && t.classList && t.classList.contains('sc-in') && document.activeElement!==t){
         ev.preventDefault();
@@ -13093,9 +13134,15 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     box.addEventListener('focusin', function(ev){
       var t=ev.target;
       if(t && t.classList && t.classList.contains('sc-in')) { try{ t.select(); }catch(e){} }    /* Tab · 화살표로 들어올 때 */
+      if(t && t.dataset && t.dataset.nr==='acct') scAcctPop(true);
+    });
+    box.addEventListener('input', function(ev){
+      var t=ev.target; if(t && t.dataset && t.dataset.nr==='acct') scAcctPop(true, t.value);
     });
     box.addEventListener('focusout', function(ev){
-      var t=ev.target; if(!t || !t.classList || !t.classList.contains('sc-in') || t.dataset.nr) return;
+      var t=ev.target;
+      if(t && t.dataset && t.dataset.nr==='acct'){ scAcctPop(false); scLastAcct=t.value.trim(); return; }
+      if(!t || !t.classList || !t.classList.contains('sc-in') || t.dataset.nr) return;
       var rt=ev.relatedTarget, want=null;
       if(rt && rt.classList && rt.classList.contains('sc-in') && box.contains(rt)) want=scWhere(rt);
       try{ scCommit(t, want); }
@@ -13108,6 +13155,26 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       if(t.dataset.anew!=null){ if(k==='Enter'){ ev.preventDefault(); scAcctAdd(); } return; }
       if(t.dataset.aedit!=null && k==='Enter'){ ev.preventDefault(); t.blur(); return; }
       if(t.dataset.nr){                                    /* 맨 위 입력 줄 */
+        if(t.dataset.nr==='acct'){
+          var pop=box.querySelector('#scAcctPop');
+          if(k==='ArrowDown'||k==='ArrowUp'){
+            ev.preventDefault();
+            if(!pop){ scAcctPop(true); pop=box.querySelector('#scAcctPop'); }
+            var its=pop?pop.querySelectorAll('.sc-pk'):[];
+            if(its.length){
+              scPopIdx = scPopIdx<0 ? (k==='ArrowDown'?0:its.length-1) : (scPopIdx+(k==='ArrowDown'?1:-1)+its.length)%its.length;
+              for(var pi=0;pi<its.length;pi++) its[pi].classList.toggle('on', pi===scPopIdx);
+            }
+            return;
+          }
+          if(k==='Escape'){ scAcctPop(false); return; }
+          if(k==='Enter'){
+            ev.preventDefault();
+            var on=pop&&pop.querySelector('.sc-pk.on');
+            if(on){ scPick(on.dataset.pick); return; }
+            scAcctPop(false);
+          }
+        }
         if(k==='Enter'){
           ev.preventDefault();
           if(t.dataset.nr==='acct'){ var tt=box.querySelector('input[data-nr="title"]'); if(tt) tt.focus(); }
@@ -13154,6 +13221,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         }, 500);
         return;
       }
+      if(t.dataset && t.dataset.nr==='acct' && !box.querySelector('#scAcctPop')){ scAcctPop(true); return; }
       if(t.closest('#expSettleNewBtn')){ scNewSave(); return; }
       if(t.closest('[data-prevmo]')){ if(window.wlMonthly&&window.wlMonthly.fromPrev) window.wlMonthly.fromPrev(scYm()); else scToast('월정산 가져오기 기능을 못 찾았어요'); return; }
       if(t.closest('#expSettleAcctBtn')){ scAcctOpen=!scAcctOpen; window.__scWant=null; window.renderExpSettle(); return; }
@@ -13203,6 +13271,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
              + (ok?'\u2705':'\u274C') + ' ' + esc(txt) + (go?' <span style="opacity:.55;font-weight:700">\u203A</span>':'') + '</button>';
       };
       var _pvMo=''; try{ _pvMo=(window.wlMonthly&&window.wlMonthly.prevYm)?window.wlMonthly.prevYm(ym):''; }catch(e){}
+      var _mSaved=true; try{ _mSaved=(window.wlMonthly&&window.wlMonthly.saved)?!!window.wlMonthly.saved(ym):true; }catch(e){}
       var _miss = [];
       if(!_mN)      _miss.push('월정산');
       if(!_hasLab)  _miss.push('관리인건비');
@@ -13211,8 +13280,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         + 'padding:9px 12px;border:1.5px solid #e3ecf6;background:#f8fbff;border-radius:10px">'
         + '<b style="font-size:12.5px;color:#33567d">\uD83D\uDCCB '+esc(ym)+' 에 들어온 것</b>'
         + _chip(_expN>0, '지출 기록 '+_expN+'건', '지출 목록에서 넣습니다', 'list')
-        + _chip(_mN>0,   '월정산 '+_mN+'줄',      '인건비+정기분 화면의 월정산 표에서 넣습니다', 'labor')
-        + ((!_mN && _pvMo) ? '<button type="button" data-prevmo="1" title="지난달 월정산을 그대로 가져와 인건비 화면에서 확인·저장합니다" style="height:26px;padding:0 10px;border-radius:8px;border:1.5px solid #ea580c;background:#fff;color:#c2410c;font-size:11.5px;font-weight:800;font-family:inherit;cursor:pointer">⬅ '+esc(_pvMo)+' 월정산 가져오기</button>' : '')
+        + _chip(_mN>0,   '월정산 '+_mN+'줄'+((_mN>0&&!_mSaved)?' · 저장 안 됨':''),      (_mN>0&&!_mSaved)?'인건비 화면에 떠 있는 초안입니다 — 아직 저장되지 않았어요':'인건비+정기분 화면의 월정산 표에서 넣습니다', 'labor')
+        + ((_pvMo && (!_mN || !_mSaved)) ? '<button type="button" data-prevmo="1" title="지난달 월정산을 그대로 가져와 인건비 화면에서 확인·저장합니다" style="height:26px;padding:0 10px;border-radius:8px;border:1.5px solid #ea580c;background:#fff;color:#c2410c;font-size:11.5px;font-weight:800;font-family:inherit;cursor:pointer">⬅ '+esc(_pvMo)+' 월정산 '+(_mN?'가져와 저장하기':'가져오기')+'</button>' : '')
         + _chip(_hasLab, '관리인건비',            '인건비+정기분 화면의 도급비 산출 내역에서 넣습니다', 'labor')
         + _chip(_hasMeal,'중식대',                '중식 화면에서 넣습니다', 'meal')
         + (_miss.length
@@ -13306,9 +13375,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         +'<button type="button" data-aadd="1" style="height:30px;padding:0 12px;border:none;border-radius:8px;background:#3f7cb8;color:#fff;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer">＋ 추가</button></span>'
         +'</div></div>';
     }
-    html+='<datalist id="scAcctList">'+acctList().map(function(x){ return '<option value="'+esc(x)+'">'; }).join('')+'</datalist>';
     html+='<tr data-newrow="1">'
-      +'<td style="'+NY+'"><input class="sc-in" data-nr="acct" list="scAcctList" autocomplete="off" placeholder="계정 ▾ (적으면 새로 생겨요)" style="font-weight:800;color:#7a5b00;font-size:12px"></td>'
+      +'<td style="'+NY+';position:relative"><input class="sc-in" data-nr="acct" autocomplete="off" placeholder="계정 ▾ (눌러서 고르기 · 적으면 새로 생겨요)" style="font-weight:800;color:#7a5b00;font-size:12px;padding-right:24px"><span data-acctarrow="1" title="계정 목록 열기" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);color:#b08a00;font-size:11px;cursor:pointer;padding:4px">▼</span></td>'
       +'<td style="'+NY+';text-align:center;color:#b08a00;font-weight:800">＋</td>'
       +'<td style="'+NY+'">'+nrIn('title','지출내용')+'</td>'
       +'<td style="'+NY+'">'+nrIn('sup','금액',true)+'</td>'
@@ -13339,7 +13407,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
               +(i===0?glabelCell(grp,need):'')
               +'<td'+(real?' class="sc-no" data-open="'+esc(e.id)+'" title="눌러서 자세히 열기 (사진·거래처 등)" style="'+TD+';text-align:center;color:#94a3b8;cursor:pointer"'
                            :' style="'+TD+';text-align:center;color:#94a3b8"')+'>'+(i+1)+'</td>'
-              +inCell('title', titleVal(e), '', '')
+              +inCell('title', titleVal(e), (real&&!titleVal(e))?'(내역 없음)':'', '')
               +inCell('sup', cell(v.sup), '', 'num')
               +inCell('tax', cell(v.tax), '', 'num;color:#94a3b8')
               +inCell('amt', cell(v.amount), '', 'num;font-weight:800')
