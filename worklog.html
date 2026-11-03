@@ -12386,7 +12386,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   }
   /* v179 — 🔴 「이 지출이 정산표 어느 칸에 들어가는가」 판단은 여기 하나뿐이다.
      지출 목록·요약도 이 창구를 써야 목록과 정산표가 어긋나지 않는다. (지침 「판단은 받는 쪽에 한 번만」) */
-  window.wlSettleGroup = function(e){ try{ return classify(e||{}); }catch(err){ return '선결재'; } };
+  window.wlSettleGroup = function(e){
+    try{
+      /* v246 — 표에서 기본 칸으로 옮긴 줄은 목록도 같은 칸으로 본다 (내가 만든 구분은 목록이 모르므로 자동 분류) */
+      var o=e&&e.settleGrp;
+      if(o==='선결재'||o==='선납부'||o==='기타정산'||o==='수도광열비') return o;
+      return classify(e||{});
+    }catch(err){ return '선결재'; }
+  };
 
   /* v237 — 정산표 빈 줄을 눌렀을 때 「어떤 지출로 새로 만들지」.
      🔴 위 classify() 의 반대 방향이다. 한쪽을 고치면 여기도 같이 본다.
@@ -12424,7 +12431,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   };
 
   /* fixedRows: 기본 줄 수 (부족분 빈 행 패딩) — 소계 줄의 ＋ / − 로 늘리고 줄인다 */
-  var GROUPS=[
+  var BASE_GROUPS=[
     {key:'선결재',     label:'선결재(개인지출)',   color:'#3f7cb8', bg:'#f0f6ff', fixedRows:10},
     {key:'선납부',     label:'선납부(전표)',       color:'#7c3aed', bg:'#f5f3ff', fixedRows:6},
     {key:'기타정산',   label:'기타정산(비정기)',   color:'#c2410c', bg:'#fff7ed', fixedRows:10, midTotalAfter:true},
@@ -12433,11 +12440,70 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     {key:'기타',       label:'기타(인건비·중식)',  color:'#16a34a', bg:'#f0fdf4', fixedRows:2}
   ];
 
+  /* ══ v246 — 달님 : 「구분을 선결재/선납부 대신 임차료·사무용품·소모품·수선유지비 등으로 바꾸거나 수동으로 나눌 수 있게」
+     · 구분 이름은 표 왼쪽 칸에서 직접 고친다 (기본 6개는 이름만 바뀌고 안쪽 분류 규칙은 그대로)
+     · 새 구분은 표 아래 「＋ 구분 추가」 로 만든다 (선납부 바로 아래, 합 계에 들어간다)
+     · 각 줄의 ⇄ 로 그 지출을 다른 구분으로 옮긴다 → 기록에 settleGrp 로 남는다 (비우면 예전 자동 분류)
+     🔴 월정산·기타 두 칸은 인건비·중식이 저절로 채우는 칸이라 옮기기 대상이 아니다. */
+  BASE_GROUPS.forEach(function(b){ if(['선결재','선납부','기타정산'].indexOf(b.key)>=0) b.mid=true; });
+  var LS_SGRP='wl_settle_groups';
+  var C_COL=['#0f766e','#a21caf','#4d7c0f','#be123c','#1d4ed8','#b45309'];
+  var C_BG =['#f0fdfa','#fdf4ff','#f7fee7','#fff1f2','#eff6ff','#fffbeb'];
+  function sgCfg(){
+    var o=null;
+    try{ o=JSON.parse(localStorage.getItem(LS_SGRP)||'null'); }
+    catch(e){ console.warn('[정산표 구분] 못 읽었어요', e); }
+    if(!o||typeof o!=='object') o={};
+    if(!o.labels||typeof o.labels!=='object') o.labels={};
+    if(!Array.isArray(o.custom)) o.custom=[];
+    return o;
+  }
+  function sgSave(o){
+    try{ localStorage.setItem(LS_SGRP, JSON.stringify(o)); }
+    catch(e){ console.warn('[정산표 구분] 저장 실패', e); if(typeof toast==='function') toast('⚠ 구분 이름을 이 기기에 저장하지 못했어요'); }
+  }
+  /* 화면에 그릴 구분 목록 (기본 6개 + 내가 만든 것). 내가 만든 것은 선납부 바로 아래에 들어간다 */
+  function groups(){
+    var cfg=sgCfg(), out=[], ci=0;
+    BASE_GROUPS.forEach(function(b){
+      var x={}; for(var k in b) x[k]=b[k];
+      x.shown=String(cfg.labels[b.key]||'').trim()||b.key;
+      out.push(x);
+      if(b.key==='선납부'){
+        cfg.custom.forEach(function(c){
+          out.push({key:c.key, shown:String(c.label||'').trim()||'(이름 없음)',
+                    color:C_COL[ci%C_COL.length], bg:C_BG[ci%C_BG.length], fixedRows:3, mid:true, custom:true});
+          ci++;
+        });
+      }
+    });
+    return out;
+  }
+  function validKeys(){ var v={}; groups().forEach(function(x){ v[x.key]=1; }); return v; }
+  var OVR_NO = {'월정산':1,'기타':1};     /* 옮기기 대상이 아닌 칸 */
+  /* 이 지출이 정산표 어느 칸에 들어가는가 — 손으로 옮긴 값(settleGrp)이 있으면 그것, 없으면 예전 자동 분류 */
+  function gkeyOf(e, valid){
+    var o=e&&e.settleGrp;
+    if(o && !OVR_NO[o] && valid[o]) return o;
+    return classify(e);
+  }
+  /* 빈 줄에 적었을 때 만들 지출의 바탕. 기본 칸은 SETTLE_ADD, 내가 만든 구분은 개인지출 + settleGrp */
+  function addSpec(k){
+    if(SETTLE_ADD[k]) return SETTLE_ADD[k];
+    var c=sgCfg().custom.filter(function(x){ return x.key===k; })[0];
+    return c ? { expType:'개인지출', settleGrp:k } : null;
+  }
+  /* 입력 칸에 보일 제목 (표시용 rowTitle 의 「(내역없음)」 은 칸에 넣지 않는다) */
+  function titleVal(e){
+    if(e.expType==='급여'&&!e.title) return e.expSubType||'급여';
+    return e.title||'';
+  }
+
   function rowVals(e, grpKey){
     var amount=Number(e.amount)||0, sup=Number(e.supplyAmt)||0, tax=Number(e.taxAmt)||0;
     if(!sup&&!tax){ sup=amount; tax=0; }   /* 부가세 미입력 → 금액=합계, 부가세 빈칸 */
     /* 선결재(개인지출): 부가세 나누지 않고 총액으로만 (금액=합계, 부가세 빈칸) */
-    if(grpKey==='선결재'){ sup=amount; tax=0; }
+    if(grpKey==='선결재' && !e.taxInline){ sup=amount; tax=0; }   /* v246 — 표에서 부가세를 직접 적은 줄은 나눠 보인다 */
     return {sup:sup, tax:tax, amount:amount};
   }
   function rowNote(e){
@@ -12480,8 +12546,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   function buildMap(ym){
     var all=(typeof entries!=='undefined'?entries:[]).filter(function(e){return e.kind==='expense'&&(e.date||'').startsWith(ym);});
     all.sort(function(a,b){return (a.date||'').localeCompare(b.date||'')||((a.createdAt||0)-(b.createdAt||0));});
-    var map={'선결재':[],'선납부':[],'기타정산':[],'월정산':[],'수도광열비':[],'기타':[]};
-    all.forEach(function(e){ map[classify(e)].push(e); });
+    var valid=validKeys(), map={};
+    groups().forEach(function(x){ map[x.key]=[]; });
+    all.forEach(function(e){ (map[gkeyOf(e,valid)]||map['선결재']).push(e); });
     /* 📅 월정산 자동 반영 (인건비 탭 월정산 표) */
     try{
       if(typeof window.getMonthlySettleRows==='function'){
@@ -12541,8 +12608,302 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     setTimeout(function(){ inp.focus(); },50);
   };
 
+  /* ══ v246 — 정산표 칸에 바로 입력 (엑셀처럼) ══
+     달님 : 「항목 입력 시 창 뜨지 말고 표 안에서 바로 입력되게 · 엑셀처럼 편하게 입력하고 지울 수 있게」
+     · 칸을 누르면 바로 적고, 칸을 벗어나면(Tab · Enter · 다른 칸 클릭) 저장된다
+     · 빈 줄에 적으면 새 지출이 생기고, 적힌 줄을 전부 비우면 휴지통으로 간다 (되돌리기 단추가 뜬다)
+     · Enter / ↓ 는 아래 칸 · ↑ 는 위 칸 · Esc 는 취소 · 한글 조합 중 Enter 는 무시
+     🔴 합계 = 금액 + 부가세. 부가세가 없으면 금액 = 합계. */
+  function scCss(){
+    if(document.getElementById('wlSettleInCss')) return;
+    var st=document.createElement('style'); st.id='wlSettleInCss';
+    st.textContent=
+      '.sc-in{display:block;width:100%;box-sizing:border-box;border:none;background:transparent;font:inherit;color:inherit;padding:8px 10px;margin:0;outline:none;border-radius:0}'
+     +'.sc-in:focus{background:#eef5ff;box-shadow:inset 0 0 0 2px #3f7cb8}'
+     +'.sc-in::placeholder{color:#b8c6d6;font-weight:500}'
+     +'.sc-num{text-align:right;font-weight:600}'
+     +'.sc-no:hover{background:#eef5ff!important;color:#3f7cb8!important}'
+     +'.sc-mv{position:relative;display:inline-block;flex:none;width:26px;height:26px}'
+     +'.sc-mv select{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}';
+    document.head.appendChild(st);
+  }
+  function scBox(){ return g('expSettleArea'); }
+  function scYm(){ return (g('expSettleMonthSel')||{}).value||kstNow().toISOString().slice(0,7); }
+  function scToast(m){ if(typeof toast==='function') toast(m); }
+  function scNum(txt){
+    var s=String(txt==null?'':txt).replace(/[,\s원₩]/g,'');
+    if(s==='') return 0;
+    if(!/^-?\d+(\.\d+)?$/.test(s)) return null;
+    return Math.round(parseFloat(s));
+  }
+  function scRec(id){ return (typeof entries!=='undefined'?entries:[]).filter(function(x){ return x && x.id===id; })[0]||null; }
+  function scNewDate(ym){
+    var t0=kstNow().toISOString().slice(0,10);
+    return (ym && t0.slice(0,7)===ym) ? t0 : (ym ? (ym+'-01') : t0);
+  }
+  /* 칸 위치를 기억했다가 다시 그린 뒤 되찾는다 */
+  function scWhere(el){
+    if(!el || !el.dataset) return null;
+    if(el.dataset.glabel!=null) return {gl:el.dataset.glabel};
+    var tr=el.closest ? el.closest('tr[data-sg]') : null;
+    if(!tr || !el.dataset.col) return null;
+    return {sg:tr.dataset.sg, si:tr.dataset.si, col:el.dataset.col};
+  }
+  function scFocus(w){
+    var box=scBox(); if(!box||!w) return;
+    var el=null, all, i;
+    if(w.gl!=null){
+      all=box.querySelectorAll('input[data-glabel]');
+      for(i=0;i<all.length;i++){ if(all[i].dataset.glabel===w.gl){ el=all[i]; break; } }
+    } else {
+      all=box.querySelectorAll('tr[data-sg]');
+      for(i=0;i<all.length;i++){
+        if(all[i].dataset.sg===w.sg && all[i].dataset.si===w.si){ el=all[i].querySelector('input[data-col="'+w.col+'"]'); break; }
+      }
+    }
+    if(el){ try{ el.focus(); el.select(); }catch(e){} }
+  }
+  /* 아무 칸도 안 남았나 (이럴 때만 줄을 지운다 — 거래처·사진·업무 연결이 있으면 남긴다) */
+  function scEmpty(r){
+    if(!r) return false;
+    if(r.expType==='급여') return false;
+    return !String(r.title||'').trim() && !(Number(r.amount)||0) && !(Number(r.supplyAmt)||0) && !(Number(r.taxAmt)||0)
+        && !String(r.memo||'').replace(/\[전표\]/g,'').trim() && !r.vendor
+        && !(r.photos&&r.photos.length) && !(r.scanRefs&&r.scanRefs.length) && !r.workId;
+  }
+  /* 지출 목록·요약 카드도 따라오게 (조금 늦춰서 한 번만) */
+  function scRefreshOthers(){
+    clearTimeout(scRefreshOthers._t);
+    scRefreshOthers._t=setTimeout(function(){
+      try{ if(typeof window.renderExpV2List==='function') window.renderExpV2List(); }catch(e){}
+      try{ if(typeof window.renderExpV2Dashboard==='function') window.renderExpV2Dashboard(); }catch(e){}
+      try{ if(window.wlExpStats && window.wlExpStats.now) window.wlExpStats.now(); }catch(e){}
+    }, 600);
+  }
+  /* 다시 그리지 않고 값만 갈아 끼운다 (입력 중 커서 튐 방지).
+     줄 구조가 달라졌으면 false → 부른 쪽이 다시 그린다. */
+  function scPaint(){
+    var box=scBox(); if(!box) return false;
+    var d=buildMap(scYm()), gs=groups(), i, c;
+    var trs=box.querySelectorAll('tr[data-sg]'), cnt={};
+    for(i=0;i<trs.length;i++){ var kk=trs[i].dataset.sg; cnt[kk]=(cnt[kk]||0)+1; }
+    for(i=0;i<gs.length;i++){
+      var arr0=d.map[gs[i].key]||[];
+      var need=Math.max(arr0.length,(gs[i].fixedRows||0)+sExtra(gs[i].key));
+      if((cnt[gs[i].key]||0)!==need) return false;
+    }
+    var midKey={}; gs.forEach(function(x){ if(x.mid) midKey[x.key]=1; });
+    var sub={}, mid=[0,0,0], all=[0,0,0], uS=0;
+    for(i=0;i<trs.length;i++){
+      var tr=trs[i], gk=tr.dataset.sg, e=(d.map[gk]||[])[+tr.dataset.si]||null;
+      var real=!!(e&&e.id&&!e.__virtual);
+      if((real?e.id:'')!==(tr.dataset.settleid||'')) return false;
+      var wantEdit = real || (!e && !!addSpec(gk));
+      if((wantEdit?'1':'0')!==tr.dataset.ed) return false;
+      var v=e?rowVals(e,gk):{sup:0,tax:0,amount:0};
+      if(!sub[gk]) sub[gk]=[0,0,0];
+      sub[gk][0]+=v.sup; sub[gk][1]+=v.tax; sub[gk][2]+=v.amount;
+      if(wantEdit){
+        var vals={title:e?titleVal(e):'', sup:e?cell(v.sup):'', tax:e?cell(v.tax):'', amt:e?cell(v.amount):'', note:e?rowNote(e):''};
+        for(c in vals){
+          var inp=tr.querySelector('input[data-col="'+c+'"]');
+          if(!inp || inp===document.activeElement) continue;
+          inp.value=vals[c]; inp.dataset.orig=vals[c];
+        }
+      }
+    }
+    function put(key, arr3){
+      var L=['s','t','a'];
+      for(var j=0;j<3;j++){
+        var el=box.querySelector('[data-tt="'+key+':'+L[j]+'"]');
+        if(el) el.textContent=cell(arr3[j]);
+      }
+    }
+    gs.forEach(function(x){
+      var s3=sub[x.key]||[0,0,0];
+      put(x.key, s3);
+      all[0]+=s3[0]; all[1]+=s3[1]; all[2]+=s3[2];
+      if(midKey[x.key]){ mid[0]+=s3[0]; mid[1]+=s3[1]; mid[2]+=s3[2]; }
+      if(x.key==='수도광열비') uS+=s3[0];
+    });
+    put('MID', mid); put('ALL', all);
+    var ex=box.querySelector('[data-tt="EXC:s"]'); if(ex) ex.textContent=cell(all[0]-uS);
+    return true;
+  }
+  function scAfter(want){
+    var ok=false;
+    try{ ok=scPaint(); }catch(e){ console.warn('[정산표 입력] 제자리 갱신 실패 — 다시 그립니다', e); }
+    if(!ok){ window.__scWant=want||null; window.renderExpSettle(); }
+    scRefreshOthers();
+  }
+  function scDelete(id){
+    var rec=scRec(id); if(!rec) return;
+    try{
+      if(typeof deleteRecord==='function' && typeof restoreRecord==='function' && typeof toastAction==='function'){
+        var backup=JSON.parse(JSON.stringify(rec));
+        if(typeof saveTempBackup==='function') saveTempBackup();
+        deleteRecord(id);
+        toastAction('지출을 삭제했습니다','되돌리기',function(){
+          restoreRecord(backup);
+          try{ if(typeof renderAll==='function') renderAll(); }catch(e){}
+          window.__scWant=null; window.renderExpSettle(); scRefreshOthers();
+          scToast('✅ 삭제를 되돌렸습니다');
+        }, 6000);
+        try{ if(typeof renderAll==='function') renderAll(); }catch(e){ console.warn('[정산표 삭제] 화면 갱신', e); }
+      } else if(typeof deleteWithUndo==='function'){
+        deleteWithUndo(id,'지출');
+      } else { scToast('지우는 기능을 못 찾았어요 — worklog.js 를 올렸는지 확인하세요'); return; }
+    }catch(err){ console.error('[정산표 삭제]',err); scToast('지우기 오류: '+(err.message||err)); return; }
+    window.__scWant=null; window.renderExpSettle(); scRefreshOthers();
+  }
+  function scCommitLabel(inp, want){
+    var key=inp.dataset.glabel, val=inp.value.trim(), orig=inp.dataset.orig||'';
+    if(inp.value===orig) return;
+    var cfg=sgCfg(), c=null;
+    cfg.custom.forEach(function(x){ if(x.key===key) c=x; });
+    if(c){ if(!val){ inp.value=orig; return; } c.label=val; }
+    else { if(val && val!==key) cfg.labels[key]=val; else delete cfg.labels[key]; }
+    sgSave(cfg);
+    scToast('✏️ 구분 이름을 「'+(val||key)+'」 로 바꿨어요');
+    window.__scWant=want||null; window.renderExpSettle();      /* ⇄ 목록의 이름도 새로 */
+  }
+  function scCommit(inp, want){
+    var box=scBox(); if(!box || box._scBusy) return;
+    if(inp.dataset.glabel!=null){ scCommitLabel(inp, want); return; }
+    var orig=inp.dataset.orig==null?'':inp.dataset.orig;
+    if(inp.value===orig) return;                       /* 안 건드린 칸 */
+    var tr=inp.closest('tr[data-sg]'); if(!tr) return;
+    var col=inp.dataset.col, txt=inp.value.trim(), gk=tr.dataset.sg, id=tr.dataset.settleid||'';
+    var rec=id?scRec(id):null;
+    if(id && !rec){ scToast('이 줄은 이미 지워졌어요'); window.__scWant=null; window.renderExpSettle(); return; }
+    var cur=rec?rowVals(rec,gk):{sup:0,tax:0,amount:0};
+    var patch={};
+    if(col==='title'){ patch.title=txt; }
+    else if(col==='note'){ patch.memo=(rec && /\[전표\]/.test(rec.memo||'')) ? (txt+' [전표]').trim() : txt; }
+    else {
+      var n=scNum(txt);
+      if(n===null){ scToast('숫자만 적어 주세요 (예: 12000)'); inp.value=orig; return; }
+      var s=cur.sup, t=cur.tax;
+      if(col==='sup'){ s=n; }
+      else if(col==='tax'){ t=n; if(gk==='선결재' && n>0 && !(rec&&rec.taxInline)) patch.taxInline=true; }
+      else if(col==='amt'){ s = t ? (n-t) : n; }
+      patch.supplyAmt=s; patch.taxAmt=t; patch.amount=(col==='amt')?n:(s+t);
+    }
+    if(rec){
+      updateRecord(id, patch);
+      if(scEmpty(scRec(id))){ scDelete(id); return; }      /* 전부 비웠다 → 휴지통 (되돌리기 있음) */
+      scAfter(want);
+      return;
+    }
+    /* 빈 줄에 처음 적었다 → 새 지출을 만든다 */
+    var spec=addSpec(gk);
+    if(!spec){ inp.value=orig; return; }
+    var obj={ kind:'expense', date:scNewDate(scYm()), title:'', amount:0, supplyAmt:0, taxAmt:0,
+              vendor:'', memo:'', purpose:'', purposes:[], isCost:true, isJeonpyo:false, isIssued:false, expSubType:'',
+              createdAt:Date.now() };
+    var kx; for(kx in spec) obj[kx]=spec[kx];
+    obj.isJeonpyo=(obj.expType==='전표'); obj.isCost=!obj.isJeonpyo;
+    for(kx in patch) obj[kx]=patch[kx];
+    if(scEmpty(obj)){ inp.value=orig; return; }          /* 0 만 적은 경우 등 — 빈 지출은 만들지 않는다 */
+    addRecord(obj);
+    scAfter(want);
+  }
+  function scInit(box){
+    if(box._scInit) return;
+    box._scInit=true;
+    /* 칸을 처음 누르면 안의 글자가 전부 선택된다 (그대로 치면 덮어쓰기, 엑셀처럼). 이미 들어간 칸을 다시 누르면 그 자리에 커서가 놓인다 */
+    box.addEventListener('mousedown', function(ev){
+      var t=ev.target;
+      if(t && t.classList && t.classList.contains('sc-in') && document.activeElement!==t){
+        ev.preventDefault();
+        try{ t.focus(); t.select(); }catch(e){}
+      }
+    });
+    box.addEventListener('focusin', function(ev){
+      var t=ev.target;
+      if(t && t.classList && t.classList.contains('sc-in')) { try{ t.select(); }catch(e){} }    /* Tab · 화살표로 들어올 때 */
+    });
+    box.addEventListener('focusout', function(ev){
+      var t=ev.target; if(!t || !t.classList || !t.classList.contains('sc-in')) return;
+      var rt=ev.relatedTarget, want=null;
+      if(rt && rt.classList && rt.classList.contains('sc-in') && box.contains(rt)) want=scWhere(rt);
+      try{ scCommit(t, want); }
+      catch(err){ console.error('[정산표 입력]', err); scToast('입력 오류: '+(err.message||err)); }
+    });
+    box.addEventListener('keydown', function(ev){
+      var t=ev.target; if(!t || !t.classList || !t.classList.contains('sc-in')) return;
+      if(ev.isComposing || ev.keyCode===229) return;       /* 한글 조합 중 Enter 는 글자 확정용 */
+      var k=ev.key;
+      if(k==='Escape'){ t.value=(t.dataset.orig==null?'':t.dataset.orig); t.blur(); ev.preventDefault(); return; }
+      if(k==='Enter' || k==='ArrowDown' || k==='ArrowUp'){
+        ev.preventDefault();
+        if(t.dataset.glabel!=null){ t.blur(); return; }
+        var list=Array.prototype.slice.call(box.querySelectorAll('input.sc-in[data-col="'+t.dataset.col+'"]'));
+        var nx=list[list.indexOf(t)+(k==='ArrowUp'?-1:1)];
+        if(nx) nx.focus(); else t.blur();
+      }
+    });
+    box.addEventListener('change', function(ev){
+      var t=ev.target; if(!t || !t.matches || !t.matches('select[data-move]')) return;
+      var id=t.dataset.move, val=t.value; if(!val) return;
+      var rec=scRec(id); if(!rec) return;
+      var k=(val==='__auto')?'':val;
+      updateRecord(id,{settleGrp:k});
+      var lab=k?((groups().filter(function(x){ return x.key===k; })[0]||{}).shown||k):'자동 분류';
+      window.__scWant=null; window.renderExpSettle(); scRefreshOthers();
+      scToast('⇄ 「'+(rec.title||'이 줄')+'」 → '+lab);
+    });
+    box.addEventListener('click', function(ev){
+      var t=ev.target; if(!t || !t.closest) return;
+      var b;
+      if((b=t.closest('[data-settledel]'))){ ev.stopPropagation(); scDelete(b.dataset.settledel); return; }
+      if((b=t.closest('[data-open]'))){
+        var oid=b.dataset.open;
+        try{ if(typeof window.wlOpenPage==='function'){ window.wlOpenPage(oid); }
+             else if(typeof window.openExpenseEditor==='function'){ window.openExpenseEditor(oid); }
+             else { scToast('자세히 여는 창을 못 찾았어요'); return; } }
+        catch(err){ console.warn('[정산표] 상세 열기 실패', err); scToast('열기 오류: '+(err.message||err)); return; }
+        var n=0, iv=setInterval(function(){          /* 창을 닫으면 정산표를 다시 그린다 */
+          if(++n>120){ clearInterval(iv); return; }
+          if(!document.getElementById('lfPageOv')){
+            clearInterval(iv);
+            try{ window.__scWant=null; window.renderExpSettle(); }catch(e2){ console.warn('[정산표] 다시 그리기 실패', e2); }
+            scRefreshOthers();
+          }
+        }, 500);
+        return;
+      }
+      if((b=t.closest('[data-gdel]'))){
+        var key=b.dataset.gdel;
+        var used=(typeof entries!=='undefined'?entries:[]).some(function(x){ return x && x.kind==='expense' && x.settleGrp===key; });
+        if(used){ scToast('이 구분에 넣어 둔 지출이 있어요 — 다른 구분으로 옮긴 뒤 지울 수 있어요'); return; }
+        var cfg=sgCfg(); cfg.custom=cfg.custom.filter(function(x){ return x.key!==key; }); sgSave(cfg);
+        window.__scWant=null; window.renderExpSettle(); scToast('구분을 지웠어요');
+        return;
+      }
+      if(t.closest('#expSettleAddGrp')){
+        var cfg2=sgCfg(), nk='u'+Date.now().toString(36);
+        cfg2.custom.push({key:nk, label:'새 구분'}); sgSave(cfg2);
+        window.__scWant={gl:nk}; window.renderExpSettle();
+        scToast('＋ 새 구분을 만들었어요 — 이름을 바로 고치세요 (예: 임차료)');
+        return;
+      }
+      if((b=t.closest('tr[data-settleadd]'))){
+        var k2=b.getAttribute('data-settleadd')||'';
+        if(SETTLE_NOADD[k2]) scToast('🔒 '+SETTLE_NOADD[k2]);
+      }
+    });
+  }
+
   window.renderExpSettle=function(){
     var box=g('expSettleArea'); if(!box) return;
+    scInit(box);
+    /* v246 — 입력 중인 칸이 있으면 다시 그리지 않는다 (적던 글자가 날아간다). 다시 그려도 그 칸으로 돌아온다 */
+    var _ae=document.activeElement, _fd=null;
+    if(_ae && box.contains(_ae) && _ae.classList && _ae.classList.contains('sc-in')){
+      if(!window.__scWant && _ae.dataset.orig!=null && _ae.value!==_ae.dataset.orig) return;
+      _fd=scWhere(_ae);
+    }
     /* v243 — 달 목록은 잠겨 있어도 채운다 (예전에는 여기서 되돌아가 목록이 안 만들어졌다) */
     fillMonthSel();
     if(!window._expFinUnlocked){ window.finLockUI(box); var c=g('expSettleCount'); if(c) c.textContent=''; return; }
@@ -12586,19 +12947,46 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
             : '<span style="flex:1;min-width:120px;font-size:11.5px;color:#6b9a80">다 들어와 있어요</span>')
         + '</div>';
     }catch(e){ console.warn('[정산표 요약]', e); html0=''; }
-    if(!d.total){
-      /* v244 — 아무것도 없을 때도 「어디서 넣는지」를 알려 준다 */
-      box.innerHTML='<div style="text-align:center;padding:44px 20px;color:#aab8c8"><div style="font-size:40px;margin-bottom:10px">🧮</div>'
-        +'<div style="font-size:14px;font-weight:700">'+esc(ym)+' 에 아직 아무것도 없어요</div>'
-        +'<div style="font-size:12px;margin-top:8px;line-height:1.8;color:#8ba0b6">'
-        +'지출은 📋 목록에서 · 월정산과 관리인건비는 👷 인건비+정기분에서 · 중식대는 🍚 중식에서 넣습니다</div></div>';
-      return;
-    }
+    /* v246 — 아무것도 없는 달에도 표를 보여 준다 (빈 줄에 바로 적어 넣는다) */
+    var emptyNote = d.total ? '' : '<div style="padding:9px 12px;margin-bottom:10px;border:1.5px dashed #dbe6f4;border-radius:10px;font-size:12px;color:#8ba0b6;line-height:1.7">'
+      +esc(ym)+' 에 아직 아무것도 없어요 — 아래 빈 줄에 바로 적어 넣으세요 · 월정산과 관리인건비는 👷 인건비+정기분에서 · 중식대는 🍚 중식에서 넣습니다</div>';
     var TH='padding:9px 10px;font-size:12px;font-weight:800;color:#fff;background:#3f7cb8;border:1px solid #dbe6f4;white-space:nowrap';
     var TD='padding:8px 10px;font-size:13px;color:#1a2f45;border:1px solid #e8f0fa;background:#fff';
     var TDR=TD+';text-align:right;white-space:nowrap;font-weight:600';
+    var TDI='padding:0;font-size:13px;color:#1a2f45;border:1px solid #e8f0fa;background:#fff';    /* v246 — 입력 칸 */
+    scCss();
+    var gdefs=groups();
+    var MV_OPTS='<option value="" selected disabled>⇄ 옮길 구분…</option><option value="__auto">↺ 자동 분류로 되돌리기</option>'
+      +gdefs.filter(function(x){ return !OVR_NO[x.key]; }).map(function(x){ return '<option value="'+esc(x.key)+'">'+esc(x.shown)+'</option>'; }).join('');
+    var AUTO_BADGE=' <span title="업무에서 저절로 만들어진 지출입니다" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:5px;padding:0 5px;font-size:10px;font-weight:800;white-space:nowrap">🤖 업무에서</span>';
+    function inCell(col, val, ph, sx){
+      var num=/^num/.test(sx||''), extra=num?String(sx).replace(/^num;?/,''):(sx||'');
+      return '<td style="'+TDI+'"><input class="sc-in'+(num?' sc-num':'')+'" data-col="'+col+'" value="'+esc(val)+'" data-orig="'+esc(val)+'" autocomplete="off"'
+        +(num?' inputmode="numeric"':'')+(ph?' placeholder="'+esc(ph)+'"':'')+(extra?' style="'+extra+'"':'')+'></td>';
+    }
+    function glabelCell(grp, need){
+      return '<td rowspan="'+(need+1)+'" style="'+TD+';padding:4px;background:'+grp.bg+';text-align:center;vertical-align:middle;white-space:nowrap">'
+        +'<input class="sc-in" data-glabel="'+esc(grp.key)+'" value="'+esc(grp.shown)+'" data-orig="'+esc(grp.shown)+'" size="7" autocomplete="off" title="구분 이름 — 눌러서 바로 고칩니다" style="text-align:center;font-weight:800;color:'+grp.color+';padding:6px 4px;border-radius:6px">'
+        +(grp.custom?'<button type="button" data-gdel="'+esc(grp.key)+'" title="이 구분 지우기 (어느 달에도 쓰이지 않을 때만)" style="margin-top:2px;border:none;background:none;color:#b8c6d6;font-size:11px;cursor:pointer;font-family:inherit">✕ 지우기</button>':'')
+        +'</td>';
+    }
+    function noteCell(e, real, edit){
+      if(!edit){
+        return '<td style="'+TD+';font-size:12px;color:#64748b">'+(e?esc(rowNote(e)):'')+'</td>';
+      }
+      var nv=e?rowNote(e):'';
+      return '<td style="'+TDI+'"><div style="display:flex;align-items:center;gap:4px;padding-right:6px">'
+        +'<input class="sc-in" data-col="note" value="'+esc(nv)+'" data-orig="'+esc(nv)+'" autocomplete="off" style="font-size:12px;color:#64748b;flex:1;min-width:90px">'
+        +(e&&e.autoFromWork?AUTO_BADGE:'')
+        +(real
+          ? '<span class="sc-mv" title="이 줄을 다른 구분으로 옮깁니다"><span style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:#eef3fa;color:#3f7cb8;font-size:13px;font-weight:800">⇄</span>'
+            +'<select data-move="'+esc(e.id)+'" aria-label="구분 옮기기">'+MV_OPTS+'</select></span>'
+            +'<button type="button" data-settledel="'+esc(e.id)+'" title="이 줄을 지웁니다 (휴지통으로 — 바로 되돌리기 가능)" style="flex:none;width:26px;height:26px;border:none;border-radius:7px;background:#fde8e8;color:#b52929;cursor:pointer;font-family:inherit;font-size:12px">🗑</button>'
+          : '')
+        +'</div></td>';
+    }
     /* v178 — 업무에서 저절로 만들어진 지출이 섞여 있으면 알려 주고 한 번에 정리할 수 있게 */
-    var html=html0;                     /* v244 — 맨 위 요약 줄 */
+    var html=html0+emptyNote;           /* v244 — 맨 위 요약 줄 */
     try{
       var _auto=[];
       for(var _k in d.map){
@@ -12622,46 +13010,42 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var gSum=0,gTax=0,gAmt=0;          /* 전체 누계 */
     var mSum=0,mTax=0,mAmt=0;          /* 중간합계 누계 (개인+전표+기타정산) */
     var uSum=0;                         /* 수도광열 금액 (제외 계산용) */
-    GROUPS.forEach(function(grp){
+    gdefs.forEach(function(grp){
       var arr=d.map[grp.key]||[];
       var need=Math.max(arr.length, (grp.fixedRows||0) + sExtra(grp.key));   /* v244 — 늘린 줄 반영 */
       if(need>0){
         var s=0,t=0,a=0;
+        var canAdd = !!addSpec(grp.key);
         for(var i=0;i<need;i++){
           var e=arr[i]||null;
           var v=e?rowVals(e,grp.key):{sup:0,tax:0,amount:0};
           if(e){ s+=v.sup; t+=v.tax; a+=v.amount; }
-          /* v237 — 달님 : 「기타정산에 비용을 여기서도 넣게」
-             빈 줄을 누르면 그 칸에 맞는 지출을 바로 새로 만든다.
-             🔴 월정산·기타는 인건비·중식 화면이 저절로 채우는 칸이라 손으로 못 넣는다 (누르면 알려 준다) */
-          var canAdd = !e && !!SETTLE_ADD[grp.key];
-          html+='<tr'
-            +(e&&e.id?' data-settleid="'+esc(e.id)+'" style="cursor:pointer"':'')
-            +(!e?' data-settleadd="'+esc(grp.key)+'" class="settle-add" style="cursor:'+(canAdd?'pointer':'default')+'"':'')
+          /* v246 — 칸에 바로 적는다 (창 없음). 월정산·자동 줄은 읽기만 */
+          var real = !!(e && e.id && !e.__virtual);
+          var edit = real || (!e && canAdd);
+          html+='<tr data-sg="'+esc(grp.key)+'" data-si="'+i+'" data-ed="'+(edit?1:0)+'"'
+            +(real?' data-settleid="'+esc(e.id)+'"':'')
+            +(!e&&!canAdd?' data-settleadd="'+esc(grp.key)+'" class="settle-add" style="cursor:default"':'')
             +'>'
-            +(i===0?'<td rowspan="'+(need+1)+'" style="'+TD+';background:'+grp.bg+';color:'+grp.color+';font-weight:800;text-align:center;vertical-align:middle;white-space:nowrap">'+esc(grp.key)+'</td>':'')
-            +'<td style="'+TD+';text-align:center;color:#94a3b8">'+(i+1)+'</td>'
-            +'<td style="'+TD+'">'+(e?esc(rowTitle(e))
-                : (canAdd?'<span class="settle-addhint" style="color:#b8c6d6;font-size:12px">＋ 여기에 적기</span>':''))+'</td>'
-            +'<td style="'+TDR+'">'+(e?cell(v.sup):'')+'</td>'
-            +'<td style="'+TDR+';color:#94a3b8">'+(e?cell(v.tax):'')+'</td>'
-            +'<td style="'+TDR+';font-weight:800">'+(e?cell(v.amount):'')+'</td>'
-            +'<td style="'+TD+';font-size:12px;color:#64748b">'
-              + (e?esc(rowNote(e)):'')
-              /* v178 — 업무에서 저절로 만들어진 지출은 🤖 로 표시하고, 여기서 바로 지울 수 있게 */
-              + (e&&e.autoFromWork?' <span title="업무에서 저절로 만들어진 지출입니다" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:5px;padding:0 5px;font-size:10px;font-weight:800">🤖 업무에서</span>':'')
-              + (e&&e.id&&!e.__virtual?' <button type="button" data-settledel="'+esc(e.id)+'" title="이 줄을 지웁니다 (휴지통으로)" style="float:right;width:26px;height:26px;border:none;border-radius:7px;background:#fde8e8;color:#b52929;cursor:pointer;font-family:inherit;font-size:12px">🗑</button>':'')
-              +'</td>'
+            +(i===0?glabelCell(grp,need):'')
+            +'<td'+(real?' class="sc-no" data-open="'+esc(e.id)+'" title="눌러서 자세히 열기 (사진·거래처 등)" style="'+TD+';text-align:center;color:#94a3b8;cursor:pointer"'
+                         :' style="'+TD+';text-align:center;color:#94a3b8"')+'>'+(i+1)+'</td>'
+            +(edit ? inCell('title', e?titleVal(e):'', e?'':'＋ 여기에 적기', '')
+                   : '<td style="'+TD+'">'+(e?esc(rowTitle(e)):'')+'</td>')
+            +(edit ? inCell('sup', e?cell(v.sup):'', '', 'num') : '<td style="'+TDR+'">'+(e?cell(v.sup):'')+'</td>')
+            +(edit ? inCell('tax', e?cell(v.tax):'', '', 'num;color:#94a3b8') : '<td style="'+TDR+';color:#94a3b8">'+(e?cell(v.tax):'')+'</td>')
+            +(edit ? inCell('amt', e?cell(v.amount):'', '', 'num;font-weight:800') : '<td style="'+TDR+';font-weight:800">'+(e?cell(v.amount):'')+'</td>')
+            +noteCell(e, real, edit)
             +'</tr>';
         }
         gSum+=s; gTax+=t; gAmt+=a;
         if(grp.key==='수도광열비') uSum+=s;
-        if(['선결재','선납부','기타정산'].indexOf(grp.key)>=0){ mSum+=s; mTax+=t; mAmt+=a; }
+        if(grp.mid){ mSum+=s; mTax+=t; mAmt+=a; }
         html+='<tr>'
           +'<td colspan="2" style="'+TD+';background:'+grp.bg+';text-align:center;font-weight:800;color:'+grp.color+'">소 계</td>'
-          +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(s)+'</td>'
-          +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+'">'+cell(t)+'</td>'
-          +'<td style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(a)+'</td>'
+          +'<td data-tt="'+esc(grp.key)+':s" style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(s)+'</td>'
+          +'<td data-tt="'+esc(grp.key)+':t" style="'+TDR+';background:'+grp.bg+';color:'+grp.color+'">'+cell(t)+'</td>'
+          +'<td data-tt="'+esc(grp.key)+':a" style="'+TDR+';background:'+grp.bg+';color:'+grp.color+';font-weight:800">'+cell(a)+'</td>'
           +'<td style="'+TD+';background:'+grp.bg+';text-align:center;white-space:nowrap">'
             +'<button type="button" data-gcopy="'+esc(grp.key)+'" title="'+esc(grp.key)+' 내용 행만 복사 ('+need+'행)" style="border:1.5px solid '+grp.color+';background:#fff;color:'+grp.color+';border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">📋 복사</button>'
             /* v244 — 줄 늘리기 · 줄이기 */
@@ -12674,9 +13058,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       if(grp.midTotalAfter){
         html+='<tr>'
           +'<td colspan="3" style="'+TD+';background:#fdba74;color:#7c2d12;text-align:center;font-weight:800;font-size:14px">합 계</td>'
-          +'<td style="'+TDR+';background:#fdba74;color:#7c2d12;font-weight:800">'+cell(mSum)+'</td>'
-          +'<td style="'+TDR+';background:#fdba74;color:#7c2d12">'+cell(mTax)+'</td>'
-          +'<td style="'+TDR+';background:#fdba74;color:#7c2d12;font-weight:800">'+cell(mAmt)+'</td>'
+          +'<td data-tt="MID:s" style="'+TDR+';background:#fdba74;color:#7c2d12;font-weight:800">'+cell(mSum)+'</td>'
+          +'<td data-tt="MID:t" style="'+TDR+';background:#fdba74;color:#7c2d12">'+cell(mTax)+'</td>'
+          +'<td data-tt="MID:a" style="'+TDR+';background:#fdba74;color:#7c2d12;font-weight:800">'+cell(mAmt)+'</td>'
           +'<td style="'+TD+';background:#fdba74"></td>'
           +'</tr>';
       }
@@ -12684,20 +13068,26 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     /* 정산 합계 + 전기·수도 제외 */
     html+='<tr>'
       +'<td colspan="3" style="'+TD+';background:#1a2f45;color:#fff;text-align:center;font-weight:800;font-size:14px">정산 합계</td>'
-      +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800;font-size:14px">'+cell(gSum)+'</td>'
-      +'<td style="'+TDR+';background:#1a2f45;color:#cbd5e1">'+cell(gTax)+'</td>'
-      +'<td style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800">'+cell(gAmt)+'</td>'
+      +'<td data-tt="ALL:s" style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800;font-size:14px">'+cell(gSum)+'</td>'
+      +'<td data-tt="ALL:t" style="'+TDR+';background:#1a2f45;color:#cbd5e1">'+cell(gTax)+'</td>'
+      +'<td data-tt="ALL:a" style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800">'+cell(gAmt)+'</td>'
       +'<td style="'+TD+';background:#1a2f45"></td>'
       +'</tr>';
     html+='<tr>'
       +'<td colspan="3" style="'+TD+';background:#475569;color:#fff;text-align:center;font-weight:700">전기·수도요금 제외</td>'
-      +'<td style="'+TDR+';background:#475569;color:#fff;font-weight:800">'+cell(gSum-uSum)+'</td>'
+      +'<td data-tt="EXC:s" style="'+TDR+';background:#475569;color:#fff;font-weight:800">'+cell(gSum-uSum)+'</td>'
       +'<td style="'+TDR+';background:#475569"></td>'
       +'<td style="'+TDR+';background:#475569"></td>'
       +'<td style="'+TD+';background:#475569"></td>'
       +'</tr>';
     html+='</tbody></table>';
+    html+='<div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      +'<button type="button" id="expSettleAddGrp" style="height:34px;padding:0 14px;border-radius:9px;border:1.5px dashed #3f7cb8;background:#fff;color:#3f7cb8;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer">＋ 구분 추가 (임차료 · 사무용품 …)</button>'
+      +'<span style="font-size:11.5px;color:#8ba0b6;line-height:1.7">칸을 눌러 바로 적습니다 · Tab/Enter 로 이동 · 구분 이름은 왼쪽 칸에서 고치고 · 각 줄의 ⇄ 로 다른 구분으로 옮기고 · 번호를 누르면 자세히 열려요</span></div>';
+    box._scBusy=true;
     box.innerHTML=html;
+    box._scBusy=false;
+    var _w=window.__scWant||_fd; window.__scWant=null; if(_w) scFocus(_w);
     /* v178 — 🧹 한 번에 정리 */
     (function(){
       var ac=box.querySelector('#expSettleAutoClean'); if(!ac) return;
@@ -12754,68 +13144,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       });
     });
 
-    /* v237 — 빈 줄 클릭 → 그 칸에 맞는 지출을 바로 새로 만든다 */
-    box.querySelectorAll('[data-settleadd]').forEach(function(tr){
-      tr.addEventListener('click', function(){
-        var k = tr.getAttribute('data-settleadd') || '';
-        if(SETTLE_NOADD[k]){ if(typeof toast==='function') toast('🔒 ' + SETTLE_NOADD[k]); return; }
-        var pre = SETTLE_ADD[k]; if(!pre) return;
-        /* 날짜 — 보고 있는 달이 이번 달이면 오늘, 아니면 그 달 1일 */
-        var ymv = (g('expSettleMonthSel')||{}).value || '';
-        var t0  = kstNow().toISOString().slice(0,10);
-        var dv  = (ymv && t0.slice(0,7)===ymv) ? t0 : (ymv ? (ymv+'-01') : t0);
-        var obj = { date: dv };
-        for(var kk in pre) obj[kk] = pre[kk];
-        try{
-          if(typeof window.wlNewPageWith === 'function'){
-            window.wlNewPageWith('expense', obj, true);
-          } else if(typeof window._openExpV2 === 'function'){
-            window._openExpV2(null);
-          } else {
-            if(typeof toast==='function') toast('입력창을 못 찾았어요 — worklog.js 를 올렸는지 확인하세요');
-            return;
-          }
-        }catch(err){ console.error('[정산표 추가]', err);
-          if(typeof toast==='function') toast('오류: ' + (err.message||err)); return; }
-        if(typeof toast==='function') toast('📝 ' + k + ' 로 새 지출을 엽니다');
-        /* 창을 닫으면 정산표를 다시 그린다 (넣은 것이 바로 보이게) */
-        var n=0, iv=setInterval(function(){
-          if(++n > 60){ clearInterval(iv); return; }
-          if(!document.getElementById('lfPageOv')){
-            clearInterval(iv);
-            try{ if(typeof window.renderExpSettle==='function') window.renderExpSettle(); }
-            catch(e2){ console.warn('[정산표] 다시 그리기 실패', e2); }
-          }
-        }, 500);
-      });
-    });
-
-    /* 행 클릭 → 상세 */
-    box.querySelectorAll('[data-settleid]').forEach(function(tr){
-      tr.addEventListener('click',function(){
-        var id=tr.dataset.settleid;
-        /* v178 — 노션식 상세 창을 먼저 쓴다 (옛 「지출 조회」 창은 못 열 때만) */
-        try{
-          if(typeof window.wlOpenPage==='function'){ window.wlOpenPage(id); return; }
-        }catch(err){ console.warn('[정산표] 노션 상세 열기 실패 — 옛 창으로', err); }
-        if(typeof window.openExpenseEditor==='function') window.openExpenseEditor(id);
-      });
-    });
-    /* v178 — 정산표에서 바로 지우기 */
-    box.querySelectorAll('[data-settledel]').forEach(function(btn){
-      btn.addEventListener('click',function(ev){
-        ev.stopPropagation();
-        var id=btn.dataset.settledel;
-        var rec=(typeof entries!=='undefined'?entries:[]).filter(function(x){return x.id===id;})[0];
-        var nm=rec?(rec.title||'(내역없음)'):'이 줄';
-        if(!confirm('「'+nm+'」 을(를) 지울까요?\n휴지통으로 갑니다 — 🛟 안전 → 휴지통에서 되살릴 수 있어요.')) return;
-        try{
-          if(typeof deleteWithUndo==='function') deleteWithUndo(id,'지출');
-          else if(typeof deleteRecord==='function') deleteRecord(id);
-        }catch(err){ console.error('[정산표 삭제]',err); if(typeof toast==='function') toast('지우기 오류: '+(err.message||err)); return; }
-        setTimeout(function(){ try{ window.renderExpSettle(); }catch(e){} }, 350);
-      });
-    });
+    /* v246 — 빈 줄·행 클릭·🗑 는 scInit() 의 위임 처리기가 맡는다 (창을 띄우지 않는다) */
     /* 그룹별 복사: 내용 행만 (지출내용·금액·부가세·합계, 빈 행 포함 고정 행수) */
     box.querySelectorAll('[data-gcopy]').forEach(function(btn){
       btn.addEventListener('click',function(ev){
@@ -12857,7 +13186,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       if(!window._expFinUnlocked){ if(typeof toast==='function') toast('🔒 비밀번호 확인 후 복사할 수 있어요'); return; }
       var ym=(g('expSettleMonthSel')||{}).value||kstNow().toISOString().slice(0,7);
       var d=buildMap(ym);
-      var grp=null; GROUPS.forEach(function(x){ if(x.key===key) grp=x; });
+      var grp=null; groups().forEach(function(x){ if(x.key===key) grp=x; });
       if(!grp) return;
       var arr=d.map[key]||[];
       var need=Math.max(arr.length, (grp.fixedRows||0) + sExtra(grp.key));   /* v244 — 늘린 줄 반영 */
@@ -12892,7 +13221,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       out.push([ym+' 관리비 지출세부','','','','','','']);
       out.push(['구분','NO','지출내용','금액','부가세','합계','비고']);
       var gSum=0,gTax=0,gAmt=0,mSum=0,mTax=0,mAmt=0,uSum=0;
-      GROUPS.forEach(function(grp){
+      groups().forEach(function(grp){
         var arr=d.map[grp.key]||[];
         var need=Math.max(arr.length, (grp.fixedRows||0) + sExtra(grp.key));   /* v244 — 늘린 줄 반영 */
         if(need>0){
@@ -12902,14 +13231,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
             if(e){
               var v=rowVals(e,grp.key);
               s+=v.sup; t+=v.tax; a+=v.amount;
-              out.push([i===0?grp.key:'', String(i+1), rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount), rowNote(e)]);
+              out.push([i===0?grp.shown:'', String(i+1), rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount), rowNote(e)]);
             } else {
-              out.push([i===0?grp.key:'', String(i+1), '', '', '', '', '']);
+              out.push([i===0?grp.shown:'', String(i+1), '', '', '', '', '']);
             }
           }
           gSum+=s; gTax+=t; gAmt+=a;
           if(grp.key==='수도광열비') uSum+=s;
-          if(['선결재','선납부','기타정산'].indexOf(grp.key)>=0){ mSum+=s; mTax+=t; mAmt+=a; }
+          if(grp.mid){ mSum+=s; mTax+=t; mAmt+=a; }
           out.push(['','','소 계', raw(s), raw(t), raw(a), '']);
         }
         if(grp.midTotalAfter){
