@@ -164,7 +164,7 @@ if(typeof kstNow==='undefined'){
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v397-1104-2017";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v398-1104-2034";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -12424,7 +12424,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   var LEGACYK={'선결재':1,'선납부':1,'기타정산':1,'월정산':1,'기타':1,'__MID':1};   /* 계정 이름으로 못 쓰는 말 */
   var LS_ACCT='wl_settle_accts';
   /* v395: 순서=소모품→수선유지비→복리후생비→임차료→용역비→관리인건비→수도광열비. 중식대 제거(복리후생비 흡수) */
-  var ACCT_DEFAULT=['소모품','수선유지비','복리후생비','임차료','용역비','관리인건비','수도광열비'];
+  /* v398: 통신비 추가 — 임차료 앞에 위치 */
+  var ACCT_DEFAULT=['소모품','수선유지비','복리후생비','통신비','임차료','용역비','관리인건비','수도광열비'];
   var C_COL=['#0f766e','#a21caf','#4d7c0f','#be123c','#1d4ed8','#b45309','#7c3aed','#0e7490'];
   var C_BG =['#f0fdfa','#fdf4ff','#f7fee7','#fff1f2','#eff6ff','#fffbeb','#f5f3ff','#ecfeff'];
   function acctStored(){
@@ -12622,6 +12623,25 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         }
       }
     }catch(e){ console.error('[정산표 중식]',e); }
+    /* 📡 통신비 고정항목 (v398) — 금액 바뀌면 아래 숫자만 수정 */
+    (function(){
+      var items=[
+        {title:'관리소 유선 방송요금', sup:12000},
+        {title:'엘리베이터 비상통화장치', sup:10500},
+        {title:'카리프트 비상통화장치', sup:5837}   /* ★ 금액 바뀌면 여기만 수정 */
+      ];
+      if(!map['통신비']) map['통신비']=[];
+      items.forEach(function(it){
+        var tax=Math.round(it.sup*0.1);
+        map['통신비'].push({__virtual:true, title:it.title, supplyAmt:it.sup, taxAmt:tax, amount:it.sup+tax});
+      });
+    })();
+    /* 🚰 임차료 고정항목 — 정수기 임차료 (v398) */
+    (function(){
+      var sup=79818, tax=Math.round(79818*0.1);
+      if(!map['임차료']) map['임차료']=[];
+      map['임차료'].push({__virtual:true, title:'정수기 임차료', supplyAmt:sup, taxAmt:tax, amount:sup+tax});
+    })();
     var vcnt=0;
     Object.keys(map).forEach(function(k){ map[k].forEach(function(x){ if(x.__virtual) vcnt++; }); });
     return {map:map, total:all.length+vcnt, groups:buildGroups(map)};
@@ -23310,7 +23330,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     '수도':         '수도광열비',
     '전기':         '수도광열비'
   };
-  var ACCOUNT_ORDER = ['소모품','수선유지비','복리후생비','임차료','용역비','관리인건비','수도광열비','기타'];
+  var ACCOUNT_ORDER = ['소모품','수선유지비','복리후생비','통신비','임차료','용역비','관리인건비','수도광열비','기타'];
 
   function esc2(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function comma(n){ return Number(n||0).toLocaleString('ko-KR'); }
