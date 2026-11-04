@@ -132,6 +132,12 @@
   }catch(e){}
 })();
 </script>
+<script>
+/* kstNow fallback: worklog.js 없이 단독 로드해도 에러 안 나게 (v393) */
+if(typeof kstNow==='undefined'){
+  window.kstNow=function(){return new Date(Date.now()+9*3600*1000);};
+}
+</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <!-- PWA 설정 — 버전은 아래 <head> 의 window.APP_VERSION 한 곳뿐 -->
@@ -1577,7 +1583,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       <button class="v43-tab active" data-v43tab="main">📋 기록</button>
       <button class="v43-tab" data-v43tab="life">🏠 개인</button>
       <button class="v43-tab" data-v43tab="data">🗃 데이터</button>
-      <button class="v43-tab" data-v43tab="expense">💰 지출</button>
+      <button class="v43-tab" data-v43tab="expense">🏢 경비지출</button>
       <button class="v43-tab" data-v43tab="memo">📝 메모</button>
       <button class="v43-tab" data-v43tab="calendar">📅 달력</button>
       <button class="v43-tab" data-v43tab="accident">🚨 사고</button>
@@ -1680,7 +1686,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   <div class="v43-panel" id="v43-expense">
     <div style="margin-top:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-        <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">💰 지출 관리</h3>
+        <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">🏢 경비지출 관리</h3>
         <div style="display:flex;gap:6px">
           <button id="btnExpV2PurposeMgr" style="background:#f7faff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 용도 관리</button>
           <button id="btnAddExpenseV2" style="background:#3f7cb8;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 지출 등록</button>
@@ -12523,7 +12529,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       if(e.kind==='expense') add(String(e.date||'').slice(0,7));
       else if(e.kind==='labor_month' || e.kind==='meal_month') add(e.ym||'');   /* v243 */
     });
-    var thisYm=kstNow().toISOString().slice(0,7);
+    var thisYm=(typeof kstNow==='function'?kstNow():new Date()).toISOString().slice(0,7);
     add(thisYm);
     var cur=sel._init?sel.value:thisYm;
     add(cur);                                  /* 고른 달이 목록에 없어도 튕기지 않게 */
@@ -13934,7 +13940,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       if(e.kind==='meal_month'&&e.ym&&months.indexOf(e.ym)<0) months.push(e.ym);
       if(e.kind==='expense'){ var m=(e.date||'').slice(0,7); if(m&&months.indexOf(m)<0) months.push(m); }
     });
-    var thisYm=kstNow().toISOString().slice(0,7);
+    var thisYm=(typeof kstNow==='function'?kstNow():new Date()).toISOString().slice(0,7);
     if(months.indexOf(thisYm)<0) months.push(thisYm);
     months.sort().reverse();
     var cur=sel._init?sel.value:thisYm;
@@ -14931,7 +14937,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       else if(e.kind==='meal_month'||e.kind==='labor_month') ym=e.ym||'';
       if(ym&&/^\d{4}/.test(ym)) ys[ym.slice(0,4)]=1;
     });
-    var cur=kstNow().toISOString().slice(0,4);
+    var cur=(typeof kstNow==='function'?kstNow():new Date()).toISOString().slice(0,4);
     ys[cur]=1; ys[String(Number(cur)+1)]=1;
     return Object.keys(ys).sort().reverse();
   }
