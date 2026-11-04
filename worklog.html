@@ -1694,13 +1694,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
         <div id="expYmMonths" style="display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;padding-bottom:2px"></div>
       </div>
 
-      <!-- 서브탭: 목록 / 정산표 -->
+      <!-- 서브탭: 목록+정산 / 중식 / 인건비 -->
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
-        <button type="button" id="expSubTabList" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 목록</button>
-        <button type="button" id="expSubTabSettle" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🧮 정산표</button>
+        <button type="button" id="expSubTabList" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 목록·정산</button>
         <button type="button" id="expSubTabMeal" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🍚 중식</button>
         <button type="button" id="expSubTabLabor" style="height:38px;padding:0 18px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">🧾 인건비+정기분</button>
-        <button type="button" id="expSubTabClose" style="display:none;height:38px;padding:0 14px;border-radius:10px;border:1.5px solid #f0b7b7;background:#fff5f5;color:#b52929;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer" title="정산표·중식·인건비 화면을 닫습니다">✕ 닫기</button>
+        <button type="button" id="expSubTabClose" style="display:none;height:38px;padding:0 14px;border-radius:10px;border:1.5px solid #f0b7b7;background:#fff5f5;color:#b52929;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer" title="중식·인건비 화면을 닫습니다">✕ 닫기</button>
         <span id="expSubTabActions" style="display:flex;gap:6px;margin-left:auto;align-items:center;flex-wrap:wrap"></span>
       </div>
       <div id="expListWrap">
@@ -1727,10 +1726,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       </div>
       <!-- 목록 -->
       <div id="expV2ListArea"></div>
-      </div><!-- /expListWrap -->
-
-      <!-- 정산표 -->
-      <div id="expSettleWrap" style="display:none">
+      <!-- 정산표 (목록 아래 통합 표시) -->
+      <div id="expSettleWrap" style="margin-top:24px;padding-top:16px;border-top:1.5px solid #dbe6f4">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
           <select id="expSettleMonthSel" style="height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45"></select>
           <button type="button" id="expSettleCopyBtn" style="height:38px;padding:0 16px;border-radius:10px;border:1.5px solid #16a34a;background:#16a34a;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📑 엑셀 복사</button>
@@ -1746,6 +1743,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
           <div id="expV2SettleArea" style="overflow-x:auto"></div>
         </div>
       </div>
+      </div><!-- /expListWrap -->
 
       <!-- 중식이용내역 -->
       <div id="expMealWrap" style="display:none">
@@ -11401,7 +11399,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var wa=g('expV2WasteAdd'); if(wa&&!wa._b){wa._b=true;wa.addEventListener('click',function(){_wasteItems.push({desc:'',amount:''});renderWasteList();});}
     // 필터 이벤트
     ['expV2MonthSel','expV2TypeSel','expV2IssuedSel'].forEach(function(id){
-      var el=g(id); if(el&&!el._f){el._f=true;el.addEventListener('change',function(){renderExpV2List();if(typeof window.renderExpV2Dashboard==='function')window.renderExpV2Dashboard();});}
+      var el=g(id); if(el&&!el._f){el._f=true;el.addEventListener('change',function(){
+        /* v393: 목록 월 변경 시 정산표 월도 동기화 */
+        if(id==='expV2MonthSel'){
+          var v=this.value; var sms=g('expSettleMonthSel'); if(sms&&sms.value!==v) sms.value=v;
+          window.renderExpSettle(); if(typeof window.renderExpV2Settle==='function') window.renderExpV2Settle();
+        }
+        renderExpV2List();if(typeof window.renderExpV2Dashboard==='function')window.renderExpV2Dashboard();
+      });}
     });
     // 용도 관리 (지출 패널 버튼)
     var pmBtn=g('btnExpV2PurposeMgr'); if(pmBtn&&!pmBtn._b){pmBtn._b=true;pmBtn.addEventListener('click',openPurposeMgr);}
@@ -13698,11 +13703,12 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   }
 
   /* ── 서브탭 전환 ── */
+  /* v393: 목록+정산 통합 — settle은 별도 탭 없이 list 아래 항상 같이 표시 */
   function setSubTab(which){
-    var lw=g('expListWrap'), sw=g('expSettleWrap'), mw=g('expMealWrap'), bw=g('expLaborWrap');
-    var bl=g('expSubTabList'), bs=g('expSubTabSettle'), bm=g('expSubTabMeal'), bb=g('expSubTabLabor');
+    var lw=g('expListWrap'), mw=g('expMealWrap'), bw=g('expLaborWrap');
+    var bl=g('expSubTabList'), bm=g('expSubTabMeal'), bb=g('expSubTabLabor');
+    /* settle은 expListWrap 안에 포함됐으므로 lw만 제어 */
     if(lw) lw.style.display=which==='list'?'':'none';
-    if(sw) sw.style.display=which==='settle'?'':'none';
     if(mw) mw.style.display=which==='meal'?'':'none';
     if(bw) bw.style.display=which==='labor'?'':'none';
     function paint(btn,on){
@@ -13711,13 +13717,17 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       btn.style.color=on?'#fff':'#7a92a8';
       btn.style.borderColor=on?'#3f7cb8':'#dbe6f4';
     }
-    paint(bl,which==='list'); paint(bs,which==='settle'); paint(bm,which==='meal'); paint(bb,which==='labor');
-    /* v177 — 정산표·중식·인건비가 열렸을 때만 [✕ 닫기] 를 보인다 */
+    paint(bl,which==='list'); paint(bm,which==='meal'); paint(bb,which==='labor');
+    /* 중식·인건비가 열렸을 때만 [✕ 닫기] 를 보인다 */
     var bc=g('expSubTabClose');
     if(bc) bc.style.display = (which==='list') ? 'none' : '';
     window._expUserClosed = (which==='list');
     if(typeof window.syncExpActions==='function') window.syncExpActions(which);
-    if(which==='settle'){ window.renderExpSettle(); if(typeof window.renderExpV2Settle==='function') window.renderExpV2Settle(); }
+    /* 목록+정산 통합 — 목록 탭 활성화 시 정산표도 함께 렌더링 */
+    if(which==='list'){
+      window.renderExpSettle();
+      if(typeof window.renderExpV2Settle==='function') window.renderExpV2Settle();
+    }
     if(which==='meal'&&typeof window.renderExpMeal==='function') window.renderExpMeal();
     if(which==='labor'&&typeof window.renderExpLabor==='function') window.renderExpLabor();
   }
@@ -13727,12 +13737,17 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   /* ── 바인딩 (1회) ── */
   function bindSettle(){
     var bl=g('expSubTabList');   if(bl&&!bl._b){bl._b=true;bl.addEventListener('click',function(){setSubTab('list');});}
-    var bs=g('expSubTabSettle'); if(bs&&!bs._b){bs._b=true;bs.addEventListener('click',function(){setSubTab('settle');});}
+    /* expSubTabSettle 버튼 제거됐지만 혹시 남아있으면 list로 연결 */
+    var bs=g('expSubTabSettle'); if(bs&&!bs._b){bs._b=true;bs.addEventListener('click',function(){setSubTab('list');});}
     var bm=g('expSubTabMeal'); if(bm&&!bm._b){bm._b=true;bm.addEventListener('click',function(){setSubTab('meal');});}
     var bb=g('expSubTabLabor'); if(bb&&!bb._b){bb._b=true;bb.addEventListener('click',function(){setSubTab('labor');});}
-    /* v177 — ✕ 닫기 : 목록으로 돌아간다 (노션 화면에서는 서브탭 줄만 남는다) */
+    /* ✕ 닫기 : 목록으로 돌아간다 */
     var bc=g('expSubTabClose'); if(bc&&!bc._b){bc._b=true;bc.addEventListener('click',function(){setSubTab('list');});}
-    var ms=g('expSettleMonthSel'); if(ms&&!ms._b){ms._b=true;ms.addEventListener('change',function(){window.renderExpSettle();if(typeof window.renderExpV2Settle==='function')window.renderExpV2Settle();});}
+    /* 정산표 월 변경 시 목록 월도 동기화 */
+    var ms=g('expSettleMonthSel'); if(ms&&!ms._b){ms._b=true;ms.addEventListener('change',function(){
+      var v=this.value; var lms=g('expV2MonthSel'); if(lms&&lms.value!==v) lms.value=v;
+      window.renderExpSettle();if(typeof window.renderExpV2Settle==='function')window.renderExpV2Settle();
+    });}
     var cp=g('expSettleCopyBtn');  if(cp&&!cp._b){cp._b=true;cp.addEventListener('click',copySettleToExcel);}
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindSettle);
@@ -23353,18 +23368,24 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     }catch(e){ alert(lines.join('\n')); }
   };
 
+  /* v393: 목록+정산 통합 — 목록 탭(expSubTabList) 클릭 시 renderExpV2Settle 호출 */
   function bindV2Settle(){
+    /* expSubTabSettle 버튼은 제거됐지만 혹시 남아있으면 list로 연결 */
     var tabBtn = document.getElementById('expSubTabSettle');
-    if(!tabBtn || tabBtn._v2bound) return;
-    tabBtn._v2bound = true;
-    tabBtn.addEventListener('click', function(){
-      setTimeout(function(){
-        var area = document.getElementById('expV2SettleArea');
-        if(area && area.style.display !== 'none') window.renderExpV2Settle();
-        var sw = document.getElementById('expSettleWrap');
-        if(sw && sw.style.display !== 'none') window.renderExpV2Settle();
-      }, 150);
-    });
+    if(tabBtn && !tabBtn._v2bound){
+      tabBtn._v2bound = true;
+      tabBtn.addEventListener('click', function(){
+        setTimeout(function(){ window.renderExpV2Settle(); }, 150);
+      });
+    }
+    /* 목록 탭 클릭 시 V2 정산표 렌더 */
+    var listBtn = document.getElementById('expSubTabList');
+    if(listBtn && !listBtn._v2bound){
+      listBtn._v2bound = true;
+      listBtn.addEventListener('click', function(){
+        setTimeout(function(){ window.renderExpV2Settle(); }, 150);
+      });
+    }
     var msel = document.getElementById('expSettleMonthSel');
     if(msel && !msel._v2bound){
       msel._v2bound = true;
