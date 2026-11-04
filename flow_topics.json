@@ -1,28 +1,27 @@
 {
- "updated_at": "2026-11-04T04:53:15.578485+09:00",
+ "updated_at": "2026-11-04T10:45:50.375116+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 16,
+   "video_count": 15,
    "channel_count": 11,
-   "total_views": 1265741,
-   "latest": "2026-11-03T19:15:31+09:00",
+   "total_views": 788591,
+   "latest": "2026-11-04T08:44:39+09:00",
    "video_ids": [
-    "zhIjTh5OecU",
-    "0CIAiCgj0OA",
+    "OPDGyjDQqOU",
+    "63hKfJnlwkg",
+    "g_PVbHEdRvk",
     "GNRAhlSJg0g",
     "9GJSnvwTTIk",
     "AZkmw1HOmLQ",
     "9JiCd79CwKM",
-    "sTJ9fDxOc-Y",
     "YgNrMIA1pNs",
     "ZGDKzFMXYKA",
     "OJ_CifoGJrw",
     "JxBCS5HNOrA",
     "6Zq7p54WTNI",
     "N2gz3wed5kk",
-    "n9rqW4jKIAg",
     "MCf2UJkvPCo",
     "4ksoy_GKmYc"
    ],
@@ -41,22 +40,22 @@
    ],
    "subtopics": [
     {
-     "word": "중간선거",
-     "videos": 3,
-     "channels": 3
-    },
-    {
      "word": "11월",
      "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "3일",
-     "videos": 3,
-     "channels": 3
+     "channels": 2
     },
     {
      "word": "데이터센터",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "위험하다",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "중간선거",
      "videos": 2,
      "channels": 2
     },
@@ -66,7 +65,7 @@
      "channels": 2
     },
     {
-     "word": "코스피",
+     "word": "원을",
      "videos": 2,
      "channels": 2
     }
@@ -76,12 +75,12 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 14,
+   "video_count": 12,
    "channel_count": 10,
-   "total_views": 1054081,
-   "latest": "2026-11-03T21:00:06+09:00",
+   "total_views": 700737,
+   "latest": "2026-11-04T08:44:39+09:00",
    "video_ids": [
-    "YjOCgsz4Ifo",
+    "OPDGyjDQqOU",
     "QqkGQV4Hp4A",
     "Tjj11WHpGrg",
     "mDp2d_Xctf8",
@@ -90,9 +89,7 @@
     "ZGDKzFMXYKA",
     "8Rj35sknn-I",
     "T2LGIfG5aIo",
-    "n9rqW4jKIAg",
     "9dLwS34lB6o",
-    "bOoU8IHTKFs",
     "JGI0fWu-8bM",
     "4ksoy_GKmYc"
    ],
@@ -110,17 +107,7 @@
    ],
    "subtopics": [
     {
-     "word": "AI",
-     "videos": 3,
-     "channels": 3
-    },
-    {
      "word": "반도체주",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "11월",
      "videos": 3,
      "channels": 2
     },
@@ -130,14 +117,24 @@
      "channels": 2
     },
     {
-     "word": "삼성전자",
+     "word": "11월",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "월요일",
+     "word": "수주",
      "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "AI",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "급락",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -145,11 +142,15 @@
   {
    "id": "정책_정치",
    "name": "정책·정치",
-   "video_count": 9,
+   "video_count": 12,
    "channel_count": 8,
-   "total_views": 1098664,
-   "latest": "2026-11-04T00:36:42+09:00",
+   "total_views": 1262712,
+   "latest": "2026-11-04T10:39:48+09:00",
    "video_ids": [
+    "yVdXC7RUcTY",
+    "TN607_WWYIc",
+    "f40Ot3uy9tw",
+    "sD8SDIyljww",
     "6T-2crlln2I",
     "4Gkk5BqjIf0",
     "9zfefRlsxOo",
@@ -157,24 +158,28 @@
     "9JiCd79CwKM",
     "NeiY28d9YHw",
     "YgNrMIA1pNs",
-    "6Zq7p54WTNI",
-    "7YBXPnG5FDA"
+    "6Zq7p54WTNI"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
+    "삼프로TV 3PROTV",
     "소수몽키",
     "슈카월드",
     "슈퍼개미 이세무사TV",
     "증시각도기TV",
-    "체슬리TV (박세익)",
-    "한문도TV 부동산채널"
+    "체슬리TV (박세익)"
    ],
    "subtopics": [
     {
      "word": "중간선거",
-     "videos": 5,
-     "channels": 4
+     "videos": 7,
+     "channels": 5
+    },
+    {
+     "word": "미국",
+     "videos": 3,
+     "channels": 3
     },
     {
      "word": "외국인",
@@ -185,6 +190,11 @@
      "word": "AI",
      "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "더블",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -192,44 +202,30 @@
   {
    "id": "국내증시",
    "name": "국내증시",
-   "video_count": 10,
-   "channel_count": 5,
-   "total_views": 1725201,
+   "video_count": 7,
+   "channel_count": 4,
+   "total_views": 1232184,
    "latest": "2026-11-03T20:00:29+09:00",
    "video_ids": [
     "dc6PCzNcx9k",
-    "zhIjTh5OecU",
     "M0X0u1kiQkY",
     "1BaRbcHkVOc",
-    "sTJ9fDxOc-Y",
     "0ouxWIbCCDo",
     "YgNrMIA1pNs",
     "cR00tECtv9k",
-    "Gjvs89hn0ug",
-    "gWM8X8AiP9U"
+    "Gjvs89hn0ug"
    ],
    "channels": [
     "815머니톡",
     "달란트투자",
-    "삼프로TV 3PROTV",
     "슈카월드",
     "슈퍼개미 이세무사TV"
    ],
    "subtopics": [
     {
      "word": "코스피",
-     "videos": 7,
-     "channels": 4
-    },
-    {
-     "word": "급락",
-     "videos": 3,
+     "videos": 5,
      "channels": 3
-    },
-    {
-     "word": "AI",
-     "videos": 3,
-     "channels": 2
     },
     {
      "word": "500선",
@@ -242,9 +238,19 @@
      "channels": 2
     },
     {
-     "word": "증시",
+     "word": "급락",
      "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "긴급인터뷰",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "바닥",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
@@ -252,16 +258,15 @@
   {
    "id": "중국경제",
    "name": "중국경제",
-   "video_count": 5,
+   "video_count": 4,
    "channel_count": 4,
-   "total_views": 529887,
+   "total_views": 524073,
    "latest": "2026-11-03T20:30:35+09:00",
    "video_ids": [
     "gA49EVKKv4c",
     "9JiCd79CwKM",
     "6Pgv1iNg0DU",
-    "bcx9qVQZj78",
-    "n9rqW4jKIAg"
+    "bcx9qVQZj78"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
@@ -272,62 +277,11 @@
    "subtopics": [
     {
      "word": "중국",
-     "videos": 5,
+     "videos": 4,
      "channels": 4
     },
     {
      "word": "애플",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "미국",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "관세_무역",
-   "name": "관세·무역",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 409440,
-   "latest": "2026-11-03T18:30:09+09:00",
-   "video_ids": [
-    "PWOQ9WkY6Sw",
-    "9dLwS34lB6o",
-    "bOoU8IHTKFs"
-   ],
-   "channels": [
-    "달란트투자",
-    "염블리와 함께 (염승환)",
-    "증시각도기TV"
-   ],
-   "subtopics": [
-    {
-     "word": "11월",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "월요일",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "반도체",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "2일",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "수출",
      "videos": 2,
      "channels": 2
     }
@@ -339,26 +293,21 @@
    "name": "실적시즌",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 136826,
-   "latest": "2026-11-03T18:15:29+09:00",
+   "total_views": 89991,
+   "latest": "2026-11-04T10:43:08+09:00",
    "video_ids": [
-    "0CIAiCgj0OA",
+    "n-jREbc74M8",
     "AZkmw1HOmLQ",
     "6Pgv1iNg0DU"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
-    "삼프로TV 3PROTV",
-    "염블리와 함께 (염승환)"
+    "염블리와 함께 (염승환)",
+    "체슬리TV (박세익)"
    ],
    "subtopics": [
     {
      "word": "실적",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "AI",
      "videos": 2,
      "channels": 2
     }
@@ -368,19 +317,17 @@
   {
    "id": "고용_경기",
    "name": "고용·경기",
-   "video_count": 4,
-   "channel_count": 2,
-   "total_views": 73366,
+   "video_count": 3,
+   "channel_count": 1,
+   "total_views": 43052,
    "latest": "2026-11-03T23:30:02+09:00",
    "video_ids": [
     "QVJep1EljxQ",
     "-Szy6dBaX0E",
-    "YjOCgsz4Ifo",
     "OtBXzrCFMUc"
    ],
    "channels": [
-    "경제사냥꾼",
-    "삼프로TV 3PROTV"
+    "경제사냥꾼"
    ],
    "subtopics": [
     {
