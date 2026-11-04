@@ -9,7 +9,7 @@
 /* v200 — 이 파일이 GitHub 에 올라갔는지 알아보는 표식.
    worklog.js 의 JS_BUILD 와 같은 구실을 한다. wlVer 가 이것도 견준다.
    🔴 안 올리면 아무 경고 없이 옛 화면이 뜬다 — 그래서 표식을 붙였다. */
-window.PERSONAL_BUILD = 'v391-1102-1200';
+window.PERSONAL_BUILD = 'v392-1104-0900';
 /* ══════════════════════════════════════════════════════════
    🏠 개인 — 기록 · 차계부 · 연락처 · 결산                v47
    데이터: entries 안에 kind:'personal' / kind:'pcontact'
@@ -9596,7 +9596,7 @@ window.PERSONAL_BUILD = 'v391-1102-1200';
     host.querySelectorAll('[data-ldel]').forEach(function(b){
       b.addEventListener('click', function(ev){
         ev.stopPropagation();
-        wlAskDel('이 기록을 지울까요?').then(function(ok){
+        askDel('이 기록을 지울까요?').then(function(ok){
           if(!ok) return;
           try{ pDel(b.getAttribute('data-ldel')); }
           catch(e){ console.error('[삭제]', e); if(typeof toast==='function') toast('삭제 실패: '+(e.message||e)); return; }

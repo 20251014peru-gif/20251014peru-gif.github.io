@@ -11200,45 +11200,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         html += makeSection(tax,'#c2410c','📃','기타정산 <span style="font-size:11px;color:#94a3b8;font-weight:600">(세금계산서)</span>',tUnissued?' · <span style="color:#c2410c">미발급 '+tUnissued+'건</span>':'');
       }
       if(util.length)     html += makeSection(util,'#0e7490','💧','수도광열비 <span style="font-size:11px;color:#94a3b8;font-weight:600">(전표 — 수도·전기)</span>');
-      /* 📅 월정산 카드 (인건비 탭 연동, 읽기전용) */
-      try{
-        var msYm=monthSel||'';
-        if(msYm && typeof window.getMonthlySettleRows==='function'){
-          var mrows=window.getMonthlySettleRows(msYm)||[];
-          /* v180 — 달님 요청: 비어 있어도 자리를 보여 주고, 여기서 바로 고칠 수 있게 */
-          {
-            var mSum2=mrows.reduce(function(s,r){return s+(Number(r.amount)||0);},0);
-            var _pv=''; try{ _pv=(window.wlMonthly&&window.wlMonthly.prevYm)?window.wlMonthly.prevYm(msYm):''; }catch(er){}
-            var BT='height:30px;padding:0 12px;border-radius:9px;border:1.5px solid #ea580c;background:#fff;color:#c2410c;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer';
-            html+='<div style="margin-bottom:22px">'
-              +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 4px;border-bottom:2px solid #ea580c;margin-bottom:10px">'
-              +'<span style="font-size:14px;font-weight:800;color:#ea580c">📅 월정산 <span style="font-size:11px;color:#94a3b8;font-weight:600">(정기 발생분 — 인건비 탭의 표 하나로 관리)</span>'
-              + ((window.wlMonthly&&window.wlMonthly.saved&&!window.wlMonthly.saved(msYm))
-                 ? ' <span style="font-size:11px;font-weight:800;color:#b52929;background:#fff5f5;border:1px solid #f0b7b7;border-radius:8px;padding:2px 7px" title="인건비 탭에서 [💾 저장] 을 눌러야 확정됩니다">🔴 아직 저장 안 됨</span>' : '')
-              +'</span>'
-              +'<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
-              +  (_pv?'<button type="button" id="expListMoPrev" style="'+BT+'" title="'+esc(_pv)+' 것을 그대로 가져옵니다">⬅ '+esc(_pv)+' 것 가져오기</button>':'')
-              +  '<button type="button" id="expListMoEdit" style="'+BT+';border:none;background:#ea580c;color:#fff">✏️ 수정</button>'
-              +  '<span style="font-size:13px;font-weight:800;color:#ea580c">'+fmt(mSum2)+'원 · '+mrows.length+'건</span>'
-              +'</span>'
-              +'</div>'
-              + (mrows.length?'':'<div style="padding:18px 4px;font-size:13px;color:#aab8c8;font-weight:600">'
-                  + esc(msYm)+' 월정산이 비어 있어요 — '
-                  + (_pv?'[⬅ '+esc(_pv)+' 것 가져오기]':'[✏️ 수정]')+' 을 누르세요</div>')
-              +'<div style="'+G+'">'
-              +mrows.map(function(r){
-                return '<div data-gomonthly="1" style="background:#fff;border:1.5px solid #fed7aa;border-left:4px solid #ea580c;border-radius:12px;padding:12px 14px;cursor:pointer">'
-                  +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
-                  +'<div style="font-size:13px;font-weight:700;color:#1a2f45;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;word-break:break-word">'+esc(r.title)+'</div>'
-                  +'<div style="font-size:15px;font-weight:800;color:#ea580c;white-space:nowrap">'+fmt(r.amount)+'원</div>'
-                  +'</div>'
-                  +'<div style="font-size:11px;color:#94a3b8;margin-top:4px">공급 '+fmt(r.supplyAmt)+' / 세 '+fmt(r.taxAmt)+(r.memo?' · '+esc(r.memo):'')+'</div>'
-                  +'</div>';
-              }).join('')
-              +'</div></div>';
-          }
-        }
-      }catch(err){ console.error('[목록 월정산]',err); }
+      /* 📅 월정산 카드는 인건비 탭(🧾 인건비+정기분)에서만 관리 — 목록 화면에서 제거 (v392) */
       if(salary.length) html += makeSection(salary,'#16a34a','💵','기타 <span style="font-size:11px;color:#94a3b8;font-weight:600">(급여)</span>');
     } else {
       html = '<div style="'+G+'">'+list.map(makeCard).join('')+'</div>';
