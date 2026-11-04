@@ -164,7 +164,7 @@ if(typeof kstNow==='undefined'){
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v391-1102-1200";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v394-1104-1050";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -1583,7 +1583,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       <button class="v43-tab active" data-v43tab="main">📋 기록</button>
       <button class="v43-tab" data-v43tab="life">🏠 개인</button>
       <button class="v43-tab" data-v43tab="data">🗃 데이터</button>
-      <button class="v43-tab" data-v43tab="expense">🏢 경비지출</button>
+      <button class="v43-tab" data-v43tab="expense">📅 월별정산</button>
       <button class="v43-tab" data-v43tab="memo">📝 메모</button>
       <button class="v43-tab" data-v43tab="calendar">📅 달력</button>
       <button class="v43-tab" data-v43tab="accident">🚨 사고</button>
@@ -1686,7 +1686,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
   <div class="v43-panel" id="v43-expense">
     <div style="margin-top:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-        <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">🏢 경비지출 관리</h3>
+        <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">📅 월별정산 관리</h3>
         <div style="display:flex;gap:6px">
           <button id="btnExpV2PurposeMgr" style="background:#f7faff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 용도 관리</button>
           <button id="btnAddExpenseV2" style="background:#3f7cb8;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 지출 등록</button>
@@ -12420,10 +12420,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
      · 계정이 없는 예전 지출(선결재·선납부·기타정산이던 것)은 「미분류」 블록에 모인다 — ⇄ 로 계정을 달아 준다
      · 🔴 수도광열비(전기·수도 제외 계산에 쓴다)·월정산·기타(인건비·중식 자동)는 그대로 남는다 */
   var NOACCT='미분류';
-  var FIXEDK={'월정산':1,'수도광열비':1,'기타':1,'__MID':1};
+  var FIXEDK={'월정산':1,'__MID':1};  /* v394: 수도광열비·기타는 계정 그룹으로 통합 */
   var LEGACYK={'선결재':1,'선납부':1,'기타정산':1,'월정산':1,'기타':1,'__MID':1};   /* 계정 이름으로 못 쓰는 말 */
   var LS_ACCT='wl_settle_accts';
-  var ACCT_DEFAULT=['복리후생비','수선유지비','임차료','사무용품','소모품'];
+  var ACCT_DEFAULT=['복리후생비','수선유지비','임차료','수도광열비','관리인건비','중식대','사무용품','소모품'];
   var C_COL=['#0f766e','#a21caf','#4d7c0f','#be123c','#1d4ed8','#b45309','#7c3aed','#0e7490'];
   var C_BG =['#f0fdfa','#fdf4ff','#f7fee7','#fff1f2','#eff6ff','#fffbeb','#f5f3ff','#ecfeff'];
   function acctStored(){
@@ -12442,13 +12442,13 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var a=acctStored();
     (typeof entries!=='undefined'?entries:[]).forEach(function(e){
       var o=e&&e.kind==='expense'?String(e.settleGrp||'').trim():'';
-      if(o && !LEGACYK[o] && o!=='수도광열비' && o!==NOACCT && a.indexOf(o)<0) a.push(o);
+      if(o && !LEGACYK[o] && o!==NOACCT && a.indexOf(o)<0) a.push(o);
     });
     return a;
   }
   function acctAdd(n){
     var a=acctStored();
-    if(n && n!==NOACCT && n!=='수도광열비' && !LEGACYK[n] && a.indexOf(n)<0){ a.push(n); acctSave(a); }
+    if(n && n!==NOACCT && !LEGACYK[n] && a.indexOf(n)<0){ a.push(n); acctSave(a); }
   }
   function acctRename(o,n){
     var a=acctStored(), i=a.indexOf(o);
@@ -12458,15 +12458,15 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   }
   /* 이 지출이 정산표 어느 블록에 들어가는가 — 계정(settleGrp)이 있으면 그것, 없으면 예전 자동 분류(수도·전기는 수도광열비, 나머지는 미분류) */
   function gkeyOf(e){
+    /* v394: 수도광열비는 계정 그룹으로 통합. 기타(인건비·중식)는 buildMap에서 관리인건비·중식대로 분리 */
     var auto=classify(e);
-    if(auto==='기타') return '기타';
     var o=String(e.settleGrp||'').trim();
-    if(o==='수도광열비') return '수도광열비';
-    if(o && !LEGACYK[o]) return o;
-    if(auto==='수도광열비') return '수도광열비';
+    if(o && !LEGACYK[o]) return o;        /* 계정이 지정돼 있으면 그대로 사용 */
+    if(auto==='수도광열비') return '수도광열비'; /* 전기·수도 → 수도광열비 계정으로 */
+    if(auto==='기타') return NOACCT;      /* 기타 자동 분류는 미분류로 */
     return NOACCT;
   }
-  /* 그 달에 실제로 있는 계정만 블록으로 (목록 순서대로, 미분류는 맨 뒤) → 합 계 → 월정산 → 수도광열비 → 기타 */
+  /* 그 달에 실제로 있는 계정만 블록으로 (목록 순서대로, 미분류는 맨 뒤) → 합 계 → 월정산(고정) */
   function buildGroups(map){
     var order=acctList(), keys=[];
     Object.keys(map).forEach(function(k){ if(!FIXEDK[k] && (map[k]||[]).length) keys.push(k); });
@@ -12543,7 +12543,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var all=(typeof entries!=='undefined'?entries:[]).filter(function(e){return e.kind==='expense'&&(e.date||'').startsWith(ym);});
     /* v247 — 표에 직접 적은 줄(inlineAt)은 적은 순서대로 맨 뒤에 둔다 */
     all.sort(function(a,b){return ((a.inlineAt?1:0)-(b.inlineAt?1:0))||(a.inlineAt&&b.inlineAt?(a.inlineAt-b.inlineAt):0)||(a.date||'').localeCompare(b.date||'')||((a.createdAt||0)-(b.createdAt||0));});
-    var map={'월정산':[],'수도광열비':[],'기타':[]};
+    /* v394: 수도광열비·관리인건비·중식대를 계정 그룹으로 통합 — 기타 고정 블록 제거 */
+    var map={'월정산':[]};
     all.forEach(function(e){ var k=gkeyOf(e); (map[k]||(map[k]=[])).push(e); });
     /* 📅 월정산 자동 반영 (인건비 탭 월정산 표) */
     try{
@@ -12551,29 +12552,32 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         (window.getMonthlySettleRows(ym)||[]).forEach(function(r){ map['월정산'].push(r); });
       }
     }catch(e){ console.error('[정산표 월정산]',e); }
-    /* 🧾 관리인건비 자동 반영 (인건비 탭 → 부가세 10%) */
+    /* 🧾 관리인건비 자동 반영 → 관리인건비 계정 그룹으로 (부가세 10%) */
     try{
       if(typeof window.getLaborMonthTotal==='function'){
         var labor=window.getLaborMonthTotal(ym);
         if(labor&&labor.total>0){
           var lt=Math.round(labor.total*0.1);
-          map['기타'].push({__virtual:true, title:'관리인건비', supplyAmt:labor.total, taxAmt:lt, amount:labor.total+lt,
+          if(!map['관리인건비']) map['관리인건비']=[];
+          map['관리인건비'].push({__virtual:true, title:'관리인건비', supplyAmt:labor.total, taxAmt:lt, amount:labor.total+lt,
             memo:'도급비 산출 '+labor.count+'명'});
         }
       }
     }catch(e){ console.error('[정산표 인건비]',e); }
-    /* 🍚 중식대 자동 반영 (중식이용내역 → 부가세 10%) */
+    /* 🍚 중식대 자동 반영 → 중식대 계정 그룹으로 (부가세 10%) */
     try{
       if(typeof window.getMealMonthTotal==='function'){
         var meal=window.getMealMonthTotal(ym);
         if(meal&&meal.total>0){
           var mt=Math.round(meal.total*0.1);
-          map['기타'].push({__virtual:true, title:'관리비 중식대', supplyAmt:meal.total, taxAmt:mt, amount:meal.total+mt,
+          if(!map['중식대']) map['중식대']=[];
+          map['중식대'].push({__virtual:true, title:'관리비 중식대', supplyAmt:meal.total, taxAmt:mt, amount:meal.total+mt,
             memo:'중식 '+meal.count+'건 (일반 '+meal.normal+' · 특식 '+meal.special+((meal.boknal||0)>0?' · 복날특식 '+meal.boknal:'')+')'});
         }
       }
     }catch(e){ console.error('[정산표 중식]',e); }
-    var vcnt=map['기타'].concat(map['월정산']).filter(function(x){return x.__virtual;}).length;
+    var vcnt=0;
+    Object.keys(map).forEach(function(k){ map[k].forEach(function(x){ if(x.__virtual) vcnt++; }); });
     return {map:map, total:all.length+vcnt, groups:buildGroups(map)};
   }
 
@@ -23259,17 +23263,18 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     '수도':         '수도광열비',
     '전기':         '수도광열비'
   };
-  var ACCOUNT_ORDER = ['복리후생비','수선유지비','임차료','용역비','인건비','수도광열비','기타소모품','기타'];
+  var ACCOUNT_ORDER = ['복리후생비','수선유지비','임차료','용역비','인건비','수도광열비','관리인건비','중식대','기타소모품','기타'];
 
   function esc2(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function comma(n){ return Number(n||0).toLocaleString('ko-KR'); }
 
   function toAcct(e){
+    /* v394: 관리인건비·중식대 가상행 직접 처리 */
+    if(e.__virtual) return e.settleGrp || e.title || '기타';
     var p = String(e.purpose||'').trim();
     if(ACCOUNT_MAP[p]) return ACCOUNT_MAP[p];
     var sg = String(e.settleGrp||'').trim();
-    if(sg && sg !== '미분류' && sg !== '수도광열비') return sg;
-    if(sg === '수도광열비') return '수도광열비';
+    if(sg && sg !== '미분류') return sg;  /* 수도광열비 포함 모든 계정 그대로 사용 */
     return '기타';
   }
 
@@ -23283,10 +23288,19 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     var box = document.getElementById('expV2SettleArea');
     if(!box) return;
     var ym = currentYm();
-    var allEntries = (typeof entries !== 'undefined' && Array.isArray(entries)) ? entries : [];
-    var rows = allEntries.filter(function(e){
-      return e && e.kind === 'expense' && String(e.date||'').startsWith(ym);
-    });
+    /* v394: buildMap을 통해 가상 행(관리인건비·중식대)까지 포함 */
+    var mapResult = (typeof buildMap === 'function') ? buildMap(ym) : null;
+    var rows = [];
+    if(mapResult){
+      Object.keys(mapResult.map).forEach(function(k){
+        (mapResult.map[k]||[]).forEach(function(e){ rows.push(e); });
+      });
+    } else {
+      var allEntries = (typeof entries !== 'undefined' && Array.isArray(entries)) ? entries : [];
+      rows = allEntries.filter(function(e){
+        return e && e.kind === 'expense' && String(e.date||'').startsWith(ym);
+      });
+    }
     if(!rows.length){
       box.innerHTML = '<div style="padding:16px;color:#94a3b8;font-size:13px">'+esc2(ym)+' 지출 기록이 없습니다.</div>';
       return;
