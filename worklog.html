@@ -164,7 +164,7 @@ if(typeof kstNow==='undefined'){
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v395-1104-2010";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v396-1104-2015";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -12420,7 +12420,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
      · 계정이 없는 예전 지출(선결재·선납부·기타정산이던 것)은 「미분류」 블록에 모인다 — ⇄ 로 계정을 달아 준다
      · 🔴 수도광열비(전기·수도 제외 계산에 쓴다)·월정산·기타(인건비·중식 자동)는 그대로 남는다 */
   var NOACCT='미분류';
-  var FIXEDK={'월정산':1,'__MID':1};  /* v394: 수도광열비·기타는 계정 그룹으로 통합 */
+  var FIXEDK={'__MID':1};  /* v396: 월정산 고정 블록 완전 제거 — 모두 계정 그룹으로 */
   var LEGACYK={'선결재':1,'선납부':1,'기타정산':1,'월정산':1,'기타':1,'__MID':1};   /* 계정 이름으로 못 쓰는 말 */
   var LS_ACCT='wl_settle_accts';
   /* v395: 순서=소모품→수선유지비→복리후생비→임차료→용역비→관리인건비→수도광열비. 중식대 제거(복리후생비 흡수) */
@@ -12438,13 +12438,24 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     try{ localStorage.setItem(LS_ACCT, JSON.stringify(a)); }
     catch(e){ console.warn('[정산표 계정] 저장 실패', e); if(typeof toast==='function') toast('⚠ 계정 목록을 이 기기에 저장하지 못했어요'); }
   }
-  /* 고를 수 있는 계정 = 저장해 둔 목록 + 지출에 이미 쓰인 것 (다른 기기에서 만든 계정도 따라온다) */
+  /* 고를 수 있는 계정 = 저장해 둔 목록 + 지출에 이미 쓰인 것 + 월정산 항목명 (다른 기기 포함) */
   function acctList(){
     var a=acctStored();
+    /* 지출 기록에서 사용된 계정 */
     (typeof entries!=='undefined'?entries:[]).forEach(function(e){
       var o=e&&e.kind==='expense'?String(e.settleGrp||'').trim():'';
       if(o && !LEGACYK[o] && o!==NOACCT && a.indexOf(o)<0) a.push(o);
     });
+    /* v396: 월정산 항목명도 계정으로 — 지출 입력 드롭다운에서 선택 가능 */
+    try{
+      if(typeof window.getMonthlySettleRows==='function'){
+        var curYm=(typeof kstNow==='function'?kstNow():new Date()).toISOString().slice(0,7);
+        (window.getMonthlySettleRows(curYm)||[]).forEach(function(r){
+          var n=String(r.title||'').trim();
+          if(n && !LEGACYK[n] && n!==NOACCT && a.indexOf(n)<0) a.push(n);
+        });
+      }
+    }catch(e){}
     return a;
   }
   function acctAdd(n){
@@ -12577,7 +12588,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     try{
       if(typeof window.getMonthlySettleRows==='function'){
         (window.getMonthlySettleRows(ym)||[]).forEach(function(r){
-          var acct=MONTHLY_ACCT_MAP[r.title]||'월정산';
+          /* v396: 미매핑 항목도 r.title을 계정명으로 사용 — 월정산 고정 블록 없앰 */
+          var acct=MONTHLY_ACCT_MAP[r.title]||(r.title||'기타');
           if(!map[acct]) map[acct]=[];
           map[acct].push(r);
         });
