@@ -164,7 +164,7 @@ if(typeof kstNow==='undefined'){
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v394-1104-2000";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v395-1104-2010";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -12423,7 +12423,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   var FIXEDK={'월정산':1,'__MID':1};  /* v394: 수도광열비·기타는 계정 그룹으로 통합 */
   var LEGACYK={'선결재':1,'선납부':1,'기타정산':1,'월정산':1,'기타':1,'__MID':1};   /* 계정 이름으로 못 쓰는 말 */
   var LS_ACCT='wl_settle_accts';
-  var ACCT_DEFAULT=['복리후생비','수선유지비','임차료','수도광열비','관리인건비','중식대','사무용품','소모품'];
+  /* v395: 순서=소모품→수선유지비→복리후생비→임차료→용역비→관리인건비→수도광열비. 중식대 제거(복리후생비 흡수) */
+  var ACCT_DEFAULT=['소모품','수선유지비','복리후생비','임차료','용역비','관리인건비','수도광열비'];
   var C_COL=['#0f766e','#a21caf','#4d7c0f','#be123c','#1d4ed8','#b45309','#7c3aed','#0e7490'];
   var C_BG =['#f0fdfa','#fdf4ff','#f7fee7','#fff1f2','#eff6ff','#fffbeb','#f5f3ff','#ecfeff'];
   function acctStored(){
@@ -12466,9 +12467,20 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(auto==='기타') return NOACCT;      /* 기타 자동 분류는 미분류로 */
     return NOACCT;
   }
-  /* 그 달에 실제로 있는 계정만 블록으로 (목록 순서대로, 미분류는 맨 뒤) → 합 계 → 월정산(고정) */
+  /* 각 계정 블록 내 행 정렬: 날짜있는 실지출(날짜 오름차순) → 가상행(__virtual, 고정항목) 맨 아래 */
+  function sortAcctRows(rows){
+    return rows.slice().sort(function(a,b){
+      var af=a.__virtual?1:0, bf=b.__virtual?1:0;
+      if(af!==bf) return af-bf;                        /* 실지출 먼저, 가상행 나중 */
+      var ad=String(a.date||''), bd=String(b.date||'');
+      return ad.localeCompare(bd);                     /* 날짜 오름차순(오래된 것 위) */
+    });
+  }
+  /* 그 달에 실제로 있는 계정만 블록으로 (ACCT_DEFAULT 순서 고정, 미분류는 맨 뒤) → 합계 → 월정산(고정) */
   function buildGroups(map){
-    var order=acctList(), keys=[];
+    /* 각 블록 행 정렬 적용 */
+    Object.keys(map).forEach(function(k){ map[k]=sortAcctRows(map[k]); });
+    var order=ACCT_DEFAULT, keys=[];   /* v395: ACCT_DEFAULT 순서로 고정 */
     Object.keys(map).forEach(function(k){ if(!FIXEDK[k] && (map[k]||[]).length) keys.push(k); });
     keys.sort(function(a,b){
       if(a===NOACCT) return 1; if(b===NOACCT) return -1;
@@ -12548,8 +12560,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     all.forEach(function(e){ var k=gkeyOf(e); (map[k]||(map[k]=[])).push(e); });
     /* 📅 월정산 자동 반영 → 항목별 계정 그룹으로 분산 (v394) */
     /* 월정산 항목명 → 계정 매핑 (없는 항목은 월정산 고정 블록으로 fallback) */
+    /* v395: 중식대→복리후생비, 기타소모품→소모품 */
     var MONTHLY_ACCT_MAP={
       '청소관리용품':'소모품',    '커피외':'복리후생비',
+      '관리비중식대':'복리후생비','중식대':'복리후생비',
       'PC임대료':'임차료',        'PC 임대료':'임차료',
       '소독.방역':'용역비',       '소독방역':'용역비',
       '정보통신설비 유지관리':'용역비', '정보통신':'용역비',
@@ -12587,8 +12601,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
         var meal=window.getMealMonthTotal(ym);
         if(meal&&meal.total>0){
           var mt=Math.round(meal.total*0.1);
-          if(!map['중식대']) map['중식대']=[];
-          map['중식대'].push({__virtual:true, title:'관리비 중식대', supplyAmt:meal.total, taxAmt:mt, amount:meal.total+mt,
+          /* v395: 중식대 → 복리후생비 계정으로 흡수 */
+          if(!map['복리후생비']) map['복리후생비']=[];
+          map['복리후생비'].push({__virtual:true, title:'관리비 중식대', supplyAmt:meal.total, taxAmt:mt, amount:meal.total+mt,
             memo:'중식 '+meal.count+'건 (일반 '+meal.normal+' · 특식 '+meal.special+((meal.boknal||0)>0?' · 복날특식 '+meal.boknal:'')+')'});
         }
       }
@@ -23263,11 +23278,11 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
      ══════════════════════════════════════════════════════════════ -->
 <script>
 (function(){
+  /* v395: 중식대→복리후생비, 기타소모품→소모품, 순서=소모품→수선유지비→복리후생비→임차료→용역비→관리인건비→수도광열비 */
   var ACCOUNT_MAP = {
-    /* 지출 직접 입력 항목 */
-    '청소관리용품': '소모품',
+    '청소관리용품': '소모품',    '기타소모품':'소모품',
     '커피외':       '복리후생비',
-    '관리비중식대': '중식대',
+    '관리비중식대': '복리후생비','중식대':'복리후생비',
     'PC임차료':     '임차료',    'PC임대료':'임차료',    'PC 임대료':'임차료',
     '보안시스템':   '임차료',    '보안시스템 임차료':'임차료',
     '소독방역':     '용역비',    '소독.방역':'용역비',
@@ -23281,7 +23296,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
     '수도':         '수도광열비',
     '전기':         '수도광열비'
   };
-  var ACCOUNT_ORDER = ['복리후생비','수선유지비','임차료','용역비','인건비','수도광열비','관리인건비','중식대','기타소모품','기타'];
+  var ACCOUNT_ORDER = ['소모품','수선유지비','복리후생비','임차료','용역비','관리인건비','수도광열비','기타'];
 
   function esc2(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function comma(n){ return Number(n||0).toLocaleString('ko-KR'); }
@@ -23328,6 +23343,14 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
       var acct = toAcct(e);
       if(!groups[acct]) groups[acct] = [];
       groups[acct].push(e);
+    });
+    /* v395: 각 계정 블록 내 날짜 오름차순 → 가상행(고정항목) 맨 아래 */
+    Object.keys(groups).forEach(function(k){
+      groups[k].sort(function(a,b){
+        var af=a.__virtual?1:0, bf=b.__virtual?1:0;
+        if(af!==bf) return af-bf;
+        return String(a.date||'').localeCompare(String(b.date||''));
+      });
     });
     var orderedKeys = [];
     ACCOUNT_ORDER.forEach(function(a){ if(groups[a]) orderedKeys.push(a); });
