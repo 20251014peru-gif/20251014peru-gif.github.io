@@ -995,14 +995,9 @@
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <h3 style="margin:0;font-size:18px;font-weight:800;color:#1a2f45">💰 지출 관리</h3>
         <div style="display:flex;gap:6px">
-          <button id="btnExpV2PurposeMgr" style="background:#f7faff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 계정 관리</button>
+          <button id="btnExpV2PurposeMgr" style="background:#f7faff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 용도 관리</button>
           <button id="btnAddExpenseV2" style="background:#3f7cb8;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">➕ 지출 등록</button>
         </div>
-      </div>
-      <!-- 뷰 탭: 목록 / 정산표 -->
-      <div style="display:flex;gap:6px;margin-bottom:12px">
-        <button id="expViewList" data-expview="list" style="flex:1;height:36px;border-radius:10px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 목록</button>
-        <button id="expViewSettle" data-expview="settle" style="flex:1;height:36px;border-radius:10px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📊 정산표</button>
       </div>
       <!-- 대시보드 -->
       <div id="expV2Dashboard" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px"></div>
@@ -1022,28 +1017,17 @@
           <option value="unissued">⏳ 미발급</option>
         </select>
       </div>
-      <!-- 목록 뷰 -->
-      <div id="expViewListArea">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-          <span id="expV2ListCount" style="font-size:12px;color:#aab8c8;font-weight:600"></span>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="display:flex;gap:6px">
+          <button id="expViewList" style="padding:5px 14px;border-radius:8px;border:1.5px solid #3f7cb8;background:#3f7cb8;color:#fff;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">목록</button>
+          <button id="expViewSettle" style="padding:5px 14px;border-radius:8px;border:1.5px solid #dbe6f4;background:#f7faff;color:#7a92a8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">정산표</button>
         </div>
-        <div id="expV2ListArea"></div>
+        <span id="expV2ListCount" style="font-size:12px;color:#aab8c8;font-weight:600"></span>
       </div>
-      <!-- 정산표 뷰 -->
-      <div id="expViewSettleArea" style="display:none">
-        <!-- 정산표 월 필터 -->
-        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-          <select id="expSettleMonthSel" style="flex:1;height:38px;padding:0 12px;border:1.5px solid #dbe6f4;border-radius:10px;font-size:13px;font-family:inherit;background:#f7faff;outline:none;color:#1a2f45">
-            <option value="">전체 월</option>
-          </select>
-          <span id="expSettleTotal" style="font-size:13px;font-weight:700;color:#1a2f45;white-space:nowrap"></span>
-        </div>
-        <!-- 계정과목 목록 관리 버튼 -->
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
-          <button id="btnExpSettleAcctMgr" style="background:#f7faff;color:#3f7cb8;border:1.5px solid #3f7cb8;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">⚙ 계정 목록 관리</button>
-        </div>
-        <div id="expSettleTableArea"></div>
-      </div>
+      <!-- 목록 -->
+      <div id="expV2ListArea"></div>
+      <!-- 정산표 -->
+      <div id="expV2SettleArea" style="display:none"></div>
     </div>
   </div>
 
@@ -6009,9 +5993,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   var _matItems = [], _mealItems = [], _wasteItems = [];
 
   var PURPOSE_LS = 'wl_exp_purposes_v44';
-  var DEFAULT_PURPOSES = ['복리후생비','수선유지비','임차료','용역비','인건비','수도광열비','기타소모품','기타'];
-  /* 계정과목 — 정산표에서 사용하는 표준 순서 */
-  var ACCOUNT_ORDER = ['복리후생비','수선유지비','임차료','용역비','인건비','수도광열비','기타소모품','기타'];
+  var DEFAULT_PURPOSES = ['자재구매','소모품','식대','폐기물 처리','기타'];
 
   function loadPurposes(){ try{ return JSON.parse(localStorage.getItem(PURPOSE_LS)||'null')||DEFAULT_PURPOSES.slice(); }catch(e){ return DEFAULT_PURPOSES.slice(); } }
   function savePurposes(arr){ try{ localStorage.setItem(PURPOSE_LS, JSON.stringify(arr)); }catch(e){} }
@@ -7134,165 +7116,202 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   setTimeout(hookCallViewer, 2000);
   console.log('[callWorkLink] 업무-통화 연결 로드');
 })();
-  /* ── 정산표 렌더 ── */
-  window.renderExpV2Settle = function(){
-    var box = g('expSettleTableArea'); if(!box) return;
-    var totalEl = g('expSettleTotal');
-    var mSel = g('expSettleMonthSel');
+  console.log('[expV2] v44-0622-1651 로드');
+})();
+</script>
 
-    var all = typeof entries!=='undefined' ? entries.filter(function(e){ return e.kind==='expense'; }) : [];
-    var months = [...new Set(all.map(function(e){ return (e.date||'').slice(0,7); }).filter(Boolean))].sort().reverse();
-    var now2 = new Date();
-    var thisYm = now2.getFullYear()+'-'+String(now2.getMonth()+1).padStart(2,'0');
-    var cur = mSel ? (mSel._si ? mSel.value : thisYm) : thisYm;
-    if(mSel && !mSel._si){
-      mSel._si = true;
-      mSel.innerHTML = '<option value="">전체 월</option>' + months.map(function(m){ return '<option value="'+m+'"'+(m===cur?' selected':'')+'>'+m+'</option>'; }).join('');
-      mSel.value = cur;
-      if(!mSel._fb){ mSel._fb=true; mSel.addEventListener('change', function(){ window.renderExpV2Settle(); }); }
-    } else if(mSel && months.length){
-      var curVal = mSel.value;
-      mSel.innerHTML = '<option value="">전체 월</option>' + months.map(function(m){ return '<option value="'+m+'"'+(m===curVal?' selected':'')+'>'+m+'</option>'; }).join('');
-      if(curVal) mSel.value = curVal;
+<script>
+/* ===== 계정과목 그룹 정산표 (renderExpV2Settle) ===== */
+(function(){
+  var ACCOUNT_MAP = {
+    '청소관리용품':  '기타소모품',
+    '커피외':        '복리후생비',
+    '관리비중식대':  '복리후생비',
+    'PC임차료':      '임차료',
+    '보안시스템':    '임차료',
+    '소독방역':      '용역비',
+    '정보통신':      '용역비',
+    '소방안전':      '용역비',
+    '옥탑층정원':    '용역비',
+    '카리프트':      '수선유지비',
+    '엘리베이터':    '수선유지비',
+    '은진FM':        '인건비',
+    '관리인건비':    '인건비',
+    '수도':          '수도광열비',
+    '전기':          '수도광열비'
+  };
+  var ACCOUNT_ORDER = ['복리후생비','수선유지비','임차료','용역비','인건비','수도광열비','기타소모품','기타'];
+  var ACCOUNT_COLORS = {
+    '복리후생비': '#e8f5e9',
+    '수선유지비': '#e3f2fd',
+    '임차료':     '#fce4ec',
+    '용역비':     '#fff3e0',
+    '인건비':     '#f3e5f5',
+    '수도광열비': '#e0f7fa',
+    '기타소모품': '#fafafa',
+    '기타':       '#f5f5f5'
+  };
+
+  function getAccount(purpose){
+    if(!purpose) return '기타';
+    for(var key in ACCOUNT_MAP){
+      if(purpose.indexOf(key) !== -1) return ACCOUNT_MAP[key];
     }
-    var monthSel = mSel ? mSel.value : '';
+    return '기타';
+  }
 
-    var list = all.filter(function(e){
-      var isJp = e.isJeonpyo || /\[전표\]/.test(e.title||'') || /\[전표\]/.test(e.memo||'');
-      if(isJp) return false;
-      if(monthSel && !(e.date||'').startsWith(monthSel)) return false;
-      return true;
+  window.renderExpV2Settle = function(){
+    var area = document.getElementById('expV2SettleArea');
+    if(!area) return;
+
+    var allEntries = (typeof entries !== 'undefined') ? entries : [];
+    var expList = allEntries.filter(function(e){
+      return e.kind === 'expense' && e.etype !== '전표';
     });
 
-    var acctOrder = typeof ACCOUNT_ORDER!=='undefined' ? ACCOUNT_ORDER : (typeof loadPurposes==='function' ? loadPurposes() : ['복리후생비','수선유지비','임차료','용역비','인건비','수도광열비','기타소모품','기타']);
-    var groups = {};
-    acctOrder.forEach(function(a){ groups[a] = []; });
-    list.forEach(function(e){
-      var acct = (e.purpose||'').trim() || '기타';
-      if(!groups[acct]) groups[acct] = [];
-      groups[acct].push(e);
-    });
-
-    var orderedAccts = acctOrder.filter(function(a){ return groups[a] && groups[a].length>0; });
-    var extraAccts = Object.keys(groups).filter(function(a){ return acctOrder.indexOf(a)<0 && groups[a].length>0; });
-    orderedAccts = orderedAccts.concat(extraAccts);
-
-    if(orderedAccts.length === 0){
-      box.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#aab8c8;font-size:14px;font-weight:700">📊 해당 월에 지출 내역이 없어요</div>';
-      if(totalEl) totalEl.textContent = '';
+    if(!expList.length){
+      area.innerHTML = '<p style="text-align:center;color:#aab8c8;padding:30px 0">데이터가 없습니다</p>';
       return;
     }
 
-    var rowColors = {
-      '복리후생비':'#e8f5e9','수선유지비':'#fce4ec','임차료':'#e3f2fd',
-      '용역비':'#fff9c4','인건비':'#e8f5e9','수도광열비':'#e0f7fa',
-      '기타소모품':'#fce4ec','기타':'#f5f5f5'
-    };
-    function esc2(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-    function fmt2(n){ return Number(n||0).toLocaleString()+'원'; }
+    var grid = {};
+    var monthSet = {};
+    expList.forEach(function(e){
+      var d = (e.date||'').substring(0,7);
+      if(!d) return;
+      monthSet[d] = true;
+      var acct = getAccount(e.purpose||'');
+      if(!grid[acct]) grid[acct] = {};
+      grid[acct][d] = (grid[acct][d]||0) + Number(e.amount||0);
+    });
+
+    var allMonths = Object.keys(monthSet).sort();
+    if(!allMonths.length){
+      area.innerHTML = '<p style="text-align:center;color:#aab8c8;padding:30px 0">데이터가 없습니다</p>';
+      return;
+    }
+
+    var usedAccounts = ACCOUNT_ORDER.filter(function(a){ return !!grid[a]; });
+    Object.keys(grid).forEach(function(a){
+      if(usedAccounts.indexOf(a) === -1) usedAccounts.push(a);
+    });
+
+    var thStyle = 'padding:8px 10px;font-size:12px;font-weight:700;color:#4a6a8a;border-bottom:2px solid #dbe6f4;white-space:nowrap;text-align:right;';
+    var thFirst = 'padding:8px 10px;font-size:12px;font-weight:700;color:#4a6a8a;border-bottom:2px solid #dbe6f4;white-space:nowrap;text-align:left;';
+
+    var html = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px">';
+    html += '<thead><tr>';
+    html += '<th style="'+thFirst+'">계정과목</th>';
+    allMonths.forEach(function(m){
+      html += '<th style="'+thStyle+'">'+m.replace('-','/')+'</th>';
+    });
+    html += '<th style="'+thStyle+'background:#f0f7ff">합계</th>';
+    html += '</tr></thead><tbody>';
 
     var grandTotal = 0;
-    var html = '<div style="overflow-x:auto">'
-      + '<table style="width:100%;border-collapse:collapse;min-width:580px;font-size:13px">'
-      + '<thead><tr style="background:#2c5f8a;color:#fff">'
-      + '<th style="padding:10px 12px;text-align:center;width:100px">구분</th>'
-      + '<th style="padding:10px 6px;text-align:center;width:32px">NO</th>'
-      + '<th style="padding:10px 12px;text-align:left">지출내용</th>'
-      + '<th style="padding:10px 10px;text-align:right;width:100px">금액</th>'
-      + '<th style="padding:10px 10px;text-align:right;width:80px">부가세</th>'
-      + '<th style="padding:10px 10px;text-align:right;width:100px">합계</th>'
-      + '<th style="padding:10px 10px;text-align:left;width:110px">비고</th>'
-      + '</tr></thead><tbody>';
+    var colTotals = {};
+    allMonths.forEach(function(m){ colTotals[m] = 0; });
 
-    orderedAccts.forEach(function(acct){
-      var items = groups[acct];
-      if(!items.length) return;
-      var bg = rowColors[acct] || '#f9f9f9';
-      var subAmt = 0, subVat = 0;
-
-      items.forEach(function(e, idx){
-        var amt = Number(e.amount)||0;
-        var vat = e.expType==='세금계산서' ? Math.round(amt*0.1) : 0;
-        subAmt += amt; subVat += vat; grandTotal += amt+vat;
-        var acctCell = idx===0
-          ? '<td rowspan="'+items.length+'" style="padding:10px 8px;font-weight:700;color:#2c5f8a;vertical-align:middle;text-align:center;background:'+bg+';border-right:2px solid #dee2e6;white-space:nowrap">'+esc2(acct)+'</td>'
-          : '';
-        html += '<tr style="border-bottom:1px solid #f0f0f0;background:'+(idx%2===0?bg:'#fff')+'">'
-          + acctCell
-          + '<td style="padding:7px 6px;text-align:center;color:#9aabbf;font-size:12px">'+(idx+1)+'</td>'
-          + '<td style="padding:7px 12px;cursor:pointer;color:#1a2f45" data-eid="'+esc2(e.id||'')+'">'+esc2(e.title||'(내역없음)')+'</td>'
-          + '<td style="padding:7px 10px;text-align:right;font-weight:600;white-space:nowrap">'+fmt2(amt)+'</td>'
-          + '<td style="padding:7px 10px;text-align:right;white-space:nowrap;color:'+(vat?'#c2410c':'#c8d6e8')+'">'+(vat?fmt2(vat):'-')+'</td>'
-          + '<td style="padding:7px 10px;text-align:right;font-weight:700;white-space:nowrap">'+fmt2(amt+vat)+'</td>'
-          + '<td style="padding:7px 10px;color:#7a92a8;font-size:12px">'+esc2(e.memo||e.vendor||'')+'</td>'
-          + '</tr>';
+    usedAccounts.forEach(function(acct){
+      var bg = ACCOUNT_COLORS[acct] || '#fff';
+      var rowTotal = 0;
+      var tdStyle = 'padding:7px 10px;border-bottom:1px solid #eef2f8;text-align:right;white-space:nowrap;';
+      var tdFirst = 'padding:7px 10px;border-bottom:1px solid #eef2f8;font-weight:700;color:#1a2f45;white-space:nowrap;';
+      html += '<tr style="background:'+bg+'">';
+      html += '<td style="'+tdFirst+'">'+acct+'</td>';
+      allMonths.forEach(function(m){
+        var v = grid[acct][m]||0;
+        rowTotal += v;
+        colTotals[m] += v;
+        html += '<td style="'+tdStyle+'">'+(v ? v.toLocaleString('ko-KR') : '-')+'</td>';
       });
-
-      var subTot = subAmt+subVat;
-      html += '<tr style="background:#ecf2fb;border-top:2px solid #c5d9f0;border-bottom:2px solid #c5d9f0">'
-        + '<td colspan="2" style="padding:7px 12px;text-align:right;font-weight:800;color:#2c5f8a;font-size:13px">소계</td>'
-        + '<td style="padding:7px 12px"></td>'
-        + '<td style="padding:7px 10px;text-align:right;font-weight:800;color:#2c5f8a;white-space:nowrap">'+fmt2(subAmt)+'</td>'
-        + '<td style="padding:7px 10px;text-align:right;font-weight:800;white-space:nowrap;color:'+(subVat?'#c2410c':'#c8d6e8')+'">'+(subVat?fmt2(subVat):'-')+'</td>'
-        + '<td style="padding:7px 10px;text-align:right;font-weight:800;color:#2c5f8a;white-space:nowrap">'+fmt2(subTot)+'</td>'
-        + '<td style="padding:7px 10px;text-align:right">'
-        + '<button data-cpacct="'+esc2(acct)+'" style="font-size:11px;background:#eaf1fb;border:none;border-radius:6px;padding:3px 8px;color:#3f7cb8;cursor:pointer;font-weight:700;font-family:inherit">📋 복사</button>'
-        + '</td></tr>';
+      grandTotal += rowTotal;
+      html += '<td style="'+tdStyle+'background:#e8f0fb;font-weight:700">'+rowTotal.toLocaleString('ko-KR')+'</td>';
+      html += '</tr>';
     });
 
-    html += '<tr style="background:#2c5f8a;color:#fff">'
-      + '<td colspan="2" style="padding:10px 12px;text-align:right;font-weight:800;font-size:14px">합 계</td>'
-      + '<td style="padding:10px 12px"></td>'
-      + '<td colspan="3" style="padding:10px 10px;text-align:right;font-weight:800;font-size:14px;white-space:nowrap">'+fmt2(grandTotal)+'</td>'
-      + '<td></td></tr>';
+    var subStyle = 'padding:8px 10px;border-top:2px solid #3f7cb8;border-bottom:1px solid #dbe6f4;font-weight:800;font-size:13px;text-align:right;white-space:nowrap;background:#dbeafe;';
+    var subFirst = 'padding:8px 10px;border-top:2px solid #3f7cb8;border-bottom:1px solid #dbe6f4;font-weight:800;font-size:13px;text-align:left;white-space:nowrap;background:#dbeafe;color:#1a2f45;';
+    html += '<tr>';
+    html += '<td style="'+subFirst+'">합 계</td>';
+    allMonths.forEach(function(m){
+      var v = colTotals[m]||0;
+      html += '<td style="'+subStyle+'">'+(v ? v.toLocaleString('ko-KR') : '-')+'</td>';
+    });
+    html += '<td style="'+subStyle+'background:#bfdbfe">'+grandTotal.toLocaleString('ko-KR')+'</td>';
+    html += '</tr>';
+
     html += '</tbody></table></div>';
-    box.innerHTML = html;
-    if(totalEl) totalEl.textContent = '합계 '+Number(grandTotal).toLocaleString()+'원';
+    html += '<div style="text-align:right;margin-top:8px">'
+          + '<button onclick="window.copyExpSettle()" style="padding:6px 16px;border-radius:8px;border:1.5px solid #3f7cb8;background:#f7faff;color:#3f7cb8;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">📋 복사</button>'
+          + '</div>';
 
-    box.querySelectorAll('[data-eid]').forEach(function(el){
-      if(el.dataset.eid) el.addEventListener('click', function(){ if(typeof openExpV2==='function') openExpV2(el.dataset.eid); });
-    });
-    box.querySelectorAll('[data-cpacct]').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        var acctName = btn.dataset.cpacct;
-        var its = groups[acctName]||[];
-        var rows = its.map(function(e,i){
-          var amt = Number(e.amount)||0;
-          var vat = e.expType==='세금계산서'?Math.round(amt*0.1):0;
-          return [acctName,i+1,e.title||'',amt,vat,amt+vat,e.memo||e.vendor||''].join('\t');
-        });
-        var sA = its.reduce(function(s,e){ return s+(Number(e.amount)||0); },0);
-        var sV = its.filter(function(e){ return e.expType==='세금계산서'; }).reduce(function(s,e){ return s+Math.round((Number(e.amount)||0)*0.1); },0);
-        rows.push(['소계','','',sA,sV,sA+sV,''].join('\t'));
-        try{ navigator.clipboard.writeText(rows.join('\n')); if(typeof toast==='function') toast('📋 '+acctName+' 복사됐어요'); }catch(err){}
-      });
-    });
+    area.innerHTML = html;
   };
 
-  /* ── 목록/정산표 탭 전환 ── */
-  (function(){
-    function setExpView(v){
-      var la = g('expViewListArea'), sa = g('expViewSettleArea');
-      var bl = g('expViewList'), bs = g('expViewSettle');
-      var isS = v==='settle';
-      if(la) la.style.display = isS?'none':'block';
-      if(sa) sa.style.display = isS?'block':'none';
-      if(bl){ bl.style.background=isS?'#f7faff':'#3f7cb8'; bl.style.color=isS?'#7a92a8':'#fff'; bl.style.borderColor=isS?'#dbe6f4':'#3f7cb8'; }
-      if(bs){ bs.style.background=isS?'#3f7cb8':'#f7faff'; bs.style.color=isS?'#fff':'#7a92a8'; bs.style.borderColor=isS?'#3f7cb8':'#dbe6f4'; }
-      if(isS){ window.renderExpV2Settle(); }
-      else { if(typeof renderExpV2List==='function') renderExpV2List(); if(typeof renderExpV2Dashboard==='function') renderExpV2Dashboard(); }
+  window.copyExpSettle = function(){
+    var area = document.getElementById('expV2SettleArea');
+    if(!area) return;
+    var tbl = area.querySelector('table');
+    if(!tbl){ alert('정산표가 없습니다'); return; }
+    var rows = tbl.querySelectorAll('tr');
+    var lines = [];
+    rows.forEach(function(tr){
+      var cells = tr.querySelectorAll('th,td');
+      var cols = [];
+      cells.forEach(function(td){ cols.push(td.textContent.trim()); });
+      lines.push(cols.join('\t'));
+    });
+    var text = lines.join('\n');
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ alert('클립보드에 복사되었습니다'); });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      alert('클립보드에 복사되었습니다');
     }
-    function bindTabs(){
-      var bl = g('expViewList'), bs = g('expViewSettle');
-      if(bl && !bl._et){ bl._et=true; bl.addEventListener('click', function(){ setExpView('list'); }); }
-      if(bs && !bs._et){ bs._et=true; bs.addEventListener('click', function(){ setExpView('settle'); }); }
-    }
-    setTimeout(bindTabs, 300);
-    setTimeout(bindTabs, 1200);
-    setTimeout(bindTabs, 3000);
-  })();
+  };
 
-  console.log('[expV2] v44-0622-1651 로드');
+  function setExpView(v){
+    var listArea   = document.getElementById('expV2ListArea');
+    var settleArea = document.getElementById('expV2SettleArea');
+    var btnList    = document.getElementById('expViewList');
+    var btnSettle  = document.getElementById('expViewSettle');
+    if(!listArea || !settleArea) return;
+    if(v === 'settle'){
+      listArea.style.display   = 'none';
+      settleArea.style.display = '';
+      if(btnList)   { btnList.style.background='#f7faff'; btnList.style.color='#7a92a8'; btnList.style.borderColor='#dbe6f4'; }
+      if(btnSettle) { btnSettle.style.background='#3f7cb8'; btnSettle.style.color='#fff'; btnSettle.style.borderColor='#3f7cb8'; }
+      window.renderExpV2Settle();
+    } else {
+      listArea.style.display   = '';
+      settleArea.style.display = 'none';
+      if(btnList)   { btnList.style.background='#3f7cb8'; btnList.style.color='#fff'; btnList.style.borderColor='#3f7cb8'; }
+      if(btnSettle) { btnSettle.style.background='#f7faff'; btnSettle.style.color='#7a92a8'; btnSettle.style.borderColor='#dbe6f4'; }
+    }
+  }
+
+  function bindExpTabs(){
+    var btnList   = document.getElementById('expViewList');
+    var btnSettle = document.getElementById('expViewSettle');
+    if(!btnList || !btnSettle) return;
+    if(btnList._expBound) return;
+    btnList._expBound = true;
+    btnList.addEventListener('click',   function(){ setExpView('list'); });
+    btnSettle.addEventListener('click', function(){ setExpView('settle'); });
+    console.log('[expSettle] 탭 바인딩 완료');
+  }
+
+  setTimeout(bindExpTabs, 400);
+  setTimeout(bindExpTabs, 1500);
+  setTimeout(bindExpTabs, 4000);
+  console.log('[expSettle] 계정과목 정산표 로드');
 })();
 </script>
   </body>
