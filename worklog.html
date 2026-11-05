@@ -12586,7 +12586,10 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       '수리·공사비':'수선유지비', '시설공사비':'수선유지비',
       /* 임차료 */
       'PC임대료':'임차료',        'PC 임대료':'임차료',
-      '보안시스템 임차료':'임차료','보안시스템':'임차료',  '정수기 임차료':'임차료',
+      '정수기 임차료':'임차료',   '칼라복합기 임대료':'임차료',
+      '카리프트 비상통화장치':'임차료','엘리베이터 비상통화장치':'임차료',
+      '관리소 유선 방송요금':'임차료','관리소 유선방송 요금':'임차료',
+      '보안시스템 임차료':'임차료','보안시스템':'임차료',
       /* 용역비 */
       '소독.방역':'용역비',       '소독방역':'용역비',       '소독·방역':'용역비',
       '정보통신설비 유지관리':'용역비','정보통신':'용역비',
@@ -12624,7 +12627,15 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       '은진 FM관리용역':'경비∙청소인력','은진FM':'경비∙청소인력','은진':'경비∙청소인력',
       '경비∙청소인력':'경비∙청소인력','관리인건비':'관리인건비',
       /* 수도광열비 */
-      '상하수도료':'상하수도료',   '전기사용료':'전기사용료', '수도광열비':'수도광열비'
+      '상하수도료':'상하수도료',         '전기사용료':'전기사용료',
+      '수도요금 전표 등록':'상하수도료', '전기요금 전표 등록':'전기사용료',
+      '수도광열비':'수도광열비',
+      /* 임차료 추가 */
+      '칼라복합기 임대료':'임차료',
+      '카리프트 비상통화장치':'임차료',  '엘리베이터 비상통화장치':'임차료',
+      '관리소 유선 방송요금':'임차료',   '관리소 유선방송 요금':'임차료',
+      /* 복리후생비 추가 */
+      '관리비 중식대':'중식대'
     };
     try{
       if(typeof window.getMonthlySettleRows==='function'){
@@ -14452,16 +14463,31 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   ];
   /* 월정산 기본 항목 (정기 발생분 — 매월 금액만 갱신) */
   var DEFAULT_MONTHLY=[
-    {name:'청소관리용품', sup:0, tax:0, note:'화장지외'},
-    {name:'커피외', sup:0, tax:0, note:''},
-    {name:'칼라복합기 임대료', sup:0, tax:0, note:''},
-    {name:'PC임대료', sup:0, tax:0, note:''},
-    {name:'소독.방역', sup:0, tax:0, note:'', rev:true},
-    {name:'소방안전관리', sup:0, tax:0, note:''},
-    {name:'옥탑층정원유지관리', sup:0, tax:0, note:'', rev:true},
-    {name:'카리프트 유지보수', sup:0, tax:0, note:'화물용'},
-    {name:'엘리베이터 유지보수', sup:0, tax:0, note:'인승용'},
-    {name:'은진 FM관리용역', sup:0, tax:0, note:'경비·청소인력'}
+    /* 소모품 */
+    {name:'청소관리용품',              sup:0, tax:0, note:'화장지외'},
+    /* 복리후생비 */
+    {name:'커피외',                    sup:0, tax:0, note:''},
+    {name:'관리비 중식대',             sup:0, tax:0, note:''},
+    /* 임차료 */
+    {name:'칼라복합기 임대료',         sup:0, tax:0, note:''},
+    {name:'PC임대료',                  sup:0, tax:0, note:''},
+    {name:'정수기 임차료',             sup:0, tax:0, note:''},
+    {name:'카리프트 비상통화장치',     sup:0, tax:0, note:''},
+    {name:'엘리베이터 비상통화장치',   sup:0, tax:0, note:''},
+    {name:'관리소 유선 방송요금',      sup:0, tax:0, note:''},
+    /* 용역비 */
+    {name:'소독.방역',                 sup:0, tax:0, note:'', rev:true},
+    {name:'정보통신설비 유지관리',     sup:0, tax:0, note:''},
+    {name:'소방안전관리',              sup:0, tax:0, note:''},
+    {name:'옥탑층정원유지관리',        sup:0, tax:0, note:'', rev:true},
+    {name:'카리프트 유지보수',         sup:0, tax:0, note:'화물용'},
+    {name:'엘리베이터 유지보수',       sup:0, tax:0, note:'인승용'},
+    /* 관리인건비 */
+    {name:'은진 FM관리용역',           sup:0, tax:0, note:'경비·청소인력'},
+    {name:'관리인건비',                sup:0, tax:0, note:''},
+    /* 수도광열비 */
+    {name:'수도요금 전표 등록',        sup:0, tax:0, note:''},
+    {name:'전기요금 전표 등록',        sup:0, tax:0, note:''}
   ];
   var _cur=null;
   var _mEdit=false, _mDraft=null;      /* 월정산 수정 모드 */
