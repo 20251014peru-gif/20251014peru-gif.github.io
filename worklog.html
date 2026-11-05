@@ -12886,7 +12886,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
   function scNewSave(){
     var box=scBox(); if(!box) return;
     function q(n){ return box.querySelector('input[data-nr="'+n+'"]'); }
-    var acct=q('acct').value.trim(), title=q('title').value.trim(), note=q('note').value.trim();
+    var acct=q('acct').value.trim(), title=q('title').value.trim(), note=q('note').value.trim(), sub=q('sub')?q('sub').value.trim():'';
     var sN=scNum(q('sup').value), tN=scNum(q('tax').value), aN=scNum(q('amt').value);
     if(sN===null||tN===null||aN===null){ scToast('금액은 숫자만 적어 주세요 (예: 12000)'); return; }
     if(!title && !sN && !tN && !aN){ scToast('내용이나 금액을 적어 주세요'); q('title').focus(); return; }
@@ -12896,7 +12896,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     if(acct===NOACCT) acct='';
     var obj={ kind:'expense', date:scNewDate(scYm()), expType:'개인지출', title:title, amount:a, supplyAmt:s, taxAmt:t,
               vendor:'', memo:note, purpose:'', purposes:[], isCost:true, isJeonpyo:false, isIssued:false, expSubType:'',
-              settleGrp:acct, taxInline:(t>0), createdAt:Date.now(), inlineAt:Date.now() };
+              settleGrp:acct, subAcct:sub, taxInline:(t>0), createdAt:Date.now(), inlineAt:Date.now() };
     addRecord(obj);
     if(acct) acctAdd(acct);
     scLastAcct=acct;
@@ -12918,6 +12918,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
     var patch={};
     if(col==='title'){ patch.title=txt; }
     else if(col==='note'){ patch.memo=(rec && /\[전표\]/.test(rec.memo||'')) ? (txt+' [전표]').trim() : txt; }
+    else if(col==='sub'){ patch.subAcct=txt; }
     else {
       var n=scNum(txt);
       if(n===null){ scToast('숫자만 적어 주세요 (예: 12000)'); inp.value=orig; return; }
@@ -13403,6 +13404,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       +'<thead><tr>'
       +'<th style="'+TH+'">구분</th><th style="'+TH+'">NO</th><th style="'+TH+';min-width:160px">지출내용</th>'
       +'<th style="'+TH+'">금액</th><th style="'+TH+'">부가세</th><th style="'+TH+'">합계</th><th style="'+TH+';min-width:110px">비고</th>'
+      +'<th style="'+TH+';min-width:100px">세부과목</th>'
       +'</tr></thead><tbody>';
     /* v247 — 맨 위 입력 줄: 계정을 고르거나 새로 적고 → 내용·금액 → Enter. 그 계정 블록에 들어간다 */
     var NY='padding:0;border:1px solid #f1e3a6;background:#fffbe6';
@@ -13435,6 +13437,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       +'<td style="'+NY+'">'+nrIn('amt','합계',true)+'</td>'
       +'<td style="'+NY+'"><div style="display:flex;align-items:center;gap:6px;padding-right:6px">'+nrIn('note','비고',false,'flex:1;min-width:80px;font-size:12px')
         +'<button type="button" id="expSettleNewBtn" style="flex:none;height:28px;padding:0 12px;border:none;border-radius:8px;background:#3f7cb8;color:#fff;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer">추가</button></div></td>'
+      +'<td style="'+NY+'">'+nrIn('sub','세부과목',false,'font-size:12px;color:#5a6a7a')+'</td>'
       +'</tr>';
     var gSum=0,gTax=0,gAmt=0;          /* 전체 누계 */
     var mSum=0,mTax=0,mAmt=0;          /* 중간합계 누계 (개인+전표+기타정산) */
@@ -13463,6 +13466,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
               +inCell('tax', cell(v.tax), '', 'num;color:#94a3b8')
               +inCell('amt', cell(v.amount), '', 'num;font-weight:800')
               +noteCell(e, real, true)
+              +inCell('sub', (e&&e.subAcct)||'', '세부과목', 'font-size:12px;color:#5a6a7a')
               +'</tr>';
           } else {
             /* 예전 방식 — 행을 누르면 상세 창, 빈 줄을 누르면 새 지출 창, 🗑 는 확인 후 삭제 */
@@ -13483,6 +13487,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
                 + (e&&e.autoFromWork?AUTO_BADGE:'')
                 + (e&&e.id&&!e.__virtual?' <button type="button" data-settledel0="'+esc(e.id)+'" title="이 줄을 지웁니다 (휴지통으로)" style="float:right;width:26px;height:26px;border:none;border-radius:7px;background:#fde8e8;color:#b52929;cursor:pointer;font-family:inherit;font-size:12px">🗑</button>':'')
                 +'</td>'
+              +'<td style="'+TD+';font-size:12px;color:#5a6a7a">'+(e&&e.subAcct?esc(e.subAcct):'')+'</td>'
               +'</tr>';
           }
         }
@@ -13500,6 +13505,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
             +(grp.acct?'':('<button type="button" data-grow="'+esc(grp.key)+'" title="빈 줄을 한 줄 늘립니다" style="margin-left:4px;width:26px;height:24px;border:1.5px solid '+grp.color+';background:#fff;color:'+grp.color+';border-radius:8px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer">＋</button>'
             +'<button type="button" data-shrink="'+esc(grp.key)+'" title="빈 줄을 한 줄 줄입니다 (적힌 줄은 안 지웁니다)"'+(need<=arr.length?' disabled':'')+' style="margin-left:2px;width:26px;height:24px;border:1.5px solid '+(need<=arr.length?'#dde6ef':grp.color)+';background:#fff;color:'+(need<=arr.length?'#c8d4e0':grp.color)+';border-radius:8px;font-size:12px;font-weight:800;font-family:inherit;cursor:'+(need<=arr.length?'default':'pointer')+'">−</button>'))
           +'</td>'
+          +'<td style="'+TD+';background:'+grp.bg+'"></td>'
           +'</tr>';
       }
       /* 🟠 중간 합계: 개인+전표+기타정산 */
@@ -13509,6 +13515,7 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
           +'<td data-tt="MID:s" style="'+TDR+';background:#fdba74;color:#7c2d12;font-weight:800">'+cell(mSum)+'</td>'
           +'<td data-tt="MID:t" style="'+TDR+';background:#fdba74;color:#7c2d12">'+cell(mTax)+'</td>'
           +'<td data-tt="MID:a" style="'+TDR+';background:#fdba74;color:#7c2d12;font-weight:800">'+cell(mAmt)+'</td>'
+          +'<td style="'+TD+';background:#fdba74"></td>'
           +'<td style="'+TD+';background:#fdba74"></td>'
           +'</tr>';
       }
@@ -13520,12 +13527,14 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       +'<td data-tt="ALL:t" style="'+TDR+';background:#1a2f45;color:#cbd5e1">'+cell(gTax)+'</td>'
       +'<td data-tt="ALL:a" style="'+TDR+';background:#1a2f45;color:#fff;font-weight:800">'+cell(gAmt)+'</td>'
       +'<td style="'+TD+';background:#1a2f45"></td>'
+      +'<td style="'+TD+';background:#1a2f45"></td>'
       +'</tr>';
     html+='<tr>'
       +'<td colspan="3" style="'+TD+';background:#475569;color:#fff;text-align:center;font-weight:700">전기·수도요금 제외</td>'
       +'<td data-tt="EXC:s" style="'+TDR+';background:#475569;color:#fff;font-weight:800">'+cell(gSum-uSum)+'</td>'
       +'<td style="'+TDR+';background:#475569"></td>'
       +'<td style="'+TDR+';background:#475569"></td>'
+      +'<td style="'+TD+';background:#475569"></td>'
       +'<td style="'+TD+';background:#475569"></td>'
       +'</tr>';
     html+='</tbody></table>';
@@ -13745,8 +13754,8 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
             if(e){
               var v=rowVals(e,grp.key);
               s+=v.sup; t+=v.tax; a+=v.amount;
-              // H열(과목)=그룹명, I열(세부과목)=빈칸(엑셀에서 직접 입력)
-              out.push([i===0?grp.shown:'', String(i+1), rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount), rowNote(e), grp.key, '']);
+              // H열(과목)=그룹명, I열(세부과목)=subAcct 필드
+              out.push([i===0?grp.shown:'', String(i+1), rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount), rowNote(e), grp.key, e.subAcct||'']);
             } else {
               out.push([i===0?grp.shown:'', String(i+1), '', '', '', '', '', grp.key, '']);
             }
