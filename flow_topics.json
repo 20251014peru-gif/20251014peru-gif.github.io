@@ -1,16 +1,16 @@
 {
- "updated_at": "2026-11-06T02:44:54.874593+09:00",
+ "updated_at": "2026-11-06T08:53:14.910453+09:00",
  "topics": [
   {
    "id": "정책_정치",
    "name": "정책·정치",
    "video_count": 17,
    "channel_count": 13,
-   "total_views": 2916852,
-   "latest": "2026-11-05T21:25:06+09:00",
+   "total_views": 2599054,
+   "latest": "2026-11-06T08:28:53+09:00",
    "video_ids": [
+    "RZRElH1I-Ac",
     "zg7nrRTcFLs",
-    "B5HYuPMzTp8",
     "agWROFbeIWg",
     "5YAj2vbmtKc",
     "0nu8aqQjuaE",
@@ -45,13 +45,13 @@
    "subtopics": [
     {
      "word": "중간선거",
-     "videos": 8,
-     "channels": 7
+     "videos": 7,
+     "channels": 6
     },
     {
      "word": "미국",
-     "videos": 4,
-     "channels": 4
+     "videos": 5,
+     "channels": 5
     },
     {
      "word": "반도체",
@@ -79,24 +79,25 @@
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 13,
+   "video_count": 14,
    "channel_count": 8,
-   "total_views": 962376,
-   "latest": "2026-11-05T19:00:17+09:00",
+   "total_views": 702429,
+   "latest": "2026-11-06T08:28:53+09:00",
    "video_ids": [
+    "RZRElH1I-Ac",
+    "qvO5TRSUZO4",
+    "u4fDEY9HT8g",
+    "WQB3kIayMdo",
     "Pl2LIxtFNB0",
     "uS2nKRR3k-w",
     "tBvVsgFdedA",
-    "uc2pd0dz8VQ",
     "VuI9rdTz1z4",
     "q9Wpy7JBOK0",
     "fHfMsZB8W4Q",
     "hwQdle-P0IM",
     "iUTIvpQJTQE",
     "K1mQLhUc1f0",
-    "00gZpxe7pjM",
-    "63hKfJnlwkg",
-    "g_PVbHEdRvk"
+    "00gZpxe7pjM"
    ],
    "channels": [
     "815머니톡",
@@ -110,12 +111,22 @@
    ],
    "subtopics": [
     {
-     "word": "대표",
+     "word": "반도체",
+     "videos": 4,
+     "channels": 4
+    },
+    {
+     "word": "선거",
+     "videos": 4,
+     "channels": 4
+    },
+    {
+     "word": "데이터센터",
      "videos": 3,
      "channels": 3
     },
     {
-     "word": "선거",
+     "word": "월가",
      "videos": 3,
      "channels": 3
     },
@@ -125,17 +136,7 @@
      "channels": 2
     },
     {
-     "word": "데이터센터",
-     "videos": 2,
-     "channels": 2
-    },
-    {
      "word": "삼성전자",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "반도체",
      "videos": 2,
      "channels": 2
     }
@@ -145,17 +146,18 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 11,
-   "channel_count": 6,
-   "total_views": 1017624,
-   "latest": "2026-11-05T20:00:03+09:00",
+   "video_count": 12,
+   "channel_count": 7,
+   "total_views": 490099,
+   "latest": "2026-11-06T08:33:38+09:00",
    "video_ids": [
+    "Z7O46_yHUq4",
+    "RZRElH1I-Ac",
+    "qvO5TRSUZO4",
     "7EgZdALirec",
-    "B5HYuPMzTp8",
     "Pl2LIxtFNB0",
     "tBvVsgFdedA",
     "DseKVf3MPyg",
-    "VPPHBFoZCY0",
     "6OXsCBzuRao",
     "fHfMsZB8W4Q",
     "IdoBdMv6u0o",
@@ -168,16 +170,22 @@
     "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
     "염블리와 함께 (염승환)",
+    "증시각도기TV",
     "홍춘욱의 경제강의노트"
    ],
    "subtopics": [
     {
-     "word": "중간선거",
+     "word": "삼성전자",
      "videos": 3,
      "channels": 3
     },
     {
-     "word": "삼성전자",
+     "word": "미국",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "AI",
      "videos": 3,
      "channels": 3
     },
@@ -192,12 +200,40 @@
      "channels": 2
     },
     {
-     "word": "블루웨이브",
+     "word": "데이터센터",
      "videos": 2,
      "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "미국증시",
+   "name": "미국증시",
+   "video_count": 4,
+   "channel_count": 4,
+   "total_views": 588656,
+   "latest": "2026-11-06T07:15:24+09:00",
+   "video_ids": [
+    "u4fDEY9HT8g",
+    "1bunhEEP6Kk",
+    "hwQdle-P0IM",
+    "gxFV31zzyv0"
+   ],
+   "channels": [
+    "내일은 투자왕 - 김단테",
+    "삼프로TV 3PROTV",
+    "이효석아카데미",
+    "증시각도기TV"
+   ],
+   "subtopics": [
+    {
+     "word": "나스닥",
+     "videos": 3,
+     "channels": 3
     },
     {
-     "word": "민주당",
+     "word": "AI",
      "videos": 2,
      "channels": 2
     }
@@ -209,7 +245,7 @@
    "name": "금리·연준",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 365936,
+   "total_views": 386568,
    "latest": "2026-11-05T18:54:04+09:00",
    "video_ids": [
     "1b1-wu4T_5U",
@@ -238,29 +274,23 @@
    "active": true
   },
   {
-   "id": "미국증시",
-   "name": "미국증시",
+   "id": "환율_달러",
+   "name": "환율·달러",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 312322,
-   "latest": "2026-11-06T01:38:19+09:00",
+   "total_views": 138733,
+   "latest": "2026-11-06T07:15:24+09:00",
    "video_ids": [
-    "1bunhEEP6Kk",
-    "hwQdle-P0IM",
-    "gxFV31zzyv0"
+    "u4fDEY9HT8g",
+    "0nu8aqQjuaE",
+    "Soo8GJdA2Dw"
    ],
    "channels": [
-    "내일은 투자왕 - 김단테",
+    "삼프로TV 3PROTV",
     "이효석아카데미",
     "증시각도기TV"
    ],
-   "subtopics": [
-    {
-     "word": "나스닥",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
+   "subtopics": [],
    "active": true
   },
   {
@@ -268,7 +298,7 @@
    "name": "국내증시",
    "video_count": 4,
    "channel_count": 2,
-   "total_views": 254491,
+   "total_views": 293212,
    "latest": "2026-11-05T20:00:17+09:00",
    "video_ids": [
     "JR-qXe8O9Dw",
@@ -304,7 +334,7 @@
    "name": "유가·에너지",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 174483,
+   "total_views": 179292,
    "latest": "2026-11-05T08:34:44+09:00",
    "video_ids": [
     "Jqx71F-4aMM",
