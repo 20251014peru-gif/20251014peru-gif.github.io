@@ -13731,8 +13731,9 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
       var d=buildMap(ym);
       if(!d.total){ if(typeof toast==='function') toast('복사할 내역이 없어요'); return; }
       var out=[];
-      out.push([ym+' 관리비 지출세부','','','','','','']);
-      out.push(['구분','NO','지출내용','금액','부가세','합계','비고']);
+      // 9열: 구분(A) NO(B) 지출내용(C) 금액(D) 부가세(E) 합계(F) 비고(G) 과목(H) 세부과목(I)
+      out.push([ym+' 관리비 지출세부','','','','','','','','']);
+      out.push(['구분','NO','지출내용','금액','부가세','합계','비고','과목','세부과목']);
       var gSum=0,gTax=0,gAmt=0,mSum=0,mTax=0,mAmt=0,uSum=0;
       d.groups.forEach(function(grp){
         var arr=d.map[grp.key]||[];
@@ -13744,22 +13745,23 @@ document.getElementById('inspMonthMgrBtn')?.addEventListener('click',()=>{
             if(e){
               var v=rowVals(e,grp.key);
               s+=v.sup; t+=v.tax; a+=v.amount;
-              out.push([i===0?grp.shown:'', String(i+1), rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount), rowNote(e)]);
+              // H열(과목)=그룹명, I열(세부과목)=빈칸(엑셀에서 직접 입력)
+              out.push([i===0?grp.shown:'', String(i+1), rowTitle(e), raw(v.sup), raw(v.tax), raw(v.amount), rowNote(e), grp.key, '']);
             } else {
-              out.push([i===0?grp.shown:'', String(i+1), '', '', '', '', '']);
+              out.push([i===0?grp.shown:'', String(i+1), '', '', '', '', '', grp.key, '']);
             }
           }
           gSum+=s; gTax+=t; gAmt+=a;
           if(grp.key==='수도광열비') uSum+=s;
           if(grp.mid){ mSum+=s; mTax+=t; mAmt+=a; }
-          out.push(['','','소 계', raw(s), raw(t), raw(a), '']);
+          out.push(['','','소 계', raw(s), raw(t), raw(a), '','','']);
         }
         if(grp.midTotalAfter){
-          out.push(['','','합 계', raw(mSum), raw(mTax), raw(mAmt), '']);
+          out.push(['','','합 계', raw(mSum), raw(mTax), raw(mAmt), '','','']);
         }
       });
-      out.push(['','','정산 합계', raw(gSum), raw(gTax), raw(gAmt), '']);
-      out.push(['','','전기·수도요금 제외', raw(gSum-uSum), '', '', '']);
+      out.push(['','','정산 합계', raw(gSum), raw(gTax), raw(gAmt), '','','']);
+      out.push(['','','전기·수도요금 제외', raw(gSum-uSum), '', '', '','','']);
       var tsv=out.map(function(r){ return r.map(function(c){ return (c||'').toString().replace(/[\t\n]/g,' '); }).join('\t'); }).join('\n');
       function done(){ if(typeof toast==='function') toast('📑 정산표가 복사됐어요 — 엑셀에 붙여넣기 하세요'); }
       if(navigator.clipboard&&navigator.clipboard.writeText){
