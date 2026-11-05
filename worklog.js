@@ -10412,7 +10412,8 @@ function wireExpenseModal(){
   /* expenseOverlay 배경 클릭 닫기 비활성화 */
 }
 
-// 엑셀 복사 — 품의서 양식에 붙여넣을 수 있도록
+// 엑셀 복사 — 지출세부 양식(9열)에 바로 붙여넣을 수 있도록
+// 열 순서: 구분(A) / NO(B) / 지출내용(C) / 금액(D) / 부가세(E) / 합계(F) / 비고(G) / 과목(H) / 세부과목(I)
 function copyExpenseExcel(){
   const expType = EXP_FILTER.tab==="personal" ? "개인지출" : "세금계산서";
   const list = entries.filter(e=>e.kind==="expense"
@@ -10420,22 +10421,38 @@ function copyExpenseExcel(){
     && (!EXP_FILTER.ym || (e.date||"").startsWith(EXP_FILTER.ym))
   ).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
   if(!list.length){ toast("복사할 내역이 없습니다"); return; }
-  // 1) 탭 구분 텍스트
-  const rows = list.map((e,i)=>[i+1, e.title||"", e.amount||0, e.date||"", e.memo||""]);
-  const text = rows.map(r=>r.map(v=>String(v).replace(/\t/g," ").replace(/\n/g," ")).join("\t")).join("\n");
+  // 지출세부 9열 형식 — 부가세·과목·세부과목은 엑셀에서 직접 입력
+  // 헤더 포함
+  const header = ["구분","NO","지출내용","금액","부가세","합계","비고","과목","세부과목"];
+  const rows = list.map((e,i)=>[
+    "",          // A: 구분 (소모품/수선유지/용역비 등 — 엑셀에서 입력)
+    i+1,         // B: NO
+    e.title||"", // C: 지출내용
+    Number(e.amount)||0, // D: 금액 (부가세 제외 — 엑셀에서 확인)
+    "",          // E: 부가세 (엑셀에서 입력)
+    Number(e.amount)||0, // F: 합계 (부가세 없으면 D와 동일, 엑셀에서 수정)
+    e.memo||"",  // G: 비고
+    "",          // H: 과목 (엑셀에서 입력)
+    ""           // I: 세부과목 (엑셀에서 입력)
+  ]);
+  // 1) 탭 구분 텍스트 (헤더 포함)
+  const allRows = [header, ...rows];
+  const text = allRows.map(r=>r.map(v=>String(v).replace(/\t/g," ").replace(/\n/g," ")).join("\t")).join("\n");
   // 2) HTML 테이블 (엑셀이 자동으로 셀에 매핑)
   let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1" cellspacing="0">`;
+  // 헤더행
+  html += "<tr>" + header.map(h=>`<th style="background:#e2e8f0;font-weight:bold">${h}</th>`).join("") + "</tr>";
   rows.forEach(r=>{
     html += "<tr>";
     r.forEach(v=>{
       const s=String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-      const isNum = typeof v === "number" || (/^[0-9]+$/.test(String(v)) && String(v).length<10);
+      const isNum = typeof v === "number" && v !== 0 || (typeof v === "number" && v === 0);
       html += isNum ? `<td x:num>${s}</td>` : `<td>${s}</td>`;
     });
     html += "</tr>";
   });
   html += "</table></body></html>";
-  copyExcelData(text, html, `${expType} ${list.length}건 엑셀 복사됨`);
+  copyExcelData(text, html, `지출세부 ${list.length}건 복사됨 (부가세·과목은 엑셀에서 입력)`);
 }
 
 // 엑셀이 잘 인식하도록 plain text + HTML 두 형식을 같이 클립보드에
