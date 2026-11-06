@@ -1,204 +1,213 @@
 {
- "updated": "2026-11-06 07:12",
+ "updated": "2026-11-06 15:19",
  "byAmount": [
   {
    "name": "SK하이닉스",
    "code": "000660",
-   "price": 1141000,
-   "changeRate": -9.73,
-   "amount": 8588133000000,
-   "surgeRate": 74.5,
+   "price": 1176000,
+   "changeRate": -6.96,
+   "amount": 8961260000000,
+   "surgeRate": 81.9,
    "turnoverRate": 1.0
   },
   {
    "name": "삼성전자",
    "code": "005930",
-   "price": 188900,
-   "changeRate": -6.25,
-   "amount": 6363339000000,
-   "surgeRate": 36.8,
+   "price": 193500,
+   "changeRate": -3.97,
+   "amount": 6622318000000,
+   "surgeRate": 42.2,
    "turnoverRate": 0.6
   },
   {
    "name": "삼성전기",
    "code": "009150",
-   "price": 862000,
-   "changeRate": -8.69,
-   "amount": 1286635000000,
-   "surgeRate": 8.0,
+   "price": 894000,
+   "changeRate": -5.3,
+   "amount": 1347162000000,
+   "surgeRate": 12.9,
    "turnoverRate": 2.0
   },
   {
    "name": "삼성전자우",
    "code": "005935",
-   "price": 150400,
-   "changeRate": -6.23,
-   "amount": 787059000000,
-   "surgeRate": 23.2,
+   "price": 155600,
+   "changeRate": -2.99,
+   "amount": 847328000000,
+   "surgeRate": 32.4,
    "turnoverRate": 0.7
   },
   {
    "name": "SK스퀘어",
    "code": "402340",
-   "price": 722000,
-   "changeRate": -10.75,
-   "amount": 588452000000,
-   "surgeRate": 13.5,
+   "price": 752000,
+   "changeRate": -7.05,
+   "amount": 617817000000,
+   "surgeRate": 19.0,
    "turnoverRate": 0.6
   },
   {
    "name": "삼성SDI",
    "code": "006400",
-   "price": 465500,
-   "changeRate": -8.55,
-   "amount": 396589000000,
-   "surgeRate": -14.1,
+   "price": 474500,
+   "changeRate": -6.78,
+   "amount": 421559000000,
+   "surgeRate": -8.7,
    "turnoverRate": 1.1
   },
   {
    "name": "NAVER",
    "code": "035420",
-   "price": 187500,
-   "changeRate": 1.41,
-   "amount": 364013000000,
-   "surgeRate": 31.6,
+   "price": 188600,
+   "changeRate": 2.0,
+   "amount": 377170000000,
+   "surgeRate": 36.4,
    "turnoverRate": 1.3
   },
   {
    "name": "한진칼",
    "code": "180640",
-   "price": 200000,
-   "changeRate": 5.04,
-   "amount": 267030000000,
-   "surgeRate": 22.6,
-   "turnoverRate": 2.0
+   "price": 196700,
+   "changeRate": 3.31,
+   "amount": 280810000000,
+   "surgeRate": 29.1,
+   "turnoverRate": 2.1
   },
   {
-   "name": "KB금융",
-   "code": "105560",
-   "price": 151100,
-   "changeRate": -3.76,
-   "amount": 216155000000,
-   "surgeRate": 45.0,
-   "turnoverRate": 0.4
+   "name": "한화솔루션",
+   "code": "009830",
+   "price": 25800,
+   "changeRate": -4.27,
+   "amount": 226316000000,
+   "surgeRate": -41.8,
+   "turnoverRate": 3.9
   },
   {
    "name": "셀트리온",
    "code": "068270",
    "price": 208500,
    "changeRate": -3.02,
-   "amount": 211933000000,
-   "surgeRate": -49.7,
+   "amount": 218555000000,
+   "surgeRate": -48.2,
+   "turnoverRate": 0.5
+  },
+  {
+   "name": "KB금융",
+   "code": "105560",
+   "price": 152200,
+   "changeRate": -3.06,
+   "amount": 217564000000,
+   "surgeRate": 45.9,
    "turnoverRate": 0.4
   },
   {
-   "name": "한화솔루션",
-   "code": "009830",
-   "price": 25700,
-   "changeRate": -4.64,
-   "amount": 210925000000,
-   "surgeRate": -45.7,
-   "turnoverRate": 3.6
-  },
-  {
-   "name": "효성중공업",
-   "code": "298040",
-   "price": 1561000,
-   "changeRate": -12.84,
-   "amount": 202464000000,
-   "surgeRate": 57.4,
-   "turnoverRate": 1.4
+   "name": "주성엔지니어링",
+   "code": "036930",
+   "price": 137400,
+   "changeRate": -6.34,
+   "amount": 212226211000,
+   "surgeRate": 20.0,
+   "turnoverRate": 3.3
   }
  ],
  "bySurge": [
   {
+   "name": "KTcs",
+   "code": "058850",
+   "price": 2280,
+   "changeRate": 12.87,
+   "amount": 15782000000,
+   "surgeRate": 18818.1,
+   "turnoverRate": 16.7
+  },
+  {
    "name": "덕성",
    "code": "004830",
-   "price": 3645,
-   "changeRate": 27.67,
-   "amount": 18969000000,
-   "surgeRate": 15036.7,
-   "turnoverRate": 33.2
+   "price": 3420,
+   "changeRate": 19.79,
+   "amount": 21977000000,
+   "surgeRate": 17448.8,
+   "turnoverRate": 41.0
   },
   {
    "name": "계양전기",
    "code": "012200",
-   "price": 2265,
-   "changeRate": -5.82,
-   "amount": 8737000000,
-   "surgeRate": 2329.7,
-   "turnoverRate": 10.9
+   "price": 2390,
+   "changeRate": -0.62,
+   "amount": 8852000000,
+   "surgeRate": 2366.1,
+   "turnoverRate": 10.5
   },
   {
    "name": "에코캡",
    "code": "128540",
    "price": 796,
    "changeRate": 29.85,
-   "amount": 7863599000,
-   "surgeRate": 1828.3,
+   "amount": 7870931000,
+   "surgeRate": 1830.0,
    "turnoverRate": 37.0
   },
   {
    "name": "롯데렌탈",
    "code": "089860",
-   "price": 58400,
-   "changeRate": 10.4,
-   "amount": 140156000000,
-   "surgeRate": 1484.8,
+   "price": 58500,
+   "changeRate": 10.59,
+   "amount": 140874000000,
+   "surgeRate": 1492.9,
    "turnoverRate": 6.6
   },
   {
    "name": "대한항공우",
    "code": "003495",
-   "price": 22750,
-   "changeRate": 4.12,
-   "amount": 5801000000,
-   "surgeRate": 841.6,
-   "turnoverRate": 23.0
+   "price": 23000,
+   "changeRate": 5.26,
+   "amount": 5992000000,
+   "surgeRate": 875.4,
+   "turnoverRate": 23.5
   },
   {
    "name": "아크릴",
    "code": "0007C0",
-   "price": 12400,
-   "changeRate": 3.51,
-   "amount": 4240808000,
-   "surgeRate": 639.8,
+   "price": 12510,
+   "changeRate": 4.42,
+   "amount": 4287673000,
+   "surgeRate": 647.9,
    "turnoverRate": 4.3
   },
   {
    "name": "성광벤드",
    "code": "014620",
-   "price": 21900,
-   "changeRate": -22.89,
-   "amount": 18893005000,
-   "surgeRate": 628.5,
-   "turnoverRate": 3.2
+   "price": 22300,
+   "changeRate": -21.48,
+   "amount": 19250166000,
+   "surgeRate": 642.1,
+   "turnoverRate": 3.3
   },
   {
    "name": "강원에너지",
    "code": "114190",
-   "price": 8500,
-   "changeRate": 11.26,
-   "amount": 21640537000,
-   "surgeRate": 596.9,
-   "turnoverRate": 9.7
+   "price": 8320,
+   "changeRate": 8.9,
+   "amount": 22825637000,
+   "surgeRate": 636.7,
+   "turnoverRate": 10.5
   },
   {
    "name": "씨어스",
    "code": "458870",
    "price": 14500,
    "changeRate": -29.95,
-   "amount": 25364241000,
-   "surgeRate": 540.4,
-   "turnoverRate": 4.6
+   "amount": 26185600000,
+   "surgeRate": 561.6,
+   "turnoverRate": 4.7
   },
   {
    "name": "한국금융지주",
    "code": "071050",
-   "price": 120600,
-   "changeRate": -18.01,
-   "amount": 92605000000,
-   "surgeRate": 517.5,
+   "price": 123800,
+   "changeRate": -15.84,
+   "amount": 94451000000,
+   "surgeRate": 529.6,
    "turnoverRate": 1.4
   },
   {
@@ -209,15 +218,6 @@
    "amount": 3268536000,
    "surgeRate": 483.0,
    "turnoverRate": 62.2
-  },
-  {
-   "name": "한국금융지주우",
-   "code": "071055",
-   "price": 103000,
-   "changeRate": -14.66,
-   "amount": 8952000000,
-   "surgeRate": 418.6,
-   "turnoverRate": 1.5
   }
  ],
  "byTurnover": [
@@ -233,20 +233,29 @@
   {
    "name": "대동금속",
    "code": "020400",
-   "price": 3540,
-   "changeRate": 5.83,
-   "amount": 30798998000,
-   "surgeRate": 384.7,
-   "turnoverRate": 95.9
+   "price": 3460,
+   "changeRate": 3.44,
+   "amount": 33076070000,
+   "surgeRate": 422.1,
+   "turnoverRate": 105.4
   },
   {
    "name": "에스와이",
    "code": "109610",
-   "price": 2110,
-   "changeRate": -1.17,
-   "amount": 65609540000,
-   "surgeRate": 47.8,
-   "turnoverRate": 63.6
+   "price": 2055,
+   "changeRate": -3.75,
+   "amount": 67651312000,
+   "surgeRate": 53.1,
+   "turnoverRate": 67.3
+  },
+  {
+   "name": "래블업",
+   "code": "0147B0",
+   "price": 10350,
+   "changeRate": 0.58,
+   "amount": 98033474000,
+   "surgeRate": 119.2,
+   "turnoverRate": 65.0
   },
   {
    "name": "형지I&C",
@@ -258,15 +267,6 @@
    "turnoverRate": 62.2
   },
   {
-   "name": "래블업",
-   "code": "0147B0",
-   "price": 10800,
-   "changeRate": 4.96,
-   "amount": 93385337000,
-   "surgeRate": 108.4,
-   "turnoverRate": 59.4
-  },
-  {
    "name": "엔젠바이오",
    "code": "354200",
    "price": 741,
@@ -276,58 +276,58 @@
    "turnoverRate": 57.5
   },
   {
-   "name": "엠에스바이오",
-   "code": "0013Y0",
-   "price": 6250,
-   "changeRate": -22.46,
-   "amount": 89620852000,
-   "surgeRate": 2.7,
-   "turnoverRate": 52.7
-  },
-  {
    "name": "깨끗한나라",
    "code": "004540",
-   "price": 1562,
-   "changeRate": 0.51,
-   "amount": 25788000000,
-   "surgeRate": 126.3,
-   "turnoverRate": 44.3
+   "price": 1550,
+   "changeRate": -0.26,
+   "amount": 31473000000,
+   "surgeRate": 181.1,
+   "turnoverRate": 54.5
+  },
+  {
+   "name": "엠에스바이오",
+   "code": "0013Y0",
+   "price": 6420,
+   "changeRate": -20.35,
+   "amount": 91122842000,
+   "surgeRate": 4.7,
+   "turnoverRate": 52.2
   },
   {
    "name": "대동기어",
    "code": "008830",
-   "price": 6790,
-   "changeRate": 2.88,
-   "amount": 52375845000,
-   "surgeRate": -54.6,
-   "turnoverRate": 40.2
+   "price": 6540,
+   "changeRate": -0.91,
+   "amount": 54484481000,
+   "surgeRate": -52.8,
+   "turnoverRate": 43.4
+  },
+  {
+   "name": "덕성",
+   "code": "004830",
+   "price": 3420,
+   "changeRate": 19.79,
+   "amount": 21977000000,
+   "surgeRate": 17448.8,
+   "turnoverRate": 41.0
   },
   {
    "name": "에코캡",
    "code": "128540",
    "price": 796,
    "changeRate": 29.85,
-   "amount": 7863599000,
-   "surgeRate": 1828.3,
+   "amount": 7870931000,
+   "surgeRate": 1830.0,
    "turnoverRate": 37.0
   },
   {
    "name": "아시아나IDT",
    "code": "267850",
-   "price": 10890,
-   "changeRate": 3.03,
-   "amount": 40372000000,
-   "surgeRate": -20.7,
-   "turnoverRate": 33.4
-  },
-  {
-   "name": "덕성",
-   "code": "004830",
-   "price": 3645,
-   "changeRate": 27.67,
-   "amount": 18969000000,
-   "surgeRate": 15036.7,
-   "turnoverRate": 33.2
+   "price": 10820,
+   "changeRate": 2.37,
+   "amount": 41048000000,
+   "surgeRate": -19.3,
+   "turnoverRate": 34.2
   }
  ]
 }
