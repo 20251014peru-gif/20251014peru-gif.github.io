@@ -886,28 +886,9 @@
    ],
    "src": "signal"
   },
-  "알래스카 선거 결과 확정 보류": {
-   "first": "2026-10-24 20:25",
-   "seen": 4,
-   "hits": [
-    "2026-10-24 20:25",
-    "2026-10-24 23:46",
-    "2026-10-25 02:40",
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "",
-   "invest": false,
-   "score": -2,
-   "why": [
-    "경제면 1/18",
-    "단어  / 무관 선거 (-2)"
-   ],
-   "src": "signal"
-  },
   "100일의 거짓말": {
    "first": "2026-10-24 23:46",
-   "seen": 12,
+   "seen": 13,
    "hits": [
     "2026-10-24 23:46",
     "2026-10-25 07:26",
@@ -920,9 +901,10 @@
     "2026-10-26 20:35",
     "2026-10-31 22:36",
     "2026-11-01 09:27",
-    "2026-11-07 22:57"
+    "2026-11-07 22:57",
+    "2026-11-08 07:22"
    ],
-   "last": "2026-11-07 22:57",
+   "last": "2026-11-08 07:22",
    "traffic": "",
    "invest": false,
    "score": -2,
@@ -948,149 +930,6 @@
    ],
    "src": "signal"
   },
-  "김정은, 왕후닝과 회담": {
-   "first": "2026-10-25 02:40",
-   "seen": 2,
-   "hits": [
-    "2026-10-25 02:40",
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "",
-   "invest": false,
-   "score": 1,
-   "why": [
-    "경제면 2/20",
-    "단어 경제 (+1)"
-   ],
-   "src": "signal"
-  },
-  "losene keita": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "100+",
-   "invest": false,
-   "score": 0,
-   "why": [],
-   "src": "google",
-   "news": [
-    "« Personne ne croyait en moi » : de « petit ami de Miss Belgique » en prison à star du MMA, le destin fabuleux de Losene Keita",
-    "Losene Keita tombe dès le 1er round par TKO face à Aaron Pico lors de l’UFC 333"
-   ]
-  },
-  "프리미어리그": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "1000+",
-   "invest": false,
-   "score": -4,
-   "why": [
-    "단어  / 무관 감독,선수 (-4)"
-   ],
-   "src": "google",
-   "news": [
-    "프리미어 리그 리버풀 대 브라이튼 점수 예측",
-    "리버풀 대 브라이튼 경기 프리뷰 및 예측: 막강한 공격력을 자랑하는 두 팀의 맞대결."
-   ]
-  },
-  "lcp": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "200+",
-   "invest": false,
-   "score": 1,
-   "why": [
-    "경제면 1/5"
-   ],
-   "src": "google",
-   "news": [
-    "Worlds 2026: LYON Overcome Early Chaos to Stomp Team Secret Whales into 1-0 Bracket",
-    "TSW Eddie: \"Vietnamese teams are not just trying to win the LCP anymore\""
-   ]
-  },
-  "เชลซี พบ สเปอร์ส": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "500+",
-   "invest": false,
-   "score": 0,
-   "why": [],
-   "src": "google",
-   "news": [
-    "การคาดการณ์ผลการแข่งขันระหว่างเชลซีกับท็อตแนม: สถิติการพบกันเป็นข้อได้เปรียบที่สำคัญ",
-    "~^$+√#™(PPTV HD 36) ดู ทีมชาติสเปอร์ส พบ เชลซี ถ่ายทอดสดฟุตบอลวันนี้ ฟีฟ่า อาเซียน คัพ"
-   ]
-  },
-  "cfo": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "200+",
-   "invest": false,
-   "score": 7,
-   "why": [
-    "경제면 8/12",
-    "단어 IPO,자사주,배당,주주 (+4)"
-   ],
-   "src": "google",
-   "news": [
-    "Forgent Power Solutions Shares Plunge as CFO Exits Less Than a Year After IPO",
-    "FPS Stock Plunges To Record Low, Falls Below IPO Price After CFO Ryan Fiedler's Exit"
-   ]
-  },
-  "도르트문트 대 아인트라흐트": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "100+",
-   "invest": false,
-   "score": 0,
-   "why": [],
-   "src": "google",
-   "news": [
-    "분데스리가 도르트문트 대 프랑크푸르트 경기 예측",
-    "보루시아 도르트문트 vs 아인트라흐트 프랑크푸르트 예측: 선두 자리를 노릴 기회"
-   ]
-  },
-  "2026 롤드컵": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "200+",
-   "invest": false,
-   "score": 0,
-   "why": [],
-   "src": "google",
-   "news": [
-    "LCK 4전 전승 속 2R 내전 성사…LPL은 1패조 벼랑 끝 승부",
-    "[고용준의 e스포츠 엿보기] 요란한 혜택보다 무거운 태극마크… '제카' 김건우가 보여준 프로의 진정성"
-   ]
-  },
   "헐크": {
    "first": "2026-10-25 04:51",
    "seen": 2,
@@ -1110,91 +949,6 @@
     "Spider-Man Defies the Avengers to Take on Marvel’s Most Terrifying Hulk in New Preview",
     "Infernal Hulk vs. Spider-Man #1 Preview: Spidey's Suicide Mission"
    ]
-  },
-  "아이치·나고야 폐막, 꿈은 계속된다": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "",
-   "invest": false,
-   "score": 0,
-   "why": [],
-   "src": "signal"
-  },
-  "1247회 로또 1등 당첨자 3명": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "",
-   "invest": false,
-   "score": 2,
-   "why": [
-    "경제면 3/8"
-   ],
-   "src": "signal"
-  },
-  "최산, 정산금으로 집 빚 갚았다": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "",
-   "invest": false,
-   "score": -2,
-   "why": [
-    "단어  / 무관 고백 (-2)"
-   ],
-   "src": "signal"
-  },
-  "이다해, 중국풍 성형설 언급": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "",
-   "invest": false,
-   "score": 0,
-   "why": [],
-   "src": "signal"
-  },
-  "장률, 파이널 테이블 셰프 변신": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "",
-   "invest": false,
-   "score": 0,
-   "why": [],
-   "src": "signal"
-  },
-  "태풍 참피 제주 근접": {
-   "first": "2026-10-25 04:51",
-   "seen": 1,
-   "hits": [
-    "2026-10-25 04:51"
-   ],
-   "last": "2026-10-25 04:51",
-   "traffic": "",
-   "invest": false,
-   "score": -5,
-   "why": [
-    "경제면 0/19",
-    "단어  / 무관 태풍,날씨 (-4)"
-   ],
-   "src": "signal"
   },
   "이다해": {
    "first": "2026-10-25 07:26",
@@ -17773,14 +17527,15 @@
   },
   "미래에셋증권 해킹 정보유출": {
    "first": "2026-11-07 09:53",
-   "seen": 4,
+   "seen": 5,
    "hits": [
     "2026-11-07 09:53",
     "2026-11-07 16:04",
     "2026-11-07 22:57",
-    "2026-11-08 03:44"
+    "2026-11-08 03:44",
+    "2026-11-08 07:22"
    ],
-   "last": "2026-11-08 03:44",
+   "last": "2026-11-08 07:22",
    "traffic": "",
    "invest": true,
    "score": 6,
@@ -18265,12 +18020,13 @@
   },
   "국민의힘 조작기소특검법 규탄 집회": {
    "first": "2026-11-07 22:57",
-   "seen": 2,
+   "seen": 3,
    "hits": [
     "2026-11-07 22:57",
-    "2026-11-08 03:44"
+    "2026-11-08 03:44",
+    "2026-11-08 07:22"
    ],
-   "last": "2026-11-08 03:44",
+   "last": "2026-11-08 07:22",
    "traffic": "",
    "invest": false,
    "score": -5,
@@ -18312,12 +18068,13 @@
   },
   "블루웨이브 쇼크 시총 증발": {
    "first": "2026-11-07 22:57",
-   "seen": 2,
+   "seen": 3,
    "hits": [
     "2026-11-07 22:57",
-    "2026-11-08 03:44"
+    "2026-11-08 03:44",
+    "2026-11-08 07:22"
    ],
-   "last": "2026-11-08 03:44",
+   "last": "2026-11-08 07:22",
    "traffic": "",
    "invest": true,
    "score": 5,
@@ -18586,7 +18343,262 @@
     "경제면 4/10"
    ],
    "src": "signal"
+  },
+  "인터 마이애미 대 샬럿": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "500+",
+   "invest": false,
+   "score": -2,
+   "why": [
+    "단어  / 무관 득점 (-2)"
+   ],
+   "src": "google",
+   "news": [
+    "인터 마이애미 대 샬럿 경기 생중계: VAR 판독 결과 샬럿의 골이 취소되었습니다.",
+    "인터 마이애미 대 샬럿 경기 예측: 손에 땀을 쥐게 하는 접전이 예상됩니다."
+   ]
+  },
+  "심폐소생술": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "200+",
+   "invest": false,
+   "score": 0,
+   "why": [
+    "경제면 1/19"
+   ],
+   "src": "google",
+   "news": [
+    "동두천소방서, 여성단체협의회 심폐소생술 교육",
+    "의왕시, 공무원 대상 심폐소생술 등 응급처치 교육실시"
+   ]
+  },
+  "real madrid": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "100+",
+   "invest": false,
+   "score": -1,
+   "why": [
+    "경제면 0/9"
+   ],
+   "src": "google",
+   "news": [
+    "Brilla Güler y Real Madrid golea al Valencia del 'Vasco'",
+    "Partidos de hoy de fútbol: horario y dónde ver por TV"
+   ]
+  },
+  "드라마": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "1000+",
+   "invest": false,
+   "score": -5,
+   "why": [
+    "경제면 0/10",
+    "단어  / 무관 드라마,배우 (-4)"
+   ],
+   "src": "google",
+   "news": [
+    "\"넷플릭스에선 대박 나는데\"…한국 드라마 업계의 비명 [김예랑의 K컬처인사이드]",
+    "드라마 업계 12개 단체 \"제작 감소로 K드라마 생태계 붕괴 위기, 국가가 지원해야\""
+   ]
+  },
+  "습관": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "200+",
+   "invest": false,
+   "score": 0,
+   "why": [
+    "경제면 1/17"
+   ],
+   "src": "google",
+   "news": [
+    "“아침에 ‘이 습관’ 없으면 신장에 돌 생긴다”…美 의사 경고 나왔다 [헬시타임]",
+    "“콩팥에 돌 생길라”…‘이 음료’ 과다 섭취땐 신장건강 악영향"
+   ]
+  },
+  "valencia vs madrid": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "200+",
+   "invest": false,
+   "score": -1,
+   "why": [
+    "경제면 0/20"
+   ],
+   "src": "google",
+   "news": [
+    "Real Madrid legend pokes fun at Valencia star during La Liga clash",
+    "‘This is pointless, s**t’ – Valencia star explodes in half-time interview vs Real Madrid"
+   ]
+  },
+  "이창훈": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "200+",
+   "invest": false,
+   "score": -2,
+   "why": [
+    "단어  / 무관 열애 (-2)"
+   ],
+   "src": "google",
+   "news": [
+    "\"그때 난리가 났다\"...이창훈, 송혜교와 '열애설' 입 열었다 - 머니투데이",
+    "이창훈 “송혜교와 열애설? ‘원조교제’ 억지에 욕하기도”"
+   ]
+  },
+  "잠실주공5단지 아파트": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "500+",
+   "invest": false,
+   "score": 2,
+   "why": [
+    "경제면 14/14",
+    "단어 부동산 / 무관 의원 (-1)"
+   ],
+   "src": "google",
+   "news": [
+    "30년 기다린 잠실주공5 재건축 올스톱 위기…사업시행인가 무용지물 가능성",
+    "잠실5단지 재건축, 이번엔 ‘중학교 일조권’ 암초"
+   ]
+  },
+  "valencia vs real madrid": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "500+",
+   "invest": false,
+   "score": -1,
+   "why": [
+    "경제면 0/20"
+   ],
+   "src": "google",
+   "news": [
+    "LIVE BLOG: Valencia vs Real Madrid | LaLiga",
+    "Business as usual: Valverde unleashes trademark strike to make it 0-1"
+   ]
+  },
+  "농민": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "100+",
+   "invest": true,
+   "score": 3,
+   "why": [
+    "경제면 6/15",
+    "단어 투자 (+1)"
+   ],
+   "src": "google",
+   "news": [
+    "추미애 지사 \"농업은 식량안보이자 환경 지키는 미래 산업...투자 확대할 것\"",
+    "제31회 경기도 농업인의 날 기념식‥‘농업인의 날’ 유공자·‘농어민 대상’ 수상자 표창"
+   ]
+  },
+  "폴란드 총기 난사 6명 사망": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "",
+   "invest": false,
+   "score": -3,
+   "why": [
+    "경제면 0/19",
+    "단어  / 무관 사망 (-2)"
+   ],
+   "src": "signal"
+  },
+  "젠슨 황 딸 방한 취소": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "",
+   "invest": true,
+   "score": 3,
+   "why": [
+    "경제면 5/10"
+   ],
+   "src": "signal"
+  },
+  "김현철, 유재석 축의금 환불 원해": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "",
+   "invest": false,
+   "score": -2,
+   "why": [
+    "단어  / 무관 결혼 (-2)"
+   ],
+   "src": "signal"
+  },
+  "트럼프 UFC 회장에 대변인 제안": {
+   "first": "2026-11-08 07:22",
+   "seen": 1,
+   "hits": [
+    "2026-11-08 07:22"
+   ],
+   "last": "2026-11-08 07:22",
+   "traffic": "",
+   "invest": false,
+   "score": -3,
+   "why": [
+    "경제면 0/20",
+    "단어  / 무관 선수 (-2)"
+   ],
+   "src": "signal"
   }
  },
- "updated": "2026-11-08 03:44"
+ "updated": "2026-11-08 07:22"
 }
