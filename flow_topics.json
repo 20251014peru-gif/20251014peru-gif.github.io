@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-11-08T09:58:26.198072+09:00",
+ "updated_at": "2026-11-08T15:48:13.030933+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
    "video_count": 13,
-   "channel_count": 9,
-   "total_views": 624220,
-   "latest": "2026-11-08T09:00:05+09:00",
+   "channel_count": 10,
+   "total_views": 703250,
+   "latest": "2026-11-08T15:00:18+09:00",
    "video_ids": [
+    "u1ZHq4WVhro",
     "dkEtkF5yuyc",
     "TfCwVN7eUB0",
     "q1UgfcKNAkQ",
@@ -20,14 +21,14 @@
     "Oq6lVjtmQco",
     "-3SUjhgQan8",
     "CtJ7LZslam0",
-    "iV72GtWgsqg",
-    "pIDj6SvKnrQ"
+    "iV72GtWgsqg"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
     "경제사냥꾼",
     "내일은 투자왕 - 김단테",
+    "삼프로TV 3PROTV",
     "언더스탠딩",
     "염블리와 함께 (염승환)",
     "이효석아카데미",
@@ -36,17 +37,17 @@
    ],
    "subtopics": [
     {
-     "word": "이렇게",
+     "word": "시대",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "교수",
      "videos": 2,
      "channels": 2
     },
     {
      "word": "주식",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "시대",
      "videos": 2,
      "channels": 2
     },
@@ -73,9 +74,10 @@
    "name": "반도체",
    "video_count": 11,
    "channel_count": 6,
-   "total_views": 634889,
-   "latest": "2026-11-08T08:30:18+09:00",
+   "total_views": 759292,
+   "latest": "2026-11-08T12:05:47+09:00",
    "video_ids": [
+    "EJbBhrHVXzs",
     "-IwG8xso3qs",
     "7-NDifEKpKY",
     "MlGQ1kCu3A4",
@@ -85,8 +87,7 @@
     "zzxFz5qEhtw",
     "g78cbuDi_JE",
     "CtJ7LZslam0",
-    "kFQSFK70dUU",
-    "lqsH-wyUpRk"
+    "kFQSFK70dUU"
    ],
    "channels": [
     "815머니톡",
@@ -135,7 +136,7 @@
    "name": "정책·정치",
    "video_count": 6,
    "channel_count": 6,
-   "total_views": 705660,
+   "total_views": 769036,
    "latest": "2026-11-07T15:00:37+09:00",
    "video_ids": [
     "vXn_cVkZ7yo",
@@ -182,7 +183,7 @@
    "name": "국내증시",
    "video_count": 5,
    "channel_count": 4,
-   "total_views": 1374803,
+   "total_views": 1589869,
    "latest": "2026-11-07T20:00:16+09:00",
    "video_ids": [
     "7-NDifEKpKY",
@@ -222,14 +223,39 @@
    "active": true
   },
   {
+   "id": "유가_에너지",
+   "name": "유가·에너지",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 211490,
+   "latest": "2026-11-08T10:00:07+09:00",
+   "video_ids": [
+    "7Y3FDMrddqA",
+    "YBcL0q0HbIA",
+    "gtQviGOjbEw"
+   ],
+   "channels": [
+    "언더스탠딩",
+    "증시각도기TV",
+    "체슬리TV (박세익)"
+   ],
+   "subtopics": [
+    {
+     "word": "교수",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "조선_방산",
    "name": "조선·방산",
-   "video_count": 4,
+   "video_count": 3,
    "channel_count": 3,
-   "total_views": 175204,
-   "latest": "2026-11-08T08:00:02+09:00",
+   "total_views": 179680,
+   "latest": "2026-11-07T17:00:00+09:00",
    "video_ids": [
-    "UGjWBIdX4hc",
     "N7v3qr_60vQ",
     "blV5yE97wk8",
     "CtJ7LZslam0"
@@ -239,39 +265,27 @@
     "염블리와 함께 (염승환)",
     "최준영 박사의 지구본 연구소"
    ],
-   "subtopics": [
-    {
-     "word": "한국",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
+   "subtopics": [],
    "active": true
   },
   {
    "id": "고용_경기",
    "name": "고용·경기",
-   "video_count": 5,
+   "video_count": 4,
    "channel_count": 2,
-   "total_views": 258454,
+   "total_views": 225724,
    "latest": "2026-11-06T23:22:43+09:00",
    "video_ids": [
     "CDHLMwDd2C8",
     "880TvQdZgjU",
     "XIXAJJ0cywc",
-    "kx3F4X6skkA",
-    "5hh4zCU5bGk"
+    "kx3F4X6skkA"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
     "경제사냥꾼"
    ],
    "subtopics": [
-    {
-     "word": "증시",
-     "videos": 3,
-     "channels": 2
-    },
     {
      "word": "고용지표",
      "videos": 2,
@@ -288,11 +302,30 @@
      "channels": 1
     },
     {
-     "word": "월가",
+     "word": "증시",
      "videos": 2,
      "channels": 1
     }
    ],
+   "active": true
+  },
+  {
+   "id": "금리_연준",
+   "name": "금리·연준",
+   "video_count": 3,
+   "channel_count": 2,
+   "total_views": 158613,
+   "latest": "2026-11-08T12:00:28+09:00",
+   "video_ids": [
+    "6JRwEiYhK64",
+    "nTmLEZMNgJA",
+    "880TvQdZgjU"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "경제사냥꾼"
+   ],
+   "subtopics": [],
    "active": true
   }
  ]
