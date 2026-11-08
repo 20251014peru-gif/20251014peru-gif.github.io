@@ -2739,7 +2739,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.28</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.29</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38813,7 +38813,7 @@ window.markflowBootError=function(items,detail){
 <script src="markflow/zip.js?v=3.10.0"></script>
 <script src="markflow/sync-merge.js?v=3.10.0"></script>
 <script src="markflow/backup.js?v=3.10.0"></script>
-<script src="markflow/usability.js?v=3.9.2"></script>
+<script src="markflow/usability.js?v=3.9.3"></script>
 <script src="markflow/ai-costs.js?v=3.9.1"></script>
 <script src="markflow/photo-recovery.js?v=3.9.2"></script>
 <script src="markflow/restore-v38.js?v=3.8-restored-1"></script>
@@ -41399,7 +41399,7 @@ window.markflowBootError=function(items,detail){
     setBlock:function(t){var i=curTopIdx();if(i>=0)convertUnit({type:'block',domIdx:i},t);},
     exec:function(c){editor.exec(c);editor.focus();},
     link:function(){var v=wwView();var sel=v.state.selection;var label=v.state.doc.textBetween(sel.from,sel.to,' ');var url=prompt('링크 주소 (https://…)', 'https://');if(!url)return;try{var parsed=new URL(url);if(!['https:','http:','mailto:','tel:'].includes(parsed.protocol))throw Error();}catch(e){mfToast('올바른 링크 주소를 입력해 주세요.');return;}editor.exec('addLink',{linkUrl:url,linkText:label||url});editor.focus();},
-    highlight:openHlPicker,bullet:function(){bulletBtn.click();},outdent:function(){outdentBtn.click();},indent:function(){indentBtn.click();},fold:function(){foldAllBtn.click();},photos:pickMultiplePhotos,video:openVideoInput,more:openTbMore,
+    highlight:openHlPicker,textColor:openTcPicker,textSize:openFmtPicker,bullet:function(){bulletBtn.click();},outdent:function(){outdentBtn.click();},indent:function(){indentBtn.click();},fold:function(){foldAllBtn.click();},photos:function(b){ if(b&&b.getBoundingClientRect) openPhotoSource(b); else openPhotoSource(document.querySelector('.mf-organized-toolbar [aria-label=\"사진 넣기\"]')||document.body); },video:openVideoInput,more:openTbMore,
     onCaret:function(fn){editor.on('caretChange',fn);},blockType:function(){var v=wwView();if(!v)return 'p';var n=v.state.selection.$from.parent;return n.type.name==='heading'?'h'+n.attrs.level:'p';}
   });
   // v3.8.16: 설정 안의 '나의 시스템 홈'(index.html) 버튼을 MarkFlow 이름 옆으로 뺀다
