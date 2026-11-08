@@ -29,8 +29,23 @@ window.installMarkflowUsability=function(api){
   const history=group('되돌리기');history.append($('btn-undo'),$('btn-redo'));
   const format=group('글 서식'), list=group('목록과 구조'),insert=group('첨부와 추가');
   function button(parent,label,content,fn,cls=''){const b=document.createElement('button');b.type='button';b.className='mf-action '+cls;b.title=label;b.setAttribute('aria-label',label);b.innerHTML=content;b.addEventListener('mousedown',e=>e.preventDefault());b.onclick=()=>{if(api.isReadOnly()){api.toast('읽기 모드를 끄면 편집할 수 있습니다.');return;}fn(b);};parent.append(b);return b;}
-  const style=document.createElement('select');style.id='mf-paragraph-style';style.setAttribute('aria-label','문단 형식');[['p','본문'],['h1','제목 1'],['h2','제목 2'],['h3','제목 3']].forEach(([v,l])=>style.add(new Option(l,v)));format.append(style);style.onchange=()=>{if(api.isReadOnly())return;api.setBlock(style.value);};
-  button(format,'굵게','<b>B</b>',()=>api.exec('bold'));button(format,'기울임','<i>I</i>',()=>api.exec('italic'));button(format,'취소선','<s>S</s>',()=>api.exec('strike'));button(format,'형광펜','<span class="mf-highlight-icon">가</span>',b=>api.highlight(b.getBoundingClientRect()));
+  const style=document.createElement('select');style.id='mf-paragraph-style';style.setAttribute('aria-label','문단 형식');[['p','본문'],['h1','제목 1'],['h2','제목 2'],['h3','제목 3'],['h4','제목 4']].forEach(([v,l])=>style.add(new Option(l,v)));format.append(style);style.onchange=()=>{if(api.isReadOnly())return;api.setBlock(style.value);};
+
+  /* 비슷한 글자 기능을 드롭다운으로 묶는다 (제목 드롭다운처럼). 선택 보존 위해 mousedown preventDefault 사용. */
+  const dstyle=document.createElement('style');dstyle.textContent='.mf-dropdown{display:inline-flex;align-items:center;gap:4px;}.mf-caret-dn{font-size:10px;opacity:.65;}.mf-tooldrop{background:var(--bg-elev,#fff);border:1px solid var(--border,#dcdfe4);border-radius:12px;box-shadow:0 10px 34px rgba(0,0,0,.2);padding:6px;display:flex;flex-direction:column;min-width:168px;}.mf-tooldrop-item{text-align:left;background:transparent;border:0;color:var(--text,#222);font-family:inherit;font-size:14.5px;padding:11px 13px;border-radius:8px;cursor:pointer;white-space:nowrap;}.mf-tooldrop-item:hover{background:var(--bg-soft,#f3f4f6);}';document.head.append(dstyle);
+  function openToolDrop(anchorBtn,items){
+    document.querySelector('.mf-tooldrop')?.remove();
+    const m=document.createElement('div');m.className='mf-tooldrop';
+    items.forEach(it=>{const row=document.createElement('button');row.type='button';row.className='mf-tooldrop-item';row.textContent=it[0];row.addEventListener('mousedown',e=>{e.preventDefault();m.remove();it[1]();});m.append(row);});
+    document.body.append(m);
+    const r=anchorBtn.getBoundingClientRect();const w=m.offsetWidth||176,h=m.offsetHeight||180;let left=Math.max(8,Math.min(r.left,innerWidth-w-8));let top=r.bottom+6;if(top+h>innerHeight-8)top=Math.max(8,r.top-h-6);
+    m.style.cssText='position:fixed;z-index:240;left:'+left+'px;top:'+top+'px;';
+    setTimeout(()=>{const close=e=>{if(!m.contains(e.target)&&!anchorBtn.contains(e.target)){m.remove();document.removeEventListener('mousedown',close);}};document.addEventListener('mousedown',close);},0);
+  }
+  function dropdown(parent,label,items){const b=document.createElement('button');b.type='button';b.className='mf-action mf-dropdown';b.title=label;b.setAttribute('aria-label',label);b.innerHTML='<span>'+label+'</span><span class="mf-caret-dn">▾</span>';b.addEventListener('mousedown',e=>e.preventDefault());b.onclick=()=>{if(api.isReadOnly()){api.toast('읽기 모드를 끄면 편집할 수 있습니다.');return;}openToolDrop(b,items);};parent.append(b);return b;}
+  dropdown(format,'서식',[['굵게',()=>api.exec('bold')],['기울임',()=>api.exec('italic')],['취소선',()=>api.exec('strike')]]);
+  dropdown(format,'색',[['형광펜',b=>api.highlight(anchor||{left:60,bottom:120,top:90})],['글자색',()=>api.textColor&&api.textColor(anchor||{left:60,bottom:120,top:90})],['글자 크기·인용색',()=>api.textSize&&api.textSize(anchor||{left:60,bottom:120,top:90})]]);
+
   button(list,'글머리 목록','☷',api.bullet);button(list,'내어쓰기','⇤',api.outdent);button(list,'들여쓰기','⇥',api.indent);button(list,'모두 접기 / 펼치기','⌃⌄',api.fold);
   button(insert,'사진 넣기','▧',api.photos);button(insert,'동영상 넣기','▷',api.video);button(insert,'링크 넣기','↗',api.link);button(insert,'더보기 · 표·아이콘·추가 서식','<span>＋</span><span class="mf-more-label">더보기</span>',b=>api.more(b.getBoundingClientRect(),b),'mf-more-action');
   const iconPairs=[['글머리 목록','.mf-tbtn.bullet'],['내어쓰기','.mf-tbtn.outdent'],['들여쓰기','.mf-tbtn.indent'],['모두 접기 / 펼치기','.mf-tbtn.foldall'],['사진 넣기','[aria-label="사진 넣기"]']];
