@@ -2774,7 +2774,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.45</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.46</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -39255,7 +39255,7 @@ window.markflowBootError=function(items,detail){
   function docLocked(d){ return !!(d && !__mfUnlocked && (d.locked || folderLocked(d.folder))); }
   function folderLocked(name){ return !!(name && state.lockedFolders && state.lockedFolders.indexOf(name)>=0); }
   function cryptoOK(){ return !!(window.crypto && crypto.subtle && crypto.getRandomValues); }
-  function isEnc(s){ return typeof s==="string" && s.slice(0,ENCP.length)===ENCP; }
+  function isEnc(s){ return typeof s==="string" && s.slice(0,5)==="🔐v1:"; }
   function _b64(buf){ var u=new Uint8Array(buf),s=""; for(var i=0;i<u.length;i++)s+=String.fromCharCode(u[i]); return btoa(s); }
   function _unb64(s){ var bin=atob(s),u=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return u; }
   // 소금(salt)은 state.lockSalt에 넣어 동기화·백업으로 다른 기기에도 전달 → 같은 비밀번호면 어디서나 복호화 가능
