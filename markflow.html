@@ -2212,7 +2212,9 @@ table.ProseMirror-selectednode {
   .tb.sync-on{color:#1a7f37;}
   select.modal-input{font-family:var(--sans);cursor:pointer;}
   /* AI 선택 툴바 */
-  .ai-bar{position:fixed;z-index:220;display:flex;gap:2px;align-items:center;background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:4px;}
+  .ai-bar{position:fixed;z-index:220;display:flex;gap:2px;align-items:center;background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:4px;max-width:calc(100vw - 14px);overflow-x:auto;}
+  .ai-bar-sep{width:1px;align-self:stretch;margin:3px 3px;background:var(--border);flex:0 0 auto;}
+  .fmt-act{font-size:15px!important;padding:6px 7px!important;flex:0 0 auto;}
   .ai-act{font-size:12.5px;font-weight:600;color:var(--text);background:transparent;border:0;border-radius:7px;padding:6px 9px;cursor:pointer;white-space:nowrap;}
   .ai-act:hover{background:var(--accent-soft);color:var(--accent);}
   .ai-busy{font-size:12.5px;color:var(--accent);font-weight:600;padding:6px 10px;}
@@ -2741,12 +2743,16 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.31</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.32</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
 
 <div class="ai-bar" id="ai-bar" style="display:none">
+  <button class="ai-act fmt-act" data-fmt="hl" title="형광펜">🖊</button>
+  <button class="ai-act fmt-act" data-fmt="tc" title="글자색">🎨</button>
+  <button class="ai-act fmt-act" data-fmt="sz" title="글자 크기">🔠</button>
+  <span class="ai-bar-sep"></span>
   <button class="ai-act" data-ai="polish">✨ 다듬기</button>
   <button class="ai-act" data-ai="summary">📝 요약</button>
   <button class="ai-act" data-ai="fix">✓ 교정</button>
@@ -40895,7 +40901,7 @@ window.markflowBootError=function(items,detail){
     inp.click();
   }
   function openPhotoSource(anchor){
-    mfPopup(anchor,[{lb:"📷 카메라로 찍기", fn:pickCameraPhoto},{lb:"🖼 갤러리에서 선택 (여러 장)", fn:pickMultiplePhotos},{lb:"🔡 텍스트·문서 스캔 (무료)", fn:function(){ scanFree("doc"); }},{lb:"📖 책표지 스캔 (무료)", fn:function(){ scanFree("book"); }}]);
+    mfPopup(anchor,[{lb:"📷 카메라로 찍기", fn:pickCameraPhoto},{lb:"🖼 갤러리에서 선택 (여러 장)", fn:pickMultiplePhotos},{lb:"📄 문서 스캔 (사진·스캔본 넣기)", fn:scanDoc},{lb:"📖 책표지 넣기 (맨 위에)", fn:scanCover},{lb:"🔡 텍스트 스캔 (글자만 · 미리보기)", fn:scanText}]);
   }
   // ---- 무료 스캔(OCR): Tesseract.js (브라우저에서 글자 인식, 비용 0) ----
   function loadTesseract(){
@@ -40914,36 +40920,48 @@ window.markflowBootError=function(items,detail){
     if(show){ if(!el){ el=document.createElement("div"); el.id="mf-scan-prog"; el.style.cssText="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:320;background:var(--bg-elev);color:var(--text);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 44px rgba(0,0,0,.3);padding:20px 24px;font-size:14px;font-weight:600;text-align:center;max-width:82vw;line-height:1.5;"; document.body.appendChild(el); } el.innerHTML=msg||"스캔 중…"; }
     else if(el){ el.remove(); }
   }
-  function insertScanText(txt, mode){
+  function insertScanText(txt){
     txt=(txt||"").replace(/\r/g,"").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim();
     if(!txt) return;
-    if(mode==="book"){ var lines=txt.split("\n").filter(function(l){return l.trim();}); var title=(lines[0]||"책 제목").trim(); var rest=lines.slice(1).join("\n"); txt="# "+title+"\n\n> 📖 표지에서 읽은 내용:\n\n"+rest+"\n"; }
     try{ editor.focus(); }catch(e){}
     try{ editor.insertText(txt); }catch(e){ try{ var d=current(); d.content=(d.content||"")+"\n\n"+txt; loading=true; editor.setMarkdown(d.content,false); loading=false; }catch(_){} }
     try{ afterHlEdit&&afterHlEdit(); }catch(e){}
   }
-  function scanFree(mode){
-    var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.setAttribute("capture","environment"); inp.style.display="none"; document.body.appendChild(inp);
-    inp.addEventListener("change",function(){ var f=(inp.files&&inp.files[0])||null; inp.remove(); if(!f) return;
-      var r=new FileReader(); r.onload=function(){
-        shrinkDataUrl(String(r.result), 2200, 0.92).then(function(img){
-          scanProgress(true,"스캔 준비 중…<br><span style='font-weight:400;font-size:12.5px;opacity:.8'>처음엔 한국어 데이터(약 15MB)를 받아<br>조금 오래 걸려요</span>");
-          loadTesseract().then(function(T){
-            return T.recognize(img, "kor+eng", {logger:function(m){
-              if(m&&m.status==="recognizing text") scanProgress(true,"글자 읽는 중… "+Math.round((m.progress||0)*100)+"%");
-              else if(m&&/load|initiali|traineddata/i.test(m.status||"")) scanProgress(true,"스캔 준비 중…<br><span style='font-weight:400;font-size:12px;opacity:.75'>"+(m.status||"")+"</span>");
-            }});
-          }).then(function(res){
-            scanProgress(false);
-            var txt=((res&&res.data&&res.data.text)||"");
-            if(!txt.trim()){ mfToast("글자를 찾지 못했어요 (더 밝고 정면으로 찍어보세요)"); return; }
-            insertScanText(txt, mode);
-            mfToast("스캔 완료 — 읽은 글자를 넣었어요. 틀린 글자는 고쳐 주세요");
-          }).catch(function(e){ scanProgress(false); mfToast("스캔 실패: "+(e&&e.message?e.message:String(e))); });
-        });
-      }; r.onerror=function(){ mfToast("이미지를 읽지 못했어요"); }; r.readAsDataURL(f);
-    });
-    inp.click();
+  function cameraFile(cb){ var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.setAttribute("capture","environment"); inp.style.display="none"; document.body.appendChild(inp); inp.addEventListener("change",function(){ var f=(inp.files&&inp.files[0])||null; inp.remove(); if(f) cb(f); }); inp.click(); }
+  function fileToImg(f, cb){ var r=new FileReader(); r.onload=function(){ shrinkDataUrl(String(r.result),2200,0.92).then(cb); }; r.onerror=function(){ mfToast("이미지를 읽지 못했어요"); }; r.readAsDataURL(f); }
+  function caretToStart(){ try{ var v=wwView_(); var TS=window.PM&&window.PM.TextSelection; if(v&&TS){ v.focus(); v.dispatch(v.state.tr.setSelection(TS.create(v.state.doc, 1))); } }catch(e){} }
+  // 책표지: 사진을 문서 맨 위에 그대로 넣기
+  function scanCover(){ cameraFile(function(f){ caretToStart(); setTimeout(function(){ processPhotoFiles([f]); },50); }); }
+  // 문서 스캔: 문서 사진/스캔본을 이미지로 넣기 (갤러리·파일에서 삼성 스캔본도 고를 수 있게 capture 없이)
+  function scanDoc(){ var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.multiple=true; inp.style.display="none"; document.body.appendChild(inp); inp.addEventListener("change",function(){ var files=Array.prototype.slice.call(inp.files||[]); inp.remove(); processPhotoFiles(files); }); inp.click(); }
+  // 무료 OCR 실행 (한국어 데이터 다운로드 진행률 표시)
+  function runOcr(img, onDone, onErr){
+    scanProgress(true,"스캔 준비 중…<br><span style='font-weight:400;font-size:12.5px;opacity:.8'>처음엔 한국어 데이터(약 15MB)를<br>받느라 조금 걸려요</span>");
+    loadTesseract().then(function(T){
+      return T.createWorker("kor+eng",1,{logger:function(m){ if(!m) return;
+        if(m.status==="recognizing text") scanProgress(true,"글자 읽는 중… "+Math.round((m.progress||0)*100)+"%");
+        else if(/traineddata|loading|initiali/i.test(m.status||"")) scanProgress(true,"한국어 데이터 받는 중… "+Math.round((m.progress||0)*100)+"%<br><span style='font-weight:400;font-size:11.5px;opacity:.7'>처음 한 번만 받아요</span>");
+      }});
+    }).then(function(worker){
+      return worker.recognize(img).then(function(res){ return worker.terminate().then(function(){ return res; }); });
+    }).then(function(res){ scanProgress(false); onDone(((res&&res.data&&res.data.text)||"").trim()); })
+     .catch(function(e){ scanProgress(false); onErr(e); });
+  }
+  // 텍스트 스캔: 글자만 읽어 미리보기로 확인 후 넣기
+  function scanText(){ cameraFile(function(f){ fileToImg(f, function(img){ runOcr(img, function(txt){ if(!txt){ mfToast("글자를 찾지 못했어요 (더 밝고 정면으로 찍어보세요)"); return; } showScanPreview(txt, function(v){ insertScanText(v); mfToast("문서에 넣었어요"); }); }, function(e){ mfToast("스캔 실패: "+(e&&e.message?e.message:String(e))); }); }); }); }
+  function showScanPreview(text, onInsert){
+    var back=document.createElement("div"); back.className="modal-back"; back.style.zIndex="330";
+    var box=document.createElement("div"); box.className="modal"; box.style.maxWidth="540px";
+    var head=document.createElement("div"); head.innerHTML='<div style="font-weight:700;font-size:15px;">스캔 결과 확인</div><div style="font-size:12.5px;color:var(--text-faint);margin:3px 0 9px;">잘못 읽은 글자는 여기서 바로 고친 뒤 넣으세요.</div>'; box.appendChild(head);
+    var ta=document.createElement("textarea"); ta.className="modal-input"; ta.style.cssText="width:100%;height:46vh;min-height:200px;resize:vertical;font-family:var(--sans);font-size:14.5px;line-height:1.55;"; ta.value=text; box.appendChild(ta);
+    var row=document.createElement("div"); row.style.cssText="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;";
+    var cancel=document.createElement("button"); cancel.type="button"; cancel.className="mbtn"; cancel.textContent="취소";
+    var ins=document.createElement("button"); ins.type="button"; ins.className="mbtn"; ins.style.cssText="background:var(--accent);color:#fff;border-color:var(--accent);"; ins.textContent="문서에 넣기";
+    cancel.onclick=function(){ back.remove(); }; ins.onclick=function(){ var v=ta.value; back.remove(); onInsert(v); };
+    row.appendChild(cancel); row.appendChild(ins); box.appendChild(row);
+    back.appendChild(box); document.body.appendChild(back);
+    back.addEventListener("mousedown",function(e){ if(e.target===back) back.remove(); });
+    setTimeout(function(){ try{ ta.focus(); }catch(e){} },60);
   }
   // 커서 바로 그 자리에 사진을 넣는 변환을 만든다 (못 만들면 null → 아래 기존 방식으로 대신 넣음)
   function photoTrAtCursor(v, nodes, pType){
@@ -41280,6 +41298,8 @@ window.markflowBootError=function(items,detail){
     continue:{sys:"다음 글에 자연스럽게 이어질 내용을 한국어로 한두 문단 써. 마크다운 없이 이어질 내용만 출력해.",busy:"이어쓰는 중…",tok:900}
   };
   var aiBar=document.getElementById("ai-bar"), aiBusy=document.getElementById("ai-busy"), aiModal=document.getElementById("ai-modal");
+  // 선택하면 뜨는 바에서 바로 서식 적용(도구막대까지 안 가게) — mousedown preventDefault로 선택 보존
+  if(aiBar) aiBar.addEventListener("mousedown",function(e){ var b=e.target.closest&&e.target.closest(".fmt-act"); if(!b) return; e.preventDefault(); e.stopPropagation(); var k=b.getAttribute("data-fmt"); var r=b.getBoundingClientRect(); if(k==="hl"){ if(typeof openHlPicker==="function") openHlPicker(r); } else if(k==="tc"){ if(typeof openTcPicker==="function") openTcPicker(r); } else if(k==="sz"){ if(typeof openFmtPicker==="function") openFmtPicker(r); } });
   function hideAiBar(){ if(aiBar) aiBar.style.display="none"; }
   function selInEditor(){
     var sel=window.getSelection(); if(!sel||sel.rangeCount===0||sel.isCollapsed) return null;
