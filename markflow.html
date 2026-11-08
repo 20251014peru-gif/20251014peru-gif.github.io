@@ -2739,7 +2739,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.27</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.28</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -40389,6 +40389,8 @@ window.markflowBootError=function(items,detail){
   function openTbMore(rect, btn){
     closeTbMore(); tbMoreBtnRef=btn||null;
     var curIdx=-1; try{ curIdx=wwView().state.selection.$from.index(0); }catch(e){ curIdx=-1; }
+    var savedRange=null; try{ var _v=wwView_(); if(_v&&!_v.state.selection.empty){ savedRange={from:_v.state.selection.from,to:_v.state.selection.to}; } }catch(e){}
+    function restoreSel(){ if(!savedRange) return; try{ var v=wwView_(); var TS=window.PM&&window.PM.TextSelection; if(v&&TS){ v.focus(); v.dispatch(v.state.tr.setSelection(TS.create(v.state.doc, savedRange.from, savedRange.to))); } }catch(e){} }
     function focusCur(){ try{ if(curIdx>=0) caretInUnit({domIdx:curIdx}); editor.focus(); }catch(e){} }
     var mobile=window.innerWidth<=760;
     tbMoreMenu=document.createElement("div"); tbMoreMenu.className="slash mf-tbmore"+(mobile?" sheet":"");
@@ -40414,7 +40416,7 @@ window.markflowBootError=function(items,detail){
       });
       tbMoreMenu.appendChild(row); });
     var extra=document.createElement('div');extra.className='bmenu-chips';
-    [['취소선',function(){editor.exec('strike');}],['이모지',function(){openInlineEmoji(rect);}],['가운데 장식선',function(){ if(curIdx<0){ if(typeof mfToast==="function") mfToast("먼저 줄을 눌러 커서를 두세요"); return; } focusCur(); setTimeout(function(){ applyCenterLine(); },0); }]].forEach(function(item){var b=document.createElement('button');b.type='button';b.className='bchip';b.textContent=item[0];b.addEventListener('mousedown',function(e){e.preventDefault();closeTbMore();item[1]();});extra.appendChild(b);});tbMoreMenu.appendChild(extra);
+    [['글자색',function(){ restoreSel(); setTimeout(function(){ openTcPicker(rect); },0); }],['글자 크기·인용색',function(){ openFmtPicker(rect); }],['메모↔마크다운 모드',function(){ setMemoMode(!memoModeOn()); }],['취소선',function(){editor.exec('strike');}],['이모지',function(){openInlineEmoji(rect);}],['가운데 장식선',function(){ if(curIdx<0){ if(typeof mfToast==="function") mfToast("먼저 줄을 눌러 커서를 두세요"); return; } focusCur(); setTimeout(function(){ applyCenterLine(); },0); }]].forEach(function(item){var b=document.createElement('button');b.type='button';b.className='bchip';b.textContent=item[0];b.addEventListener('mousedown',function(e){e.preventDefault();closeTbMore();item[1]();});extra.appendChild(b);});tbMoreMenu.appendChild(extra);
     document.body.appendChild(tbMoreMenu);
     if(!mobile){ var x=Math.min(rect.left, window.innerWidth-262); if(x<6)x=6; var y=rect.bottom+6; tbMoreMenu.style.left=x+"px"; tbMoreMenu.style.top=y+"px"; tbMoreMenu.style.maxHeight=(window.innerHeight-y-12)+"px"; tbMoreMenu.style.overflowY="auto"; }
     setTimeout(function(){ document.addEventListener("mousedown",tbMoreOutside); },0);
