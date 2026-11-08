@@ -2755,7 +2755,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.33</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.35</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -39294,8 +39294,8 @@ window.markflowBootError=function(items,detail){
   }
   function homeThumb(d){
     var c=homeInfo(d); if(c.thumb!==undefined) return c.thumb;
-    var raw=d.content||"", i=raw.indexOf("data:image"), src="";
-    if(i>=0){ var j=raw.indexOf(")",i); if(j>i) src=raw.slice(i,j); }
+    var src="";
+    if(d.coverTop){ var raw=d.content||"", i=raw.indexOf("data:image"); if(i>=0){ var j=raw.indexOf(")",i); if(j>i) src=raw.slice(i,j); } }
     c.thumb=src; return src;
   }
   function relTime(t){
@@ -40899,12 +40899,13 @@ window.markflowBootError=function(items,detail){
     });
   }
   // ---- 사진 여러 장 넣기 ----
-  function processPhotoFiles(files){
+  function processPhotoFiles(files, cover){
     files=Array.prototype.slice.call(files||[]); if(!files.length) return;
     var reads=files.map(function(f){ return new Promise(function(res){ var r=new FileReader(); r.onload=function(){
       shrinkDataUrl(String(r.result), 1200, 0.78).then(function(u){ return shrinkOriginal(f).then(function(of){ return storePhotoOriginal(of,u); }).then(function(ok){ res({name:(f.name||"사진").replace(/\.[^.]+$/,""), url:u, original:ok}); }); });
     }; r.onerror=function(){ res(null); }; r.readAsDataURL(f); }); });
     Promise.all(reads).then(function(imgs){ imgs=imgs.filter(Boolean); if(!imgs.length) return; insertPhotosAtCursor(imgs);
+      if(cover){ try{ var cd=current(); cd.coverTop=true; delete homeCache[cd.id]; scheduleSave(); mfToast("책표지로 지정했어요 (목록 카드 그림으로 나와요)"); }catch(e){} }
       var lost=imgs.filter(function(x){ return !x.original; }).length; if(lost) mfToast("사진 "+lost+"장은 원본을 저장하지 못해 화면용 축소본만 넣었어요 (저장 공간 확인)"); });
   }
   function pickMultiplePhotos(){
@@ -40920,7 +40921,7 @@ window.markflowBootError=function(items,detail){
     inp.click();
   }
   function openPhotoSource(anchor){
-    mfPopup(anchor,[{lb:"📷 카메라로 찍기", fn:pickCameraPhoto},{lb:"🖼 갤러리에서 선택 (여러 장)", fn:pickMultiplePhotos},{lb:"📄 문서 스캔 (사진·스캔본 넣기)", fn:scanDoc},{lb:"📖 책표지 넣기 (맨 위에)", fn:scanCover},{lb:"🤖 텍스트 스캔 (AI · 정확)", fn:scanTextAI},{lb:"🔡 텍스트 스캔 (무료 · 미리보기)", fn:scanText}]);
+    mfPopup(anchor,[{lb:"📷 카메라로 찍기", fn:pickCameraPhoto},{lb:"🖼 갤러리에서 선택 (여러 장)", fn:pickMultiplePhotos},{lb:"📖 책표지 넣기 (사진 선택)", fn:scanCover},{lb:"🔡 텍스트 스캔 (글자 읽기 · AI)", fn:scanTextAI}]);
   }
   // ---- 무료 스캔(OCR): Tesseract.js (브라우저에서 글자 인식, 비용 0) ----
   function loadTesseract(){
@@ -40949,10 +40950,8 @@ window.markflowBootError=function(items,detail){
   function cameraFile(cb){ var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.setAttribute("capture","environment"); inp.style.display="none"; document.body.appendChild(inp); inp.addEventListener("change",function(){ var f=(inp.files&&inp.files[0])||null; inp.remove(); if(f) cb(f); }); inp.click(); }
   function fileToImg(f, cb){ var r=new FileReader(); r.onload=function(){ shrinkDataUrl(String(r.result),2200,0.92).then(cb); }; r.onerror=function(){ mfToast("이미지를 읽지 못했어요"); }; r.readAsDataURL(f); }
   function caretToStart(){ try{ var v=wwView_(); var TS=window.PM&&window.PM.TextSelection; if(v&&TS){ v.focus(); v.dispatch(v.state.tr.setSelection(TS.create(v.state.doc, 1))); } }catch(e){} }
-  // 책표지: 사진을 문서 맨 위에 그대로 넣기
-  function scanCover(){ cameraFile(function(f){ caretToStart(); setTimeout(function(){ processPhotoFiles([f]); },50); }); }
-  // 문서 스캔: 문서 사진/스캔본을 이미지로 넣기 (갤러리·파일에서 삼성 스캔본도 고를 수 있게 capture 없이)
-  function scanDoc(){ var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.multiple=true; inp.style.display="none"; document.body.appendChild(inp); inp.addEventListener("change",function(){ var files=Array.prototype.slice.call(inp.files||[]); inp.remove(); processPhotoFiles(files); }); inp.click(); }
+  // 책표지: 갤러리에서 사진을 골라 문서 맨 위에 넣고 '책표지'로 지정
+  function scanCover(){ var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.style.display="none"; document.body.appendChild(inp); inp.addEventListener("change",function(){ var f=(inp.files&&inp.files[0])||null; inp.remove(); if(!f) return; caretToStart(); setTimeout(function(){ processPhotoFiles([f], true); },50); }); inp.click(); }
   // 무료 OCR 실행 (한국어 데이터 다운로드 진행률 표시)
   function runOcr(img, onDone, onErr){
     scanProgress(true,"스캔 준비 중…<br><span style='font-weight:400;font-size:12.5px;opacity:.8'>처음엔 한국어 데이터(약 15MB)를<br>받느라 조금 걸려요</span>");
