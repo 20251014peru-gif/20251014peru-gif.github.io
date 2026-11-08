@@ -2774,7 +2774,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.44</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.43</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38904,10 +38904,9 @@ window.markflowBootError=function(items,detail){
   // localStorage에는 사진 데이터를 뺀 '가벼운 사본'만 저장 → 문서 목록·본문 글자는 절대 사라지지 않음(사진은 IndexedDB에 별도 보관)
   var IMG_PH="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
   function stripImages(md){ return (md||"").replace(/(!\[[^\]]*\]\()data:[^)\s]+(\))/g, "$1"+IMG_PH+"$2"); }
-  function slimStateFrom(docs){ var s={docs:[],currentId:state.currentId,theme:state.theme,folders:state.folders,collapsed:state.collapsed,savedAt:state.savedAt,numHeadings:state.numHeadings,seedCleared:state.seedCleared,deleted:state.deleted,lockedFolders:state.lockedFolders};
-    s.docs=docs.map(function(d){ var c={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) c[k]=d[k]; } c.content=(typeof isEnc==="function"&&isEnc(d.content))? d.content : stripImages(d.content||""); return c; });
+  function slimState(){ var s={docs:[],currentId:state.currentId,theme:state.theme,folders:state.folders,collapsed:state.collapsed,savedAt:state.savedAt,numHeadings:state.numHeadings,seedCleared:state.seedCleared,deleted:state.deleted,lockedFolders:state.lockedFolders};
+    s.docs=state.docs.map(function(d){ var c={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) c[k]=d[k]; } c.content=stripImages(d.content||""); return c; });
     return s; }
-  function slimState(){ return slimStateFrom(state.docs); }
   function uid(){ return "d"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
   function docTitle(md){
     var cleaned=(md||'').replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/⟦vid(?:file:| )[^⟧]*⟧/g,'').replace(/data:image\/[^\s)]+/g,'');
@@ -38977,11 +38976,9 @@ window.markflowBootError=function(items,detail){
     var seq=++saveSeq, gen=changeGen;
     if(saveRetry){ clearTimeout(saveRetry); saveRetry=null; }
     state.savedAt=Date.now();
-    return encDocsForSave().then(function(encDocs){
-    var stForSave={}; for(var sk in state){ if(Object.prototype.hasOwnProperty.call(state,sk)) stForSave[sk]=state[sk]; } stForSave.docs=encDocs;
-    var full=JSON.stringify(stForSave);
+    var full=JSON.stringify(state);
     // 1) 가벼운 사본(사진 제외)을 localStorage에
-    var slimOk=lsWriteVerified(SKEY, JSON.stringify(slimStateFrom(encDocs)));
+    var slimOk=lsWriteVerified(SKEY, JSON.stringify(slimState()));
     // 2) 사진 포함 전체를 IndexedDB에(대용량). 실패하면 localStorage에 전체 저장을 시도
     var fullP=idbAvailable
       ? idbSetVerified(full).then(function(){ return true; }, function(){ return lsWriteVerified(SKEY, full); })
@@ -38993,7 +38990,6 @@ window.markflowBootError=function(items,detail){
         else { setSaveState(result); showSaveError(result); saveRetry=setTimeout(function(){ saveRetry=null; if(seq===saveSeq) persistNow(); }, 15000); }
       }
       return result;
-    });
     });
   }
   function scheduleSave(){
@@ -39100,7 +39096,7 @@ window.markflowBootError=function(items,detail){
     previewStyle: "tab",
     hideModeSwitch: true,
     usageStatistics: false,
-    initialValue: (typeof isEnc==="function"&&isEnc(current().content))?"":current().content,
+    initialValue: current().content,
     autofocus: false,
     toolbarItems: [
       ["bold","italic","strike"],
@@ -39135,7 +39131,7 @@ window.markflowBootError=function(items,detail){
 
   function loadDoc(id){
     var d=state.docs.find(function(x){return x.id===id;}); if(!d) return;
-    if(docLocked(d)){ tryUnlock(function(){ loadDoc(id); }); return; }
+    if(d.locked && !__mfUnlocked){ tryUnlock(function(){ loadDoc(id); }); return; }
     state.currentId=id; try{ hideHome(); }catch(_){} loading=true; try{ closePhotoPane(); }catch(_){}
     editor.setMarkdown(d.content||"", false);
     loading=false; clearUndoHistory(); if(viewMode) applyEditable();
@@ -39246,36 +39242,13 @@ window.markflowBootError=function(items,detail){
     if(!mobile){ var x=Math.min(r.right-170, window.innerWidth-176); if(x<6)x=6; var y=r.bottom+4; if(y>window.innerHeight-40) y=Math.max(8,r.top-6-40); popEl.style.left=x+"px"; popEl.style.top=y+"px"; }
     setTimeout(function(){ document.addEventListener("mousedown",popOutside); },0);
   }
-  // ---- 일기·비밀 문서 잠금 + 잠긴 폴더 실제 암호화 ----
-  var __mfUnlocked=false, __lockKey=null, encCache={};
-  var ENCP="🔐v1:"; // 🔐v1:
+  // ---- 일기·비밀 문서 잠금 (이 기기에 비밀번호 저장, 가벼운 잠금) ----
+  var __mfUnlocked=false;
   function lockHashStr(s){ var h=5381; for(var i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return "v1:"+h.toString(36)+":"+s.length; }
   function hasLockPw(){ return !!sget("markflow_lock_pw"); }
   function docLocked(d){ return !!(d && !__mfUnlocked && (d.locked || folderLocked(d.folder))); }
   function folderLocked(name){ return !!(name && state.lockedFolders && state.lockedFolders.indexOf(name)>=0); }
-  function cryptoOK(){ return !!(window.crypto && crypto.subtle && crypto.getRandomValues); }
-  function isEnc(s){ return typeof s==="string" && s.slice(0,ENCP.length)===ENCP; }
-  function _b64(buf){ var u=new Uint8Array(buf),s=""; for(var i=0;i<u.length;i++)s+=String.fromCharCode(u[i]); return btoa(s); }
-  function _unb64(s){ var bin=atob(s),u=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return u; }
-  function _getSalt(){ var s=sget("markflow_lock_salt"); if(!s){ s=_b64(crypto.getRandomValues(new Uint8Array(16))); sset("markflow_lock_salt",s); } return _unb64(s); }
-  function deriveLockKey(pw){ if(!cryptoOK()) return Promise.reject(new Error("이 브라우저는 암호화를 지원하지 않아요")); return crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]).then(function(base){ return crypto.subtle.deriveKey({name:"PBKDF2",salt:_getSalt(),iterations:150000,hash:"SHA-256"}, base, {name:"AES-GCM",length:256}, false, ["encrypt","decrypt"]); }); }
-  function encText(plain){ var iv=crypto.getRandomValues(new Uint8Array(12)); return crypto.subtle.encrypt({name:"AES-GCM",iv:iv}, __lockKey, new TextEncoder().encode(plain)).then(function(ct){ var out=new Uint8Array(iv.length+ct.byteLength); out.set(iv,0); out.set(new Uint8Array(ct),iv.length); return ENCP+_b64(out); }); }
-  function decText(enc){ var raw=_unb64(enc.slice(ENCP.length)); var iv=raw.slice(0,12), ct=raw.slice(12); return crypto.subtle.decrypt({name:"AES-GCM",iv:iv}, __lockKey, ct).then(function(pt){ return new TextDecoder().decode(pt); }); }
-  // 저장용으로 잠긴 폴더 문서의 content를 암호문으로 (캐시로 안정화 — 안 바뀐 글은 같은 암호문 재사용)
-  function cipherFor(d){
-    if(isEnc(d.content)) return Promise.resolve(d.content);
-    var c=encCache[d.id]; if(c && c.plain===d.content) return Promise.resolve(c.cipher);
-    if(!__lockKey){ return Promise.resolve((c&&c.cipher) || d.content); }
-    return encText(d.content).then(function(ct){ encCache[d.id]={plain:d.content,cipher:ct}; return ct; });
-  }
-  function encDocsForSave(){ return Promise.all(state.docs.map(function(d){ if(!folderLocked(d.folder)) return Promise.resolve(d); return cipherFor(d).then(function(ct){ if(ct===d.content) return d; var c={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) c[k]=d[k]; } c.content=ct; return c; }); })); }
-  function decryptAllLocked(){ if(!__lockKey) return Promise.resolve(); return Promise.all(state.docs.map(function(d){ if(isEnc(d.content)){ var cipher=d.content; return decText(cipher).then(function(plain){ d.content=plain; encCache[d.id]={plain:plain,cipher:cipher}; }, function(){}); } return null; }).filter(Boolean)); }
-  function relock(){ __mfUnlocked=false;
-    try{ if(__lockKey){ var jobs=state.docs.map(function(d){ if(folderLocked(d.folder) && !isEnc(d.content)){ return encText(d.content).then(function(ct){ d.content=ct; encCache[d.id]={plain:undefined,cipher:ct}; }, function(){}); } return null; }).filter(Boolean);
-      if(jobs.length){ Promise.all(jobs).then(function(){ __lockKey=null; encCache={}; try{persistNow();}catch(e){} try{renderDocs();}catch(e){} }); return; } }
-    }catch(e){}
-    __lockKey=null; encCache={};
-  }
+  function relock(){ __mfUnlocked=false; }
   function pwModal(opts){
     var back=document.createElement("div"); back.className="modal-back"; back.style.zIndex="340";
     var box=document.createElement("div"); box.className="modal"; box.style.maxWidth="360px";
@@ -39294,20 +39267,8 @@ window.markflowBootError=function(items,detail){
     back.appendChild(box); document.body.appendChild(back);
     setTimeout(function(){ try{ inp.focus(); }catch(e){} },60);
   }
-  function ensureLockPw(cb){
-    if(hasLockPw()){ if(__lockKey){ cb(); return; }
-      pwModal({title:"비밀번호 확인", desc:"잠금 작업을 위해 비밀번호를 입력하세요.", okLabel:"확인", onOk:function(v){ if(lockHashStr(v)!==sget("markflow_lock_pw")){ mfToast("비밀번호가 틀렸어요"); return; } deriveLockKey(v).then(function(key){ __lockKey=key; __mfUnlocked=true; return decryptAllLocked(); }).then(function(){ cb(); }).catch(function(e){ mfToast("오류: "+(e&&e.message?e.message:e)); }); }});
-      return; }
-    pwModal({title:"비밀번호 만들기", desc:"잠긴 폴더의 글·사진을 이 비밀번호로 암호화해요. 이 기기에만 저장되고, 잊어버리면 복구할 수 없어요. 꼭 기억하세요.", confirm:true, okLabel:"저장", onOk:function(v){ deriveLockKey(v).then(function(key){ sset("markflow_lock_pw", lockHashStr(v)); __lockKey=key; __mfUnlocked=true; mfToast("비밀번호를 설정했어요"); cb(); }).catch(function(e){ mfToast("오류: "+(e&&e.message?e.message:e)); }); }});
-  }
-  function tryUnlock(cb){
-    if(__mfUnlocked){ cb(); return; }
-    if(!hasLockPw()){ __mfUnlocked=true; cb(); return; }
-    pwModal({title:"🔒 잠긴 문서 열기", desc:"비밀번호를 입력하세요.", okLabel:"열기", onOk:function(v){
-      if(lockHashStr(v)!==sget("markflow_lock_pw")){ mfToast("비밀번호가 틀렸어요"); return; }
-      deriveLockKey(v).then(function(key){ __lockKey=key; return decryptAllLocked(); }).then(function(){ __mfUnlocked=true; try{renderDocs();}catch(e){} try{ if(homeIsOpen())renderHome(); }catch(e){} cb(); }).catch(function(e){ mfToast("잠금 해제 실패: "+(e&&e.message?e.message:e)); });
-    }});
-  }
+  function ensureLockPw(cb){ if(hasLockPw()){ cb(); return; } pwModal({title:"비밀번호 만들기", desc:"일기·비밀 문서를 열 때 쓸 비밀번호예요. 이 기기에만 저장돼요(잊어버리면 복구가 어려우니 기억해 두세요).", confirm:true, okLabel:"저장", onOk:function(v){ sset("markflow_lock_pw", lockHashStr(v)); __mfUnlocked=true; mfToast("비밀번호를 설정했어요"); cb(); }}); }
+  function tryUnlock(cb){ if(__mfUnlocked||!hasLockPw()){ __mfUnlocked=true; cb(); return; } pwModal({title:"🔒 잠긴 문서 열기", desc:"비밀번호를 입력하세요.", okLabel:"열기", onOk:function(v){ if(lockHashStr(v)===sget("markflow_lock_pw")){ __mfUnlocked=true; try{renderDocs();}catch(e){} try{ if(homeIsOpen())renderHome(); }catch(e){} cb(); } else mfToast("비밀번호가 틀렸어요"); }}); }
   function toggleDocLock(d){
     if(d.locked){ tryUnlock(function(){ d.locked=false; try{delete homeCache[d.id];}catch(e){} scheduleSave(); try{renderDocs();}catch(e){} try{ if(homeIsOpen())renderHome(); }catch(e){} mfToast("잠금을 해제했어요"); }); }
     else { ensureLockPw(function(){ d.locked=true; try{delete homeCache[d.id];}catch(e){} scheduleSave(); try{renderDocs();}catch(e){} try{ if(homeIsOpen())renderHome(); }catch(e){} mfToast("🔒 일기로 잠갔어요 (앱을 나가면 다시 잠겨요)"); }); }
@@ -39431,7 +39392,7 @@ window.markflowBootError=function(items,detail){
   function mkEl(tag,cls,txt){ var e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
   function openFromHome(id){
     var ld=state.docs.find(function(x){return x.id===id;});
-    if(ld && docLocked(ld)){ tryUnlock(function(){ openFromHome(id); }); return; }
+    if(ld && ld.locked && !__mfUnlocked){ tryUnlock(function(){ openFromHome(id); }); return; }
     if(id===state.currentId){ hideHome(); try{ editor.focus(); }catch(_){} }
     else loadDoc(id);
   }
@@ -41356,8 +41317,7 @@ window.markflowBootError=function(items,detail){
     if(btn){ btn.classList.toggle("sync-on", kind==="ok"||kind==="syncing"); }
     if(lbl){ lbl.textContent = GH.token? (kind==="syncing"?"동기화…":"동기화됨") : "동기화"; }
   }
-  function syncPayload(){ var docs=state.docs.map(function(d){ if(folderLocked(d.folder) && !isEnc(d.content)){ var c=encCache[d.id]; var ct=(c&&c.plain===d.content&&c.cipher)?c.cipher:((c&&c.cipher)||null); var o={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) o[k]=d[k]; } o.content=ct||""; return o; } return d; });
-    return JSON.stringify({docs:docs,folders:state.folders,collapsed:state.collapsed,theme:state.theme,currentId:state.currentId,savedAt:state.savedAt,deleted:state.deleted,lockedFolders:state.lockedFolders}); }
+  function syncPayload(){ return JSON.stringify({docs:state.docs,folders:state.folders,collapsed:state.collapsed,theme:state.theme,currentId:state.currentId,savedAt:state.savedAt,deleted:state.deleted,lockedFolders:state.lockedFolders}); }
   function gistBody(){ return JSON.stringify({description:"MarkFlow data (do not delete)",public:false,files:{"markflow-data.json":{content:syncPayload()}}}); }
   function findGist(){
     return fetch("https://api.github.com/gists?per_page=100",{headers:ghHeaders()}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }).then(function(arr){
@@ -41618,7 +41578,7 @@ window.markflowBootError=function(items,detail){
   function runBackup(){
     if(backupBusy) return; backupBusy=true; syncEditorIntoState(); showPill("백업 만드는 중…");
     persistNow().then(function(saveResult){
-      return encDocsForSave().then(function(encDocs){ var stB={}; for(var bk in state){ if(Object.prototype.hasOwnProperty.call(state,bk)) stB[bk]=state[bk]; } stB.docs=encDocs; return stB; }).then(function(stB){ return window.markflowBackup.create({state:stB, appVersion:"3.10.0", onProgress:function(p){ showPill("백업 만드는 중… "+Math.round(p*100)+"%"); }}); }).then(function(r){
+      return window.markflowBackup.create({state:state, appVersion:"3.10.0", onProgress:function(p){ showPill("백업 만드는 중… "+Math.round(p*100)+"%"); }}).then(function(r){
         hidePill();
         try{ sset("markflow_last_backup", String(Date.now())); sset("markflow_photos_since_backup","0"); hideBackupReminder(); }catch(e){}
         var u=URL.createObjectURL(r.blob), a=document.createElement("a"); a.href=u; a.download=r.filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(u); },120000);
