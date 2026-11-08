@@ -2774,7 +2774,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.46</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.47</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -41366,7 +41366,7 @@ window.markflowBootError=function(items,detail){
 
   // ---- GitHub Gist 동기화 ----
   var GH={ token: sget("markflow_gh_token")||"", gist: sget("markflow_gist_id")||"" };
-  var syncing=false, syncQueued=false, syncDebounce=null;
+  var syncing=false, syncQueued=false, syncDebounce=null, gistVerified=false;
   function ghHeaders(){ return {"Authorization":"Bearer "+GH.token,"Accept":"application/vnd.github+json","Content-Type":"application/json","X-GitHub-Api-Version":"2022-11-28"}; }
   function setSyncState(kind,extra){
     var el=document.getElementById("sync-status"); var lbl=document.getElementById("sync-lbl"); var btn=document.getElementById("btn-sync");
@@ -41378,9 +41378,12 @@ window.markflowBootError=function(items,detail){
   function syncPayload(){ var docs=state.docs.map(function(d){ if(folderLocked(d.folder) && !isEnc(d.content)){ var c=encCache[d.id]; var ct=(c&&c.plain===d.content&&c.cipher)?c.cipher:((c&&c.cipher)||null); var o={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) o[k]=d[k]; } o.content=ct||""; return o; } return d; });
     return JSON.stringify({docs:docs,folders:state.folders,collapsed:state.collapsed,theme:state.theme,currentId:state.currentId,savedAt:state.savedAt,deleted:state.deleted,lockedFolders:state.lockedFolders,lockSalt:state.lockSalt||null,lockCheck:state.lockCheck||null}); }
   function gistBody(){ return JSON.stringify({description:"MarkFlow data (do not delete)",public:false,files:{"markflow-data.json":{content:syncPayload()}}}); }
+  // 여러 기기가 각자 Gist를 만들어 '갈라지는' 문제 방지: 항상 '가장 먼저 만든' Gist 하나로 모두가 모이도록 결정적으로 고른다.
   function findGist(){
     return fetch("https://api.github.com/gists?per_page=100",{headers:ghHeaders()}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }).then(function(arr){
-      for(var i=0;i<arr.length;i++){ if(arr[i].files&&arr[i].files["markflow-data.json"]) return arr[i].id; } return "";
+      var best=null;
+      for(var i=0;i<arr.length;i++){ var g=arr[i]; if(g&&g.files&&g.files["markflow-data.json"]){ if(!best) best=g; else { var a=g.created_at||"", b=best.created_at||""; if(a<b || (a===b && String(g.id)<String(best.id))) best=g; } } }
+      return best?best.id:"";
     });
   }
   // 동기화는 항상 "원격 읽기 → 문서별 병합 → 병합 결과 올리기" 순서로만 한다.
@@ -41431,7 +41434,11 @@ window.markflowBootError=function(items,detail){
     if(!GH.token) return Promise.resolve(false);
     if(syncing){ syncQueued=true; return Promise.resolve(false); }
     syncing=true; setSyncState("syncing");
-    return (GH.gist?Promise.resolve(GH.gist):findGist()).then(function(gid){
+    // 세션당 한 번은 반드시 목록을 다시 확인해 '가장 먼저 만든' Gist로 다시 묶는다(이미 갈라진 기기도 이때 한 데로 모임). 목록 실패 시엔 기존 Gist 유지(새로 만들지 않음).
+    var gistP;
+    if(GH.gist && gistVerified){ gistP=Promise.resolve(GH.gist); }
+    else { gistP=findGist().then(function(g){ gistVerified=true; return g||GH.gist||""; }, function(e){ if(GH.gist) return GH.gist; throw e; }); }
+    return gistP.then(function(gid){
       if(!gid){ GH.gist=""; sset("markflow_gist_id",""); return pushGist(true); }
       if(gid!==GH.gist){ GH.gist=gid; sset("markflow_gist_id",gid); }
       return fetchRemote().then(function(remote){
