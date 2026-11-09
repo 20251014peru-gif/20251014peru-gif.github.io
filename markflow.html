@@ -2798,7 +2798,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.53</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.54</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -41480,8 +41480,9 @@ window.markflowBootError=function(items,detail){
     if(btn){ btn.classList.toggle("sync-on", kind==="ok"||kind==="syncing"); }
     if(lbl){ lbl.textContent = GH.token? (kind==="syncing"?"동기화…":"동기화됨") : "동기화"; }
   }
-  function syncPayload(){ var docs=state.docs.map(function(d){ if(folderLocked(d.folder) && !isEnc(d.content)){ var c=encCache[d.id]; var ct=(c&&c.plain===d.content&&c.cipher)?c.cipher:((c&&c.cipher)||null); var o={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) o[k]=d[k]; } o.content=ct||""; return o; } return d; });
-    return JSON.stringify({docs:docs,folders:state.folders,collapsed:state.collapsed,theme:state.theme,currentId:state.currentId,savedAt:state.savedAt,deleted:state.deleted,deletedFolders:state.deletedFolders,lockedFolders:state.lockedFolders,lockSalt:state.lockSalt||null,lockCheck:state.lockCheck||null}); }
+  // 동기화·병합·비교는 '항상 암호문 기준'으로 한다. 잠금 해제 상태의 평문을 그대로 비교하면 원격(암호문)과 매번 달라 충돌 사본이 양산됨.
+  function syncSafeDocs(){ return state.docs.map(function(d){ if(folderLocked(d.folder) && !isEnc(d.content)){ var c=encCache[d.id]; var ct=(c&&c.plain===d.content&&c.cipher)?c.cipher:((c&&c.cipher)||null); if(!ct) return d; var o={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) o[k]=d[k]; } o.content=ct; return o; } return d; }); }
+  function syncPayload(){ return JSON.stringify({docs:syncSafeDocs(),folders:state.folders,collapsed:state.collapsed,theme:state.theme,currentId:state.currentId,savedAt:state.savedAt,deleted:state.deleted,deletedFolders:state.deletedFolders,lockedFolders:state.lockedFolders,lockSalt:state.lockSalt||null,lockCheck:state.lockCheck||null}); }
   function gistBody(){ return JSON.stringify({description:"MarkFlow data (do not delete)",public:false,files:{"markflow-data.json":{content:syncPayload()}}}); }
   // 여러 기기가 각자 Gist를 만들어 '갈라지는' 문제 방지: 항상 '가장 먼저 만든' Gist 하나로 모두가 모이도록 결정적으로 고른다.
   function findGist(){
@@ -41517,10 +41518,12 @@ window.markflowBootError=function(items,detail){
     // 어느 폴더가 잠겼는지(lockedFolders)도 기기 간에 맞춰야 함 — 안 그러면 한쪽은 암호화, 한쪽은 평문으로 취급돼 일기가 새거나 암호문이 보임
     try{ if(Array.isArray(remote.lockedFolders)){ remote.lockedFolders.forEach(function(f){ if(f && state.lockedFolders.indexOf(f)<0 && !folderTombs()[f]) state.lockedFolders.push(f); }); } }catch(e){}
     mergeTombstones(remote.deleted); mergeFolderTombs(remote.deletedFolders);
-    var m=window.markflowSyncMerge.merge({docs:state.docs,folders:state.folders},{docs:remote.docs,folders:remote.folders},loadSyncBase());
+    var safe=syncSafeDocs();
+    var m=window.markflowSyncMerge.merge({docs:safe,folders:state.folders},{docs:remote.docs,folders:remote.folders},loadSyncBase());
     pruneTombstones(); m.docs=applyTombstones(m.docs);
     pruneFolderTombs(); m.folders=applyFolderTombs(m.folders); // 삭제한 폴더가 동기화로 되살아나지 않게
-    var changed=m.docs.length!==state.docs.length||m.docs.some(function(d,i){ return d!==state.docs[i]; })||m.folders.join("\n")!==state.folders.join("\n");
+    // 변경 감지는 '암호문 기준'으로 (평문과 비교하면 매번 바뀐 것처럼 보여 편집 중 화면이 리셋됨)
+    var changed=docsDiffer(safe,m.docs)||m.folders.join("\n")!==state.folders.join("\n");
     if(changed){
       state.docs=m.docs; state.folders=m.folders; migrate();
       if(!state.docs.some(function(x){return x.id===state.currentId;})) state.currentId=state.docs[0].id;
@@ -41534,7 +41537,7 @@ window.markflowBootError=function(items,detail){
     return remote;
   }
   function pushGist(create){
-    var base=window.markflowSyncMerge.baseFrom(state.docs), body=gistBody();
+    var base=window.markflowSyncMerge.baseFrom(syncSafeDocs()), body=gistBody();
     var req=create? fetch("https://api.github.com/gists",{method:"POST",headers:ghHeaders(),body:body})
                   : fetch("https://api.github.com/gists/"+GH.gist,{method:"PATCH",headers:ghHeaders(),body:body});
     return req.then(function(r){ if(!r.ok) throw new Error(String(r.status)); return r.json(); }).then(function(j){ if(j&&j.id){ GH.gist=j.id; sset("markflow_gist_id",GH.gist); } saveSyncBase(base); });
@@ -41554,7 +41557,7 @@ window.markflowBootError=function(items,detail){
       return fetchRemote().then(function(remote){
         if(!remote) return pushGist(false);
         remote=applyMerged(remote);
-        if(!docsDiffer(state.docs,remote.docs)&&(remote.folders||[]).join("\n")===state.folders.join("\n")){ saveSyncBase(window.markflowSyncMerge.baseFrom(state.docs)); return; }
+        if(!docsDiffer(syncSafeDocs(),remote.docs)&&(remote.folders||[]).join("\n")===state.folders.join("\n")){ saveSyncBase(window.markflowSyncMerge.baseFrom(syncSafeDocs())); return; }
         return pushGist(false);
       }, function(e){
         // 원격 Gist가 삭제된 경우에만 새로 만든다. 그 밖의 읽기 실패는 올리지 않는다(원격 덮어쓰기 방지).
