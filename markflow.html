@@ -2800,7 +2800,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.55</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.56</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38878,7 +38878,7 @@ window.markflowBootError=function(items,detail){
 <script src="markflow/zip.js?v=3.10.0"></script>
 <script src="markflow/sync-merge.js?v=3.10.0"></script>
 <script src="markflow/backup.js?v=3.10.0"></script>
-<script src="markflow/usability.js?v=3.9.6"></script>
+<script src="markflow/usability.js?v=3.9.7"></script>
 <script src="markflow/ai-costs.js?v=3.9.1"></script>
 <script src="markflow/photo-recovery.js?v=3.9.2"></script>
 <script src="markflow/restore-v38.js?v=3.8-restored-1"></script>
@@ -40166,6 +40166,24 @@ window.markflowBootError=function(items,detail){
     setTimeout(function(){ applyImageRotations(); repositionImgBar(); },30);
   }
   function rotateCurImg(delta){ var m=curImgMeta(); setImageRotation((m.r||0)+(delta||90)); }
+  // 이 사진만 따로 저장/공유 (원본이 있으면 원본으로). 모바일은 공유 시트, PC는 다운로드.
+  function saveCurImg(){
+    var el=curImgEl(); if(!el){ if(typeof mfToast==="function") mfToast("사진을 먼저 선택해 주세요"); return; }
+    var src=el.getAttribute("src")||""; if(!src){ return; }
+    function dl(blob,fname){ var u=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=u; a.download=fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ try{URL.revokeObjectURL(u);}catch(e){} },2000); }
+    Promise.resolve().then(function(){ return (typeof loadOriginalUrl==="function")?loadOriginalUrl(src):null; }).then(function(origUrl){
+      var url=origUrl||src;
+      return fetch(url).then(function(r){ return r.blob(); }).then(function(blob){
+        var ext=((blob.type||"image/png").split("/")[1]||"png").replace("jpeg","jpg").replace("+xml","").replace(/[^a-z0-9]/gi,"")||"png";
+        var fname="사진_"+new Date().toISOString().slice(0,10)+"_"+Date.now().toString(36)+"."+ext;
+        var file=null; try{ file=new File([blob],fname,{type:blob.type||"image/png"}); }catch(e){}
+        if(file && navigator.canShare && navigator.canShare({files:[file]})){
+          navigator.share({files:[file]}).catch(function(){ dl(blob,fname); });
+        } else { dl(blob,fname); if(typeof mfToast==="function") mfToast("사진을 저장했어요"); }
+        if(origUrl){ setTimeout(function(){ try{URL.revokeObjectURL(origUrl);}catch(e){} },3000); }
+      });
+    }).catch(function(){ var a=document.createElement("a"); a.href=src; a.download="사진.png"; document.body.appendChild(a); a.click(); a.remove(); });
+  }
   function deleteCurImg(){
     var v=wwView_(); if(!v||imgBarPos<0) return; var node=v.state.doc.nodeAt(imgBarPos); if(!node||node.type.name!=="image") return;
     var from=imgBarPos, to=imgBarPos+node.nodeSize;
@@ -40223,6 +40241,7 @@ window.markflowBootError=function(items,detail){
      ["⟳ 회전","오른쪽으로 90° 회전",function(){ rotateCurImg(90); },""],
      ["◧ 옆에서","사진을 오른쪽 패널에서 크게 보기 (글 쓰면서 계속 볼 수 있어요)",function(){ openPhotoPane(curImgEl()); },""],
      ["🔍 확대","크게 보기",function(){ openImgZoom(); },""],
+     ["💾 저장","이 사진만 따로 저장·공유",function(){ saveCurImg(); },""],
      ["🗑 삭제","이 사진 삭제",function(){ deleteCurImg(); },"del"]].forEach(function(o){
       var b=document.createElement("button"); b.type="button"; b.className="mf-iabtn"+(o[3]?" "+o[3]:""); b.textContent=o[0]; b.title=o[1];
       b.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); o[2](); });
