@@ -2278,6 +2278,11 @@ table.ProseMirror-selectednode {
   body[data-mf-ul="square"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"■";}
   body[data-mf-ul="diamond"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"◆";}
   body[data-mf-ul="arrow"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"➤";}
+  body[data-mf-ul="pin"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"📌";}
+  body[data-mf-ul="memo"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"📝";}
+  body[data-mf-ul="check"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"✅";}
+  body[data-mf-ul="point"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"👉";}
+  body[data-mf-ul="pin"] .toastui-editor-contents ul > li:not(.task-list-item)::before,body[data-mf-ul="memo"] .toastui-editor-contents ul > li:not(.task-list-item)::before,body[data-mf-ul="check"] .toastui-editor-contents ul > li:not(.task-list-item)::before,body[data-mf-ul="point"] .toastui-editor-contents ul > li:not(.task-list-item)::before{margin-left:-25px!important;font-size:.8em!important;}
   /* 다단: 줄 간격을 조금 줄이고(1.6→1.45), 가로 스크롤바는 숨긴다(세로 휠로 한 페이지씩 넘김) */
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror :is(p,li),
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror :is(p,li){line-height:1.45!important;}
@@ -2844,7 +2849,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.59</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.61</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -42018,30 +42023,35 @@ window.mfCol=(function(){
       editor.exec(tag==="OL"?"orderedList":"bulletList"); editor.focus(); }catch(e){} };
     mfApplyListStyle();
     // 목록(문서 목록) 번호 모양·아이콘: 두 번 누르지 않게 목록 메뉴에 바로 펼쳐 보여준다
+    function accRow(m,it,before,onPick){ var el;
+      if(!it[1]){ el=document.createElement("button"); el.type="button"; el.className="mf-tooldrop-item"; el.setAttribute("data-hd",it[2]); el.textContent=it[0]+"  ▸"; el.style.fontWeight="700";
+        el.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); var g=it[2], open=el.getAttribute("data-open")!=="1";
+          [].forEach.call(m.querySelectorAll("[data-hd]"),function(h){ var on=open&&h.getAttribute("data-hd")===g; h.setAttribute("data-open",on?"1":"0"); h.textContent=h.textContent.replace(/\s+[▸▾]$/,"")+(on?"  ▾":"  ▸"); });
+          [].forEach.call(m.querySelectorAll("[data-g]"),function(r){ r.style.display=(open&&r.getAttribute("data-g")===g)?"":"none"; });
+          var h2=m.offsetHeight, top=parseFloat(m.style.top)||0; if(top+h2>window.innerHeight-8) m.style.top=Math.max(8,window.innerHeight-8-h2)+"px"; }); }
+      else { el=document.createElement("button"); el.type="button"; el.className="mf-tooldrop-item"; el.setAttribute("data-g",it[2]); el.style.display="none"; el.style.paddingLeft="22px"; el.textContent=it[0]; el.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); onPick(); it[1](); }); }
+      if(before) m.insertBefore(el,before); else m.appendChild(el); }
     function shapeItems(){ function t(on,x){ return (on?"✓ ":"")+x; }
       var ol=(listNumStyle()==="circle")?"circle":"num", ul=sget("markflow_ul_style")||"dot", di=sget("markflow_list_docicon")||"", dOn=listIconOn();
       function setOl(v){ return function(){ sset("markflow_list_numstyle",v); mfApplyListStyle(); renderDocs(); mfEnsureList("OL"); }; }
       function setUl(v){ return function(){ sset("markflow_ul_style",v); mfApplyListStyle(); mfEnsureList("UL"); }; }
       function setIc(v){ return function(){ if(v==="off"){ sset("markflow_list_icon","0"); } else { sset("markflow_list_icon","1"); sset("markflow_list_docicon",v==="def"?"":v); } renderDocs(); }; }
-      var out=[["번호 목록 (고르면 바로 번호 목록)",null],[t(ol==="num","숫자 (1 2 3)"),setOl("num")],[t(ol==="circle","동그라미 (① ② ③)"),setOl("circle")],["글머리 목록 (고르면 바로 글머리 목록)",null]];
-      [["dot","• 점 (기본)"],["ring","○ 빈 동그라미"],["star","★ 별"],["square","■ 네모"],["diamond","◆ 마름모"],["arrow","➤ 화살표"]].forEach(function(o){ out.push([t(ul===o[0],o[1]),setUl(o[0])]); });
-      out.push(["왼쪽 문서 목록 아이콘",null]);
-      [["def","📄 기본 문서 모양"],["📝","📝 메모"],["📒","📒 노트"],["📌","📌 핀"],["⭐","⭐ 별"],["off","아이콘 없음"]].forEach(function(o){ var on=o[0]==="off"?!dOn:(dOn&&(o[0]==="def"?di==="":di===o[0])); out.push([t(on,o[1]),setIc(o[0])]); });
+      var out=[["번호 목록",null,"n"],[t(ol==="num","숫자 (1 2 3)"),setOl("num"),"n"],[t(ol==="circle","동그라미 (① ② ③)"),setOl("circle"),"n"],["글머리 · 기호",null,"s"]];
+      [["dot","• 점 (기본)"],["ring","○ 빈 동그라미"],["star","★ 별"],["square","■ 네모"],["diamond","◆ 마름모"],["arrow","➤ 화살표"]].forEach(function(o){ out.push([t(ul===o[0],o[1]),setUl(o[0]),"s"]); });
+      out.push(["글머리 · 그림",null,"e"]);
+      [["pin","📌 핀"],["memo","📝 메모"],["check","✅ 체크"],["point","👉 손가락"]].forEach(function(o){ out.push([t(ul===o[0],o[1]),setUl(o[0]),"e"]); });
       return out; }
     // 위쪽 도구막대의 '목록' 메뉴(usability.js가 만듦)에도 같은 항목을 넣고, 두 번 눌러야 하던 '목록 번호 모양…' 줄은 없앤다
     try{ new MutationObserver(function(recs){ recs.forEach(function(r){ [].forEach.call(r.addedNodes,function(m){
         if(m.nodeType!==1||!m.classList||!m.classList.contains("mf-tooldrop")) return;
         var rows=[].slice.call(m.querySelectorAll(".mf-tooldrop-item")), tg=null; rows.forEach(function(x){ var tx=x.textContent; if(tx.indexOf("목록 번호 모양")===0) tg=x; else if(tx==="글머리 목록"||tx==="번호 목록") x.remove(); }); if(!tg) return;
-        shapeItems().forEach(function(it){ var el;
-          if(!it[1]){ el=document.createElement("div"); el.textContent=it[0]; el.style.cssText="font-size:11px;font-weight:700;color:var(--text-faint);padding:6px 10px 2px;"; }
-          else { el=document.createElement("button"); el.type="button"; el.className="mf-tooldrop-item"; el.textContent=it[0]; el.addEventListener("mousedown",function(e){ e.preventDefault(); m.remove(); it[1](); }); }
-          m.insertBefore(el,tg); });
+        shapeItems().forEach(function(it){ accRow(m,it,tg,function(){ m.remove(); }); });
         tg.remove(); var h=m.offsetHeight, top=parseFloat(m.style.top)||0; if(top+h>window.innerHeight-8) m.style.top=Math.max(8,window.innerHeight-8-h)+"px";
       }); }); }).observe(document.body,{childList:true}); }catch(e){}
     function closeDrop(){ if(dropEl){ dropEl.remove(); dropEl=null; document.removeEventListener("mousedown",dropOutside,true); } }
     function dropOutside(e){ if(dropEl&&!dropEl.contains(e.target)&&!(e.target.closest&&e.target.closest("#ai-bar"))) closeDrop(); }
     function openDrop(anchor,items){ closeDrop(); var r=anchor.getBoundingClientRect(); var m=document.createElement("div"); m.className="mf-tooldrop";
-      items.forEach(function(it){ if(!it[1]){ var hd=document.createElement("div"); hd.textContent=it[0]; hd.style.cssText="font-size:11px;font-weight:700;color:var(--text-faint);padding:6px 10px 2px;"; m.appendChild(hd); return; } var row=document.createElement("button"); row.type="button"; row.className="mf-tooldrop-item"; row.textContent=it[0];
+      items.forEach(function(it){ if(it[2]){ accRow(m,it,null,function(){ closeDrop(); }); return; } if(!it[1]){ var hd=document.createElement("div"); hd.textContent=it[0]; hd.style.cssText="font-size:11px;font-weight:700;color:var(--text-faint);padding:6px 10px 2px;"; m.appendChild(hd); return; } var row=document.createElement("button"); row.type="button"; row.className="mf-tooldrop-item"; row.textContent=it[0];
         row.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); closeDrop(); it[1](r); }); m.appendChild(row); });
       m.style.cssText="position:fixed;z-index:240;left:-9999px;top:0;visibility:hidden;"; document.body.appendChild(m); dropEl=m;
       var w=m.offsetWidth||188, h=m.offsetHeight||200, left=Math.max(8,Math.min(r.left,window.innerWidth-w-8)), top=r.top-h-6; if(top<8) top=r.bottom+6;
