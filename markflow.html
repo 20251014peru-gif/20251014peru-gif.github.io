@@ -2243,7 +2243,7 @@ table.ProseMirror-selectednode {
   #editor{flex:1;min-height:0;}
   /* 신문식 다단(3열/2열): 한 열이 화면 높이만큼 차면 다음 열로 이어짐. 넘치면 가로로 이동. 열 수는 아래 스크립트가 data-mf-cols 로 정함(1이면 아무 영향 없음) */
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror,
-  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-fill:auto;column-gap:96px;padding-left:100px!important;overflow-x:auto;overflow-y:auto;}
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-fill:auto;column-gap:96px;padding-left:96px!important;overflow-x:auto;overflow-y:auto;}
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror{column-count:2;}
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-count:3;}
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror :is(p,h1,h2,h3,h4,h5,h6,pre,blockquote,table,img,li>p),
@@ -38894,7 +38894,7 @@ window.markflowBootError=function(items,detail){
 <script>
 /* 다단 보기(3열/2열/1열): 편집창 너비로 열 수를 정한다. 사이드바·사진창이 열려 좁아지면 자동으로 줄어듦. */
 window.mfCol=(function(){
-  var W3=1600, W2=900; // 편집창 너비(px)가 W3 이상이면 3열, W2 이상이면 2열, 그보다 좁으면(휴대폰 등) 1열
+  var W3=1200, W2=900; // 편집창 너비(px)가 W3 이상이면 3열, W2 이상이면 2열, 그보다 좁으면(휴대폰 등) 1열
   var C={
     n:function(){ return +document.body.getAttribute("data-mf-cols")||1; },
     fr:function(el){ var a=el.getClientRects(); return a.length?a[0]:el.getBoundingClientRect(); },            // 첫 조각(여러 열에 걸친 블록은 시작 위치)
@@ -38908,7 +38908,7 @@ window.mfCol=(function(){
     idx:function(x){ var s=C.step(); return s?Math.max(0,Math.floor((x-C.left0()+C.gap()/2)/s)):0; } // x가 몇 번째 열인지(0부터)
   };
   function apply(){ var wrap=document.querySelector(".editor-wrap"); if(!wrap) return; var w=wrap.clientWidth, n=w>=W3?3:(w>=W2?2:1);
-    if(document.body.getAttribute("data-mf-cols")!==String(n)){ document.body.setAttribute("data-mf-cols",n); try{ window.dispatchEvent(new Event("resize")); }catch(e){} } }
+    if(document.body.getAttribute("data-mf-cols")!==String(n)){ document.body.setAttribute("data-mf-cols",n); try{ window.dispatchEvent(new Event("resize")); }catch(e){} if(C.snap) C.snap(); } }
   function init(){ var wrap=document.querySelector(".editor-wrap"); if(!wrap) return; apply();
     try{ new ResizeObserver(apply).observe(wrap); }catch(e){ window.addEventListener("resize",apply); }
     // 다단일 땐 마우스 휠(위아래)을 가로 이동으로 바꾼다 — 열이 가로로 이어지므로
@@ -38917,7 +38917,20 @@ window.mfCol=(function(){
       if(Math.abs(e.deltaY)<Math.abs(e.deltaX)||pm.scrollWidth<=pm.clientWidth) return; e.preventDefault();
       var now=Date.now(), fresh=now-lastW>120; lastW=now; if(!fresh) return;
       var st=C.step(), max=pm.scrollWidth-pm.clientWidth, t=(Math.round(pm.scrollLeft/st)+(e.deltaY>0?1:-1))*st;
-      pm.scrollTo({left:Math.max(0,Math.min(t,max)),behavior:"smooth"}); },{passive:false}); }
+      pm.scrollTo({left:Math.max(0,Math.min(t,max)),behavior:"smooth"}); },{passive:false});
+    // 스크롤바·트랙패드로 넘기다 멈추면 가장 가까운 열 경계로 자동 정렬(글자가 반쯤 잘려 보이지 않게). 타이핑 중이면 커서가 보이는 쪽으로.
+    var tmr=0, snapping=false;
+    function caretOk(pm,t){ var s=window.getSelection(); if(!s||!s.rangeCount||!pm.contains(s.focusNode)) return false;
+      var r=s.getRangeAt(0).cloneRange(); r.collapse(false); var el=s.focusNode.nodeType===1?s.focusNode:s.focusNode.parentElement;
+      var rc=r.getClientRects()[0]||(el&&el.getClientRects()[0]); if(!rc) return false; var pr=pm.getBoundingClientRect(), d=pm.scrollLeft-t;
+      return rc.left+d>=pr.left+4&&rc.right+d<=pr.right-4; }
+    function caretIn(pm){ var s=window.getSelection(); return !!(s&&s.rangeCount&&pm.contains(s.focusNode)); }
+    function snap(){ var pm=C.pm(); if(!pm||C.n()<2||snapping) return; var st=C.step(), max=pm.scrollWidth-pm.clientWidth; if(max<=0||!st) return;
+      var k=pm.scrollLeft/st, a=Math.round(k), b=(a===Math.floor(k))?Math.ceil(k):Math.floor(k), cand=[a,b], need=caretOk(pm,pm.scrollLeft)&&caretIn(pm); // 지금 커서가 화면에 보이면(타이핑 중) 정렬 후에도 보여야 함
+      for(var i=0;i<2;i++){ var t=Math.max(0,Math.min(cand[i]*st,max)); if(need&&!caretOk(pm,t)) continue; if(Math.abs(t-pm.scrollLeft)<3) return;
+        snapping=true; pm.scrollTo({left:t,behavior:"smooth"}); setTimeout(function(){ snapping=false; },500); return; } }
+    C.snap=function(){ clearTimeout(tmr); tmr=setTimeout(snap,250); };
+    wrap.addEventListener("scroll",function(e){ if(e.target!==C.pm()||snapping) return; clearTimeout(tmr); tmr=setTimeout(snap,200); },true); }
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
   return C;
 })();
