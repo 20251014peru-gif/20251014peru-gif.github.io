@@ -40950,7 +40950,8 @@ window.mfCol=(function(){
   var FS_MIN=13, FS_MAX=26;
   function fmtGet(){ var fs=parseInt(sget("markflow_edfs"),10); if(!(fs>=FS_MIN&&fs<=FS_MAX)) fs=16; return { fs:fs, qbar:sget("markflow_qbar")||"", qtext:sget("markflow_qtext")||"" }; }
   function applyUserFmt(){ var f=fmtGet(); var st=document.getElementById("mf-userfmt"); if(!st){ st=document.createElement("style"); st.id="mf-userfmt"; document.head.appendChild(st); }
-    var css=".toastui-editor-contents{font-size:"+f.fs+"px !important;}";
+    var css=".toastui-editor-contents{--mf-fs:"+f.fs+"px;font-size:"+f.fs+"px !important;}";
+    css+="body[data-mf-cols='2'] .toastui-editor-contents,body[data-mf-cols='3'] .toastui-editor-contents{font-size:calc(var(--mf-fs) * .8) !important;}"; // 다단 보기: 한 열에 더 많이 들어가도록 글자 80%
     if(f.qbar) css+=".toastui-editor-contents blockquote{border-left-color:"+f.qbar+" !important;}";
     if(f.qtext) css+=".toastui-editor-contents blockquote,.toastui-editor-contents blockquote p,.toastui-editor-contents blockquote ul,.toastui-editor-contents blockquote ol{color:"+f.qtext+" !important;}";
     st.textContent=css;
