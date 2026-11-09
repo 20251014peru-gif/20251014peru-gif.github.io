@@ -2241,6 +2241,15 @@ table.ProseMirror-selectednode {
   .toastui-editor-ww-container .ProseMirror{padding-left:72px!important;padding-right:14px;}
   @media(max-width:760px){ .toastui-editor-ww-container .ProseMirror{padding-left:94px!important;padding-right:12px;} }
   #editor{flex:1;min-height:0;}
+  /* 신문식 다단(3열/2열): 한 열이 화면 높이만큼 차면 다음 열로 이어짐. 넘치면 가로로 이동. 열 수는 아래 스크립트가 data-mf-cols 로 정함(1이면 아무 영향 없음) */
+  body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror,
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-fill:auto;column-gap:96px;padding-left:100px!important;overflow-x:auto;overflow-y:auto;}
+  body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror{column-count:2;}
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-count:3;}
+  body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror :is(p,h1,h2,h3,h4,h5,h6,pre,blockquote,table,img,li>p),
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror :is(p,h1,h2,h3,h4,h5,h6,pre,blockquote,table,img,li>p){break-inside:avoid;}
+  body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror :is(h1,h2,h3,h4,h5,h6),
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror :is(h1,h2,h3,h4,h5,h6){break-after:avoid;}
 
   .status{display:flex;align-items:center;gap:16px;padding:6px 14px;background:var(--bg-elev);border-top:1px solid var(--border);font-size:12px;color:var(--text-faint);user-select:none;}
   .status .sf{color:var(--text-soft);font-weight:500;}
@@ -38883,6 +38892,37 @@ window.markflowBootError=function(items,detail){
 <script src="markflow/photo-recovery.js?v=3.9.2"></script>
 <script src="markflow/restore-v38.js?v=3.8-restored-1"></script>
 <script>
+/* 다단 보기(3열/2열/1열): 편집창 너비로 열 수를 정한다. 사이드바·사진창이 열려 좁아지면 자동으로 줄어듦. */
+window.mfCol=(function(){
+  var W3=1600, W2=900; // 편집창 너비(px)가 W3 이상이면 3열, W2 이상이면 2열, 그보다 좁으면(휴대폰 등) 1열
+  var C={
+    n:function(){ return +document.body.getAttribute("data-mf-cols")||1; },
+    fr:function(el){ var a=el.getClientRects(); return a.length?a[0]:el.getBoundingClientRect(); },            // 첫 조각(여러 열에 걸친 블록은 시작 위치)
+    lr:function(el){ var a=el.getClientRects(); return a.length?a[a.length-1]:el.getBoundingClientRect(); },   // 마지막 조각
+    pm:function(){ return document.querySelector(".toastui-editor-ww-container .ProseMirror"); },
+    left0:function(){ var pm=C.pm(); if(!pm) return 0; return pm.getBoundingClientRect().left+pm.clientLeft+(parseFloat(getComputedStyle(pm).paddingLeft)||0)-pm.scrollLeft; }, // 1열 글자 시작 x
+    step:function(){ var pm=C.pm(), n=C.n(); if(!pm||n<2) return 0; var cs=getComputedStyle(pm), gap=parseFloat(cs.columnGap)||0;
+      return (pm.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0)-gap*(n-1))/n+gap; }, // 한 열 이동 거리(열 너비+간격)
+    colLeft:function(x){ return C.left0()+C.idx(x)*C.step(); }, // x가 속한 열의 글자 시작 x
+    gap:function(){ var pm=C.pm(); return pm?(parseFloat(getComputedStyle(pm).columnGap)||0):0; },
+    idx:function(x){ var s=C.step(); return s?Math.max(0,Math.floor((x-C.left0()+C.gap()/2)/s)):0; } // x가 몇 번째 열인지(0부터)
+  };
+  function apply(){ var wrap=document.querySelector(".editor-wrap"); if(!wrap) return; var w=wrap.clientWidth, n=w>=W3?3:(w>=W2?2:1);
+    if(document.body.getAttribute("data-mf-cols")!==String(n)){ document.body.setAttribute("data-mf-cols",n); try{ window.dispatchEvent(new Event("resize")); }catch(e){} } }
+  function init(){ var wrap=document.querySelector(".editor-wrap"); if(!wrap) return; apply();
+    try{ new ResizeObserver(apply).observe(wrap); }catch(e){ window.addEventListener("resize",apply); }
+    // 다단일 땐 마우스 휠(위아래)을 가로 이동으로 바꾼다 — 열이 가로로 이어지므로
+    var lastW=0; // 휠/트랙패드 한 번 굴리면 한 열씩 넘어가며 열 경계에 맞춰 멈춘다(관성으로 이어지는 이벤트는 한 번으로 침)
+    wrap.addEventListener("wheel",function(e){ if(C.n()<2||e.ctrlKey) return; var pm=C.pm(); if(!pm||!pm.contains(e.target)) return;
+      if(Math.abs(e.deltaY)<Math.abs(e.deltaX)||pm.scrollWidth<=pm.clientWidth) return; e.preventDefault();
+      var now=Date.now(), fresh=now-lastW>120; lastW=now; if(!fresh) return;
+      var st=C.step(), max=pm.scrollWidth-pm.clientWidth, t=(Math.round(pm.scrollLeft/st)+(e.deltaY>0?1:-1))*st;
+      pm.scrollTo({left:Math.max(0,Math.min(t,max)),behavior:"smooth"}); },{passive:false}); }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
+  return C;
+})();
+</script>
+<script>
 (async function(){
   var bootMissing=[];
   if(!window.toastui||!window.toastui.Editor) bootMissing.push("편집기 본체");
@@ -40018,11 +40058,11 @@ window.markflowBootError=function(items,detail){
     while(layer.children.length<heads.length){ var c=document.createElement("div"); c.className="mf-caret"; c.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'; layer.appendChild(c); }
     for(var k=layer.children.length-1;k>=heads.length;k--) layer.children[k].remove();
     heads.forEach(function(h,k){
-      var c=layer.children[k]; var hr=h.el.getBoundingClientRect();
+      var c=layer.children[k]; var hr=window.mfCol?mfCol.fr(h.el):h.el.getBoundingClientRect();
       var top=hr.top-wr.top;
       var visible= hr.height>0 && top>=clipTop-2 && top<=wr.height-8;
       c.style.display=visible?"flex":"none";
-      c.style.top=(top+2)+"px"; c.style.left=FOLD_RAIL_X+"px";
+      c.style.top=(top+2)+"px"; c.style.left=(window.mfCol&&mfCol.n()>1?mfCol.colLeft(hr.left)-wr.left-30:FOLD_RAIL_X)+"px";
       var folded=foldSet.has(h.idx);
       c.classList.toggle("exp",!folded); c.classList.toggle("folded",folded);
       c.onclick=(function(hidx){ return function(e){ e.stopPropagation(); if(foldSet.has(hidx)) foldSet.delete(hidx); else foldSet.add(hidx); scheduleFold(); }; })(h.idx);
@@ -40072,11 +40112,11 @@ window.markflowBootError=function(items,detail){
     while(layer.children.length<items.length){ var c=document.createElement("div"); c.className="mf-caret li"; c.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'; layer.appendChild(c); }
     for(var k=layer.children.length-1;k>=items.length;k--) layer.children[k].remove();
     items.forEach(function(it,k){
-      var c=layer.children[k]; var lr=it.li.getBoundingClientRect();
+      var c=layer.children[k]; var lr=window.mfCol?mfCol.fr(it.li):it.li.getBoundingClientRect();
       var top=lr.top-wr.top;
       var visible= lr.height>0 && top>=clipTop-2 && top<=wr.height-8;
       c.style.display=visible?"flex":"none";
-      c.style.top=(top+1)+"px"; c.style.left=FOLD_RAIL_X+"px";
+      c.style.top=(top+1)+"px"; c.style.left=(window.mfCol&&mfCol.n()>1?mfCol.colLeft(lr.left)-wr.left-30:FOLD_RAIL_X)+"px";
       c.classList.toggle("exp",!it.folded); c.classList.toggle("folded",it.folded);
       c.onclick=(function(key){ return function(e){ e.stopPropagation(); if(liFoldSet.has(key)) liFoldSet.delete(key); else liFoldSet.add(key); scheduleFold(); }; })(it.key);
     });
@@ -40696,17 +40736,20 @@ window.markflowBootError=function(items,detail){
     try{ var sel=view.state.selection.constructor; }catch(e){}
     afterDomEdit();
   }
-  function unitAtY(y){ var us=movableUnits(); for(var i=0;i<us.length;i++){ var r=us[i].el.getBoundingClientRect(); if(r.height===0) continue; if(y>=r.top-3&&y<=r.bottom+3) return us[i]; } return null; }
+  function unitAtY(y,x){ var us=movableUnits(); var M=window.mfCol&&mfCol.n()>1;
+    for(var i=0;i<us.length;i++){ var rs=M?us[i].el.getClientRects():[us[i].el.getBoundingClientRect()];
+      for(var k=0;k<rs.length;k++){ var r=rs[k]; if(r.height===0) continue; if(y>=r.top-3&&y<=r.bottom+3&&(!M||(x>=r.left-96&&x<=r.right))) return us[i]; } } return null; }
   function positionHandleForUnit(u){
     var wrap=document.querySelector(".editor-wrap"); if(!u||!wrap){ if(hEl)hEl.style.display="none"; return; }
-    var wr=wrap.getBoundingClientRect(); var r=u.el.getBoundingClientRect();
-    var refLeft=(u.type==="li"&&u.listEl)?u.listEl.getBoundingClientRect().left:r.left;
+    var wr=wrap.getBoundingClientRect(); var r=window.mfCol?mfCol.fr(u.el):u.el.getBoundingClientRect();
+    var refLeft=(u.type==="li"&&u.listEl)?(window.mfCol?mfCol.fr(u.listEl):u.listEl.getBoundingClientRect()).left:r.left;
+    if(window.mfCol&&mfCol.n()>1&&u.type==="li"&&u.listEl){ refLeft=r.left-(mfCol.fr(u.listEl).left<=r.left?(r.left-mfCol.fr(u.listEl).left):0); }
     var top=r.top-wr.top;
     var wwc=document.querySelector(".toastui-editor-ww-container"); var clipTop=wwc?wwc.getBoundingClientRect().top-wr.top:0;
     if(r.height===0||top<clipTop-2||top>wr.height-10){ hEl.style.display="none"; return; }
-    hEl.style.display="flex"; hEl.style.top=(top+1)+"px"; hEl.style.left=Math.max(6,(refLeft-wr.left)-56)+"px"; hoverUnit=u;
+    hEl.style.display="flex"; hEl.style.top=(top+1)+"px"; hEl.style.left=Math.max(6,(refLeft-wr.left)-(window.mfCol&&mfCol.n()>1?84:56))+"px"; hoverUnit=u;
   }
-  function onEditorMove(e){ if(dragging||viewMode) return; var u=unitAtY(e.clientY); if(u) positionHandleForUnit(u); else if(!hoverHold&&hEl) hEl.style.display="none"; }
+  function onEditorMove(e){ if(dragging||viewMode) return; var u=unitAtY(e.clientY,e.clientX); if(u) positionHandleForUnit(u); else if(!hoverHold&&hEl) hEl.style.display="none"; }
   // "+"(블록 추가) 메뉴에서 제목/목록/인용처럼 '이 줄의 형식'에 해당하는 항목을 고르면
   // 새 블록을 끼워넣지 말고 지금 가리키던 줄 자체를 그 형식으로 바꾼다(다른 메뉴의 "유형 바꾸기"와 동일 규칙).
   // 표/동영상/구분선/콜아웃처럼 실제 '새 내용'인 항목만 계속 삽입으로 남긴다.
@@ -41438,16 +41481,19 @@ window.markflowBootError=function(items,detail){
     if(!dragMoved){ if(Math.abs(e.clientX-dragSX)<4&&Math.abs(e.clientY-dragSY)<4) return; dragMoved=true; document.body.classList.add("mf-dragging"); if(dragEl) dragEl.classList.add("grabbing"); }
     var wrap=document.querySelector(".editor-wrap"); var wr=wrap.getBoundingClientRect(); var top, l="6px", rgt="6px";
     if(dragUnit.type==="li"){
-      var lis=siblingLis(dragUnit.listEl); var insAt=lis.length;
-      for(var i=0;i<lis.length;i++){ var r=lis[i].getBoundingClientRect(); if(e.clientY<r.top+r.height/2){ insAt=i; break; } }
-      if(insAt<lis.length) top=lis[insAt].getBoundingClientRect().top-wr.top; else top=lis[lis.length-1].getBoundingClientRect().bottom-wr.top;
+      var lis=siblingLis(dragUnit.listEl); var insAt=lis.length; var C=window.mfCol, M=C&&C.n()>1, pc=M?C.idx(e.clientX):0;
+      for(var i=0;i<lis.length;i++){ var r=M?C.fr(lis[i]):lis[i].getBoundingClientRect(); if((M&&C.idx(r.left)>pc)||((!M||C.idx(r.left)===pc)&&e.clientY<r.top+r.height/2)){ insAt=i; break; } }
+      var tR=M?(insAt<lis.length?C.fr(lis[insAt]):C.lr(lis[lis.length-1])):null;
+      if(insAt<lis.length) top=(M?tR:lis[insAt].getBoundingClientRect()).top-wr.top; else top=(M?tR:lis[lis.length-1].getBoundingClientRect()).bottom-wr.top;
       var lr=dragUnit.listEl.getBoundingClientRect(); l=Math.max(6,lr.left-wr.left)+"px"; rgt=Math.max(6,wr.right-lr.right)+"px";
+      if(M){ var off=Math.max(0,C.fr(lis[0]).left-C.fr(dragUnit.listEl).left); l=Math.max(6,tR.left-off-wr.left)+"px"; rgt=Math.max(6,wr.right-tR.right)+"px"; }
       dropTarget=insAt;
     } else {
       // 드롭 위치를 DOM 최상위 자식 인덱스로 계산(마크다운 재분할에 의존하지 않음).
-      var p2=pmEl(); var kk=p2?p2.children:[]; var insDom=kk.length;
-      for(var m2=0;m2<kk.length;m2++){ var rb=kk[m2].getBoundingClientRect(); if(rb.height===0) continue; if(e.clientY<rb.top+rb.height/2){ insDom=m2; break; } }
-      if(insDom<kk.length) top=kk[insDom].getBoundingClientRect().top-wr.top; else top=kk.length?kk[kk.length-1].getBoundingClientRect().bottom-wr.top:0;
+      var p2=pmEl(); var kk=p2?p2.children:[]; var insDom=kk.length; var C2=window.mfCol, M2=C2&&C2.n()>1, pc2=M2?C2.idx(e.clientX):0;
+      for(var m2=0;m2<kk.length;m2++){ var rb=M2?C2.fr(kk[m2]):kk[m2].getBoundingClientRect(); if(rb.height===0) continue; if((M2&&C2.idx(rb.left)>pc2)||((!M2||C2.idx(rb.left)===pc2)&&e.clientY<rb.top+rb.height/2)){ insDom=m2; break; } }
+      if(insDom<kk.length) top=(M2?C2.fr(kk[insDom]):kk[insDom].getBoundingClientRect()).top-wr.top; else top=kk.length?(M2?C2.lr(kk[kk.length-1]):kk[kk.length-1].getBoundingClientRect()).bottom-wr.top:0;
+      if(M2&&kk.length){ var tb=insDom<kk.length?C2.fr(kk[insDom]):C2.lr(kk[kk.length-1]); l=Math.max(6,tb.left-wr.left)+"px"; rgt=Math.max(6,wr.right-tb.right)+"px"; }
       dropTarget=insDom;
     }
     dropLine.style.display="block"; dropLine.style.top=(top-2)+"px"; dropLine.style.left=l; dropLine.style.right=rgt;
@@ -41515,7 +41561,7 @@ window.markflowBootError=function(items,detail){
     wrap.addEventListener("mouseleave",function(){ if(!hoverHold&&!dragging&&hEl) hEl.style.display="none"; });
     wrap.addEventListener("scroll",function(){ if(hoverUnit&&!dragging) positionHandleForUnit(hoverUnit); },true);
     // 폰(터치): 문단을 탭하면 그 블록의 손잡이를 표시 → 손잡이로 메뉴 접근 가능
-    wrap.addEventListener("click",function(e){ if(dragging||viewMode) return; if(e.target&&e.target.tagName==="IMG"){ e.stopPropagation(); openImgBar(e.target); return; } var tbl=e.target&&e.target.closest&&e.target.closest("table"); if(tbl&&wrap.contains(tbl)){ openTblBar(tbl); } else if(tblBar){ closeTblBar(); } if(hEl&&(e.target.closest&&e.target.closest(".mf-handle"))) return; var u=unitAtY(e.clientY); if(u) positionHandleForUnit(u); });
+    wrap.addEventListener("click",function(e){ if(dragging||viewMode) return; if(e.target&&e.target.tagName==="IMG"){ e.stopPropagation(); openImgBar(e.target); return; } var tbl=e.target&&e.target.closest&&e.target.closest("table"); if(tbl&&wrap.contains(tbl)){ openTblBar(tbl); } else if(tblBar){ closeTblBar(); } if(hEl&&(e.target.closest&&e.target.closest(".mf-handle"))) return; var u=unitAtY(e.clientY,e.clientX); if(u) positionHandleForUnit(u); });
     wrap.addEventListener("scroll",function(){ if(imgBarPos>=0) repositionImgBar(); if(tblBar) repositionTblBar(); },true);
     wrap.addEventListener("dblclick",function(e){ if(viewMode) return; if(e.target&&e.target.tagName==="IMG"){ e.preventDefault(); e.stopPropagation(); var pos=imgNodePosFromDOM(e.target); if(pos>=0) openImgZoom(pos); } });
   }
