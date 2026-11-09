@@ -2795,7 +2795,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.51</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.52</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38873,7 +38873,7 @@ window.markflowBootError=function(items,detail){
 <script src="markflow/zip.js?v=3.10.0"></script>
 <script src="markflow/sync-merge.js?v=3.10.0"></script>
 <script src="markflow/backup.js?v=3.10.0"></script>
-<script src="markflow/usability.js?v=3.9.5"></script>
+<script src="markflow/usability.js?v=3.9.6"></script>
 <script src="markflow/ai-costs.js?v=3.9.1"></script>
 <script src="markflow/photo-recovery.js?v=3.9.2"></script>
 <script src="markflow/restore-v38.js?v=3.8-restored-1"></script>
@@ -38925,7 +38925,7 @@ window.markflowBootError=function(items,detail){
   // localStorage에는 사진 데이터를 뺀 '가벼운 사본'만 저장 → 문서 목록·본문 글자는 절대 사라지지 않음(사진은 IndexedDB에 별도 보관)
   var IMG_PH="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
   function stripImages(md){ return (md||"").replace(/(!\[[^\]]*\]\()data:[^)\s]+(\))/g, "$1"+IMG_PH+"$2"); }
-  function slimStateFrom(docs){ var s={docs:[],currentId:state.currentId,theme:state.theme,folders:state.folders,collapsed:state.collapsed,savedAt:state.savedAt,numHeadings:state.numHeadings,seedCleared:state.seedCleared,deleted:state.deleted,lockedFolders:state.lockedFolders,lockSalt:state.lockSalt,lockCheck:state.lockCheck};
+  function slimStateFrom(docs){ var s={docs:[],currentId:state.currentId,theme:state.theme,folders:state.folders,collapsed:state.collapsed,savedAt:state.savedAt,numHeadings:state.numHeadings,seedCleared:state.seedCleared,deleted:state.deleted,deletedFolders:state.deletedFolders,lockedFolders:state.lockedFolders,lockSalt:state.lockSalt,lockCheck:state.lockCheck};
     s.docs=docs.map(function(d){ var c={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) c[k]=d[k]; } c.content=(typeof isEnc==="function"&&isEnc(d.content))? d.content : stripImages(d.content||""); return c; });
     return s; }
   function slimState(){ return slimStateFrom(state.docs); }
@@ -38943,11 +38943,15 @@ window.markflowBootError=function(items,detail){
   }
 
   // ---- state ----
-  var state = { docs:null, currentId:null, theme:"light", folders:null, collapsed:[], savedAt:0, deleted:{}, lockedFolders:[] };
+  var state = { docs:null, currentId:null, theme:"light", folders:null, collapsed:[], savedAt:0, deleted:{}, deletedFolders:{}, lockedFolders:[] };
   function migrate(){
     if(!Array.isArray(state.folders)) state.folders=[];
     if(!Array.isArray(state.collapsed)) state.collapsed=[];
     if(!Array.isArray(state.lockedFolders)) state.lockedFolders=[];
+    if(!state.deletedFolders||typeof state.deletedFolders!=="object"||Array.isArray(state.deletedFolders)) state.deletedFolders={};
+    state.folders=applyFolderTombs(state.folders); // 삭제한 폴더가 남아 있으면 정리
+    // 존재하지 않는(삭제된) 폴더의 잠금 기록은 제거 → 삭제한 잠긴 폴더가 사라져도 잠금만 되살아나는 일 방지
+    state.lockedFolders=state.lockedFolders.filter(function(f){ return state.folders.indexOf(f)>=0; });
     state.docs.forEach(function(d){ if(typeof d.folder!=="string") d.folder=""; });
     // 기본 폴더(업무·아이디어·일상)는 한 번만 자동 정리: 문서가 없는 것만 제거(사용자가 직접 만든 동명 폴더는 보존)
     if(!state.seedCleared){ state.seedCleared=true; var defs=["업무","아이디어","일상"];
@@ -38961,11 +38965,18 @@ window.markflowBootError=function(items,detail){
   function pruneTombstones(){ var t=tombstones(); var cut=Date.now()-150*24*3600*1000; for(var k in t){ if((+t[k]||0)<cut) delete t[k]; } }
   // 무덤에 있는 id는 목록에서 제거한다. 단, 문서가 삭제 시각보다 나중에 수정됐다면(다른 기기에서 되살려 편집) 무덤을 풀고 남긴다.
   function applyTombstones(docs){ if(!Array.isArray(docs)) return docs; var t=tombstones(); return docs.filter(function(d){ if(!d||!d.id) return true; var ts=+t[d.id]||0; if(!ts) return true; if((+d.updated||0)>ts){ delete t[d.id]; return true; } return false; }); }
+  // ---- 폴더 삭제 무덤: 삭제한 폴더가 동기화로 되살아나지 않게 한다 (폴더는 '수정 시각'이 없어 이름 기준으로만 관리) ----
+  function folderTombs(){ if(!state.deletedFolders||typeof state.deletedFolders!=="object"||Array.isArray(state.deletedFolders)) state.deletedFolders={}; return state.deletedFolders; }
+  function recordFolderTomb(name){ if(!name) return; folderTombs()[name]=Date.now(); }
+  function clearFolderTomb(name){ var t=folderTombs(); if(t[name]) delete t[name]; }
+  function mergeFolderTombs(src){ if(!src||typeof src!=="object") return; var t=folderTombs(); for(var k in src){ if(Object.prototype.hasOwnProperty.call(src,k)){ var v=+src[k]||0; if(v&&(!t[k]||v>t[k])) t[k]=v; } } }
+  function pruneFolderTombs(){ var t=folderTombs(); var cut=Date.now()-150*24*3600*1000; for(var k in t){ if((+t[k]||0)<cut) delete t[k]; } }
+  function applyFolderTombs(folders){ if(!Array.isArray(folders)) return folders; var t=folderTombs(); return folders.filter(function(f){ return !t[f]; }); }
   // 저장 보류: 저장된 데이터를 읽지 못해 기본 문서로 시작했거나 부팅이 실패하면 기존 데이터를 덮어쓰지 않는다.
   var saveHold=false, bootDefault=false;
   (function load(){
     var raw=photoRecovery.state?JSON.stringify(photoRecovery.state):sget(SKEY);
-    if(raw){ try{ var d=JSON.parse(raw); if(d&&Array.isArray(d.docs)&&d.docs.length){ state.docs=d.docs; state.currentId=d.currentId||d.docs[0].id; state.theme=d.theme||"light"; state.folders=d.folders||null; state.collapsed=d.collapsed||[]; state.savedAt=d.savedAt||0; if(d.deleted&&typeof d.deleted==="object"&&!Array.isArray(d.deleted)) state.deleted=d.deleted; if(Array.isArray(d.lockedFolders)) state.lockedFolders=d.lockedFolders; if(typeof d.lockSalt==="string") state.lockSalt=d.lockSalt; if(typeof d.lockCheck==="string") state.lockCheck=d.lockCheck; if(d.numHeadings) state.numHeadings=d.numHeadings; if(d.seedCleared) state.seedCleared=d.seedCleared; } }catch(e){} }
+    if(raw){ try{ var d=JSON.parse(raw); if(d&&Array.isArray(d.docs)&&d.docs.length){ state.docs=d.docs; state.currentId=d.currentId||d.docs[0].id; state.theme=d.theme||"light"; state.folders=d.folders||null; state.collapsed=d.collapsed||[]; state.savedAt=d.savedAt||0; if(d.deleted&&typeof d.deleted==="object"&&!Array.isArray(d.deleted)) state.deleted=d.deleted; if(d.deletedFolders&&typeof d.deletedFolders==="object"&&!Array.isArray(d.deletedFolders)) state.deletedFolders=d.deletedFolders; if(Array.isArray(d.lockedFolders)) state.lockedFolders=d.lockedFolders; if(typeof d.lockSalt==="string") state.lockSalt=d.lockSalt; if(typeof d.lockCheck==="string") state.lockCheck=d.lockCheck; if(d.numHeadings) state.numHeadings=d.numHeadings; if(d.seedCleared) state.seedCleared=d.seedCleared; } }catch(e){} }
     if(!state.docs){ bootDefault=true; var id=uid(); state.docs=[{id:id,content:DEFAULT,updated:Date.now(),folder:""}]; state.currentId=id; }
     migrate();
     if(!bootDefault){ pruneTombstones(); state.docs=applyTombstones(state.docs); }
@@ -39044,8 +39055,12 @@ window.markflowBootError=function(items,detail){
   function flushSave(){ try{ if(!loading){ var d=current(); if(d){ d.content=editor.getMarkdown(); d.updated=Date.now(); } } }catch(e){} if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; } try{ persistNow(); }catch(e){} }
   document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="hidden") flushSave(); });
   // 앱을 나가거나 다른 작업으로 전환하면 일기를 바로 다시 잠근다
-  function lockOnLeave(){ try{ var cd=current(); var wasLocked=cd&&(cd.locked||folderLocked(cd.folder)); relock(); if(wasLocked){ try{ showHome(); }catch(e){} } try{ renderDocs(); }catch(e){} }catch(e){ relock(); } }
+  // 자동 잠금: 앱을 벗어나면 다시 암호화 + '편집기 내용까지 비워' 복귀 시 평문이 남지 않게 한다(보안).
+  function lockOnLeave(){ try{ var cd=current(); var wasLocked=cd&&(cd.locked||folderLocked(cd.folder)); relock(); if(wasLocked){ try{ loading=true; editor.setMarkdown("",false); loading=false; }catch(e){ loading=false; } try{ showHome(); }catch(e){} } try{ renderDocs(); }catch(e){} }catch(e){ try{ relock(); }catch(_){} } }
   document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="hidden"){ lockOnLeave(); } });
+  // 복귀 시에도 잠긴 문서가 열려 있으면 홈으로 보낸다(일부 모바일 브라우저가 전환 시 숨김 이벤트를 늦게/안 주는 경우 대비)
+  document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible"){ try{ if(!__mfUnlocked){ var cd=current(); if(cd&&(cd.locked||folderLocked(cd.folder))&&!homeIsOpen()){ try{ loading=true; editor.setMarkdown("",false); loading=false; }catch(e){ loading=false; } showHome(); } } }catch(e){} } });
+  window.addEventListener("pagehide", function(){ try{ lockOnLeave(); }catch(e){} });
   // 데스크톱: 다른 프로그램을 클릭하면(탭은 숨겨지지 않아 visibilitychange가 안 뜸) 창 포커스가 빠지는 걸로 감지해 다시 잠근다.
   // 단, 사진·백업 등 파일 선택창을 여느라 포커스가 빠진 경우는 제외(그때는 잠그면 안 됨).
   var __mfFileDialog=false;
@@ -39237,8 +39252,8 @@ window.markflowBootError=function(items,detail){
     group("",un,true);
   }
   /* 폴더 조작 */
-  function newFolder(){ var base="새 폴더", name=base, n=2; while(state.folders.indexOf(name)>=0){ name=base+" "+n; n++; } state.folders.push(name); var c=state.collapsed.indexOf(name); if(c>=0) state.collapsed.splice(c,1); renderDocs(); scheduleSave(); startFolderRename(name); }
-  function doRenameFolder(f, name){ name=(name||"").trim(); if(!name||name===f){ renderDocs(); return; } if(state.folders.indexOf(name)>=0){ if(typeof mfToast==="function") mfToast("같은 이름의 폴더가 이미 있어요"); renderDocs(); return; } var i=state.folders.indexOf(f); if(i>=0) state.folders[i]=name; state.docs.forEach(function(d){ if(d.folder===f) d.folder=name; }); var c=state.collapsed.indexOf(f); if(c>=0) state.collapsed[c]=name; renderDocs(); scheduleSave(); }
+  function newFolder(){ var base="새 폴더", name=base, n=2; while(state.folders.indexOf(name)>=0 || folderTombs()[name]){ name=base+" "+n; n++; } state.folders.push(name); clearFolderTomb(name); var c=state.collapsed.indexOf(name); if(c>=0) state.collapsed.splice(c,1); renderDocs(); scheduleSave(); startFolderRename(name); }
+  function doRenameFolder(f, name){ name=(name||"").trim(); if(!name||name===f){ renderDocs(); return; } if(state.folders.indexOf(name)>=0){ if(typeof mfToast==="function") mfToast("같은 이름의 폴더가 이미 있어요"); renderDocs(); return; } var i=state.folders.indexOf(f); if(i>=0) state.folders[i]=name; state.docs.forEach(function(d){ if(d.folder===f) d.folder=name; }); var c=state.collapsed.indexOf(f); if(c>=0) state.collapsed[c]=name; clearFolderTomb(name); recordFolderTomb(f); if(state.lockedFolders&&state.lockedFolders.indexOf(f)>=0){ setFolderLock(f,false); setFolderLock(name,true); } renderDocs(); scheduleSave(); }
   // 휴대폰에서도 확실히 되도록 폴더 이름 변경을 인라인 입력으로(프롬프트 미사용)
   function startFolderRename(name){
     var head=null; var heads=document.querySelectorAll(".folder-head"); for(var i=0;i<heads.length;i++){ var fn=heads[i].querySelector(".fname"); if(fn && fn.textContent===name){ head=heads[i]; break; } }
@@ -39254,7 +39269,7 @@ window.markflowBootError=function(items,detail){
     inp.addEventListener("blur",commit);
   }
   function renameFolder(f){ startFolderRename(f); }
-  function deleteFolder(f){ var hasDocs=state.docs.some(function(d){return d.folder===f;}); if(hasDocs && !confirm('"'+f+'" 폴더를 삭제할까요?\n(안의 문서는 미분류로 이동합니다)')) return; state.folders=state.folders.filter(function(x){return x!==f;}); state.docs.forEach(function(d){ if(d.folder===f) d.folder=""; }); renderDocs(); scheduleSave(); }
+  function deleteFolder(f){ var hasDocs=state.docs.some(function(d){return d.folder===f;}); if(hasDocs && !confirm('"'+f+'" 폴더를 삭제할까요?\n(안의 문서는 미분류로 이동합니다)')) return; state.folders=state.folders.filter(function(x){return x!==f;}); state.docs.forEach(function(d){ if(d.folder===f) d.folder=""; }); recordFolderTomb(f); if(folderLocked(f)) setFolderLock(f,false); renderDocs(); scheduleSave(); }
   function toggleFolder(f){ var i=state.collapsed.indexOf(f); if(i>=0) state.collapsed.splice(i,1); else state.collapsed.push(f); renderDocs(); scheduleSave(); }
   function moveDocToFolder(id,f){ var d=state.docs.find(function(x){return x.id===id;}); if(d){ d.folder=f; d.updated=Date.now(); } renderDocs(); scheduleSave(); }
   /* 팝업 메뉴 */
@@ -39335,8 +39350,10 @@ window.markflowBootError=function(items,detail){
     var box=document.createElement("div"); box.className="modal"; box.style.maxWidth="360px";
     var h=document.createElement("div"); h.style.cssText="font-weight:700;font-size:15px;"; h.textContent=opts.title; box.appendChild(h);
     if(opts.desc){ var dd=document.createElement("div"); dd.style.cssText="font-size:12.5px;color:var(--text-faint);margin:4px 0 10px;line-height:1.5;"; dd.textContent=opts.desc; box.appendChild(dd); } else { var sp=document.createElement("div"); sp.style.height="8px"; box.appendChild(sp); }
-    var inp=document.createElement("input"); inp.type="password"; inp.className="modal-input"; inp.placeholder=opts.placeholder||"비밀번호"; inp.setAttribute("autocomplete","off"); box.appendChild(inp);
-    var inp2=null; if(opts.confirm){ inp2=document.createElement("input"); inp2.type="password"; inp2.className="modal-input"; inp2.style.marginTop="8px"; inp2.placeholder="한 번 더 입력"; inp2.setAttribute("autocomplete","off"); box.appendChild(inp2); }
+    // 비밀번호 저장/업데이트 팝업(브라우저·폰)이 뜨지 않게: 진짜 password 필드 대신 '가려진 텍스트' 필드를 쓴다.
+    function mkSecret(ph){ var e=document.createElement("input"); e.type="text"; e.className="modal-input"; e.placeholder=ph; e.style.setProperty("-webkit-text-security","disc"); e.style.setProperty("text-security","disc"); e.setAttribute("autocomplete","off"); e.setAttribute("autocorrect","off"); e.setAttribute("autocapitalize","off"); e.setAttribute("spellcheck","false"); e.setAttribute("name","mf-lk-"+Math.random().toString(36).slice(2)); e.setAttribute("inputmode","text"); e.setAttribute("data-1p-ignore","true"); e.setAttribute("data-lpignore","true"); return e; }
+    var inp=mkSecret(opts.placeholder||"비밀번호"); box.appendChild(inp);
+    var inp2=null; if(opts.confirm){ inp2=mkSecret("한 번 더 입력"); inp2.style.marginTop="8px"; box.appendChild(inp2); }
     var row=document.createElement("div"); row.style.cssText="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;";
     var cancel=document.createElement("button"); cancel.type="button"; cancel.className="mbtn"; cancel.textContent="취소";
     var ok=document.createElement("button"); ok.type="button"; ok.className="mbtn"; ok.style.cssText="background:var(--accent);color:#fff;border-color:var(--accent);"; ok.textContent=opts.okLabel||"확인";
@@ -41446,7 +41463,7 @@ window.markflowBootError=function(items,detail){
     if(lbl){ lbl.textContent = GH.token? (kind==="syncing"?"동기화…":"동기화됨") : "동기화"; }
   }
   function syncPayload(){ var docs=state.docs.map(function(d){ if(folderLocked(d.folder) && !isEnc(d.content)){ var c=encCache[d.id]; var ct=(c&&c.plain===d.content&&c.cipher)?c.cipher:((c&&c.cipher)||null); var o={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) o[k]=d[k]; } o.content=ct||""; return o; } return d; });
-    return JSON.stringify({docs:docs,folders:state.folders,collapsed:state.collapsed,theme:state.theme,currentId:state.currentId,savedAt:state.savedAt,deleted:state.deleted,lockedFolders:state.lockedFolders,lockSalt:state.lockSalt||null,lockCheck:state.lockCheck||null}); }
+    return JSON.stringify({docs:docs,folders:state.folders,collapsed:state.collapsed,theme:state.theme,currentId:state.currentId,savedAt:state.savedAt,deleted:state.deleted,deletedFolders:state.deletedFolders,lockedFolders:state.lockedFolders,lockSalt:state.lockSalt||null,lockCheck:state.lockCheck||null}); }
   function gistBody(){ return JSON.stringify({description:"MarkFlow data (do not delete)",public:false,files:{"markflow-data.json":{content:syncPayload()}}}); }
   // 여러 기기가 각자 Gist를 만들어 '갈라지는' 문제 방지: 항상 '가장 먼저 만든' Gist 하나로 모두가 모이도록 결정적으로 고른다.
   function findGist(){
@@ -41479,9 +41496,10 @@ window.markflowBootError=function(items,detail){
     // 잠금 소금·검증 토큰은 다른 기기와 공유되어야 함 — 아직 없으면 원격 것을 받아온다
     try{ if(remote.lockSalt && !state.lockSalt){ state.lockSalt=remote.lockSalt; try{ sset("markflow_lock_salt",remote.lockSalt); }catch(e){} } }catch(e){}
     try{ if(remote.lockCheck && !state.lockCheck){ state.lockCheck=remote.lockCheck; } }catch(e){}
-    mergeTombstones(remote.deleted);
+    mergeTombstones(remote.deleted); mergeFolderTombs(remote.deletedFolders);
     var m=window.markflowSyncMerge.merge({docs:state.docs,folders:state.folders},{docs:remote.docs,folders:remote.folders},loadSyncBase());
     pruneTombstones(); m.docs=applyTombstones(m.docs);
+    pruneFolderTombs(); m.folders=applyFolderTombs(m.folders); // 삭제한 폴더가 동기화로 되살아나지 않게
     var changed=m.docs.length!==state.docs.length||m.docs.some(function(d,i){ return d!==state.docs[i]; })||m.folders.join("\n")!==state.folders.join("\n");
     if(changed){
       state.docs=m.docs; state.folders=m.folders; migrate();
