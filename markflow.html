@@ -2262,6 +2262,8 @@ table.ProseMirror-selectednode {
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror img:not([height]):not([style*="height"]){max-height:33.3vh;width:auto;height:auto;max-width:100%;object-fit:contain;}
   .mf-pageind{display:none;font-weight:700;color:var(--accent);}
   @media print{.mf-pageind{display:none!important;}}
+  /* 문서 목록 번호 모양 설정은 위쪽 '목록' 메뉴로 일원화 → 사이드바의 같은 기능 버튼(≡)은 숨김 */
+  #side-listset{display:none!important;}
   /* AI 기능 숨김(요금 표시·문장 다듬기 포함): 달님 요청. 요소는 남겨 둠(앱 코드가 이 요소들을 찾음) */
   #btn-ai,#ai-menu,#ai-backdrop,#ai-pill,.mf-cost-total,.mf-cost-box,.mf-ai-cost-button{display:none!important;}
   /* 다단: 줄 간격을 조금 줄이고(1.6→1.45), 가로 스크롤바는 숨긴다(세로 휠로 한 페이지씩 넘김) */
@@ -41997,24 +41999,37 @@ window.mfCol=(function(){
   (function(){ var bar=document.getElementById("ai-bar"), api=window.__mfApi; if(!bar||!api) return;
     [].forEach.call(bar.querySelectorAll(".fmt-act,.ai-bar-sep"),function(n){ n.remove(); });
     var busy=document.getElementById("ai-busy"), dropEl=null;
+    // 목록(문서 목록) 번호 모양·아이콘: 두 번 누르지 않게 목록 메뉴에 바로 펼쳐 보여준다
+    function shapeItems(){ var st=listNumStyle(), ic=listIconOn(); function t(on,x){ return (on?"✓ ":"")+x; }
+      return [["목록 번호 모양",null],[t(st==="num","숫자 (1 2 3)"),function(){ sset("markflow_list_numstyle","num"); renderDocs(); }],[t(st==="circle","동그라미 (① ② ③)"),function(){ sset("markflow_list_numstyle","circle"); renderDocs(); }],[t(st==="off","번호 없음"),function(){ sset("markflow_list_numstyle","off"); renderDocs(); }],[t(ic,"문서 아이콘 표시"),function(){ sset("markflow_list_icon",ic?"0":"1"); renderDocs(); }]]; }
+    // 위쪽 도구막대의 '목록' 메뉴(usability.js가 만듦)에도 같은 항목을 넣고, 두 번 눌러야 하던 '목록 번호 모양…' 줄은 없앤다
+    try{ new MutationObserver(function(recs){ recs.forEach(function(r){ [].forEach.call(r.addedNodes,function(m){
+        if(m.nodeType!==1||!m.classList||!m.classList.contains("mf-tooldrop")) return;
+        var rows=[].slice.call(m.querySelectorAll(".mf-tooldrop-item")), tg=null; rows.forEach(function(x){ if(x.textContent.indexOf("목록 번호 모양")===0) tg=x; }); if(!tg) return;
+        shapeItems().forEach(function(it){ var el;
+          if(!it[1]){ el=document.createElement("div"); el.textContent=it[0]; el.style.cssText="font-size:11px;font-weight:700;color:var(--text-faint);padding:6px 10px 2px;"; }
+          else { el=document.createElement("button"); el.type="button"; el.className="mf-tooldrop-item"; el.textContent=it[0]; el.addEventListener("mousedown",function(e){ e.preventDefault(); m.remove(); it[1](); }); }
+          m.insertBefore(el,tg); });
+        tg.remove(); var h=m.offsetHeight, top=parseFloat(m.style.top)||0; if(top+h>window.innerHeight-8) m.style.top=Math.max(8,window.innerHeight-8-h)+"px";
+      }); }); }).observe(document.body,{childList:true}); }catch(e){}
     function closeDrop(){ if(dropEl){ dropEl.remove(); dropEl=null; document.removeEventListener("mousedown",dropOutside,true); } }
     function dropOutside(e){ if(dropEl&&!dropEl.contains(e.target)&&!(e.target.closest&&e.target.closest("#ai-bar"))) closeDrop(); }
     function openDrop(anchor,items){ closeDrop(); var r=anchor.getBoundingClientRect(); var m=document.createElement("div"); m.className="mf-tooldrop";
-      items.forEach(function(it){ var row=document.createElement("button"); row.type="button"; row.className="mf-tooldrop-item"; row.textContent=it[0];
+      items.forEach(function(it){ if(!it[1]){ var hd=document.createElement("div"); hd.textContent=it[0]; hd.style.cssText="font-size:11px;font-weight:700;color:var(--text-faint);padding:6px 10px 2px;"; m.appendChild(hd); return; } var row=document.createElement("button"); row.type="button"; row.className="mf-tooldrop-item"; row.textContent=it[0];
         row.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); closeDrop(); it[1](r); }); m.appendChild(row); });
       m.style.cssText="position:fixed;z-index:240;left:-9999px;top:0;visibility:hidden;"; document.body.appendChild(m); dropEl=m;
       var w=m.offsetWidth||188, h=m.offsetHeight||200, left=Math.max(8,Math.min(r.left,window.innerWidth-w-8)), top=r.top-h-6; if(top<8) top=r.bottom+6;
       m.style.left=left+"px"; m.style.top=top+"px"; m.style.visibility=""; document.addEventListener("mousedown",dropOutside,true); }
     function mk(label,title,fn,isDrop,items){ var b=document.createElement("button"); b.type="button"; b.className="ai-act mf-fb"; b.title=title||label;
       b.innerHTML=isDrop?"<span>"+label+"</span><span style=\"font-size:10px;opacity:.65\"> ▾</span>":label;
-      b.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); if(api.isReadOnly()){ api.toast("읽기 모드를 끄면 편집할 수 있습니다."); return; } if(isDrop) openDrop(b,items); else fn(b); });
+      b.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); if(api.isReadOnly()){ api.toast("읽기 모드를 끄면 편집할 수 있습니다."); return; } if(isDrop) openDrop(b,typeof items==="function"?items():items); else fn(b); });
       bar.insertBefore(b,busy); return b; }
     function sep(){ var d=document.createElement("span"); d.className="ai-bar-sep"; bar.insertBefore(d,busy); }
     mk("본문","문단 형식",null,true,[["본문",function(){ api.setBlock("p"); }],["제목 1",function(){ api.setBlock("h1"); }],["제목 2",function(){ api.setBlock("h2"); }],["제목 3",function(){ api.setBlock("h3"); }],["제목 4",function(){ api.setBlock("h4"); }]]);
     mk("서식","서식",null,true,[["굵게",function(){ api.exec("bold"); }],["기울임",function(){ api.exec("italic"); }],["취소선",function(){ api.exec("strike"); }],["이모지",function(r){ api.emoji&&api.emoji(r); }]]);
     mk("색","색",null,true,[["형광펜",function(r){ api.highlight(r); }],["글자색",function(r){ api.textColor&&api.textColor(r); }],["글자 크기·인용색",function(r){ api.textSize&&api.textSize(r); }]]);
     sep();
-    mk("목록","목록",null,true,[["글머리 목록",function(){ api.bulletList?api.bulletList():api.bullet(); }],["체크박스",function(){ api.checklist&&api.checklist(); }],["번호 목록",function(){ api.numberList&&api.numberList(); }],["인용",function(){ api.quote&&api.quote(); }],["목록 번호 모양…",function(){ api.listSettings&&api.listSettings(document.querySelector(".mf-organized-toolbar [aria-label='목록']")); }]]);
+    mk("목록","목록",null,true,function(){ return [["글머리 목록",function(){ api.bulletList?api.bulletList():api.bullet(); }],["체크박스",function(){ api.checklist&&api.checklist(); }],["번호 목록",function(){ api.numberList&&api.numberList(); }],["인용",function(){ api.quote&&api.quote(); }]].concat(shapeItems()); });
     mk("⇤","내어쓰기",function(){ api.outdent(); }); mk("⇥","들여쓰기",function(){ api.indent(); }); mk("⌃⌄","모두 접기 / 펼치기",function(){ api.fold(); });
     sep();
     mk("넣기","넣기",null,true,[["사진",function(){ api.photos(); }],["링크",function(){ api.link(); }],["콜아웃",function(r){ api.callout&&api.callout(r); }],["표",function(r){ api.table&&api.table(r); }],["동영상",function(){ api.video(); }]]);
