@@ -1,7 +1,7 @@
 /* Arrange existing actions without removing features or replacing the editor. */
 window.installMarkflowUsability=function(api){
   const $=id=>document.getElementById(id), top=document.querySelector('.topbar');
-  document.documentElement.dataset.markflowUi='3.9.5';
+  document.documentElement.dataset.markflowUi='3.9.6';
   let anchor=null;
   document.addEventListener('pointerdown',e=>{const b=e.target.closest('button,.dd,.fmenu,.mf-handle');if(b)anchor=b.getBoundingClientRect();},true);
   function place(el){
@@ -29,6 +29,8 @@ window.installMarkflowUsability=function(api){
   const toolbar=document.createElement('div');toolbar.className='mf-organized-toolbar';toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','글쓰기 도구');column.prepend(toolbar);
   function group(label){const el=document.createElement('div');el.className='mf-tool-group';el.setAttribute('role','group');el.setAttribute('aria-label',label);toolbar.append(el);return el;}
   const history=group('되돌리기');history.append($('btn-undo'),$('btn-redo'));
+  // 목차·집중모드를 상단 바에서 도구막대(기능 쪽)로 옮긴다 (DOM만 이동 — 기존 클릭 동작 유지)
+  const view=group('보기·이동'); ['btn-toc','btn-focus'].forEach(id=>{const el=$(id); if(el){ el.classList.add('mf-action'); view.append(el); }});
   const format=group('글 서식'), structure=group('목록과 구조'), insert=group('넣기 도구');
   function button(parent,label,content,fn,cls=''){const b=document.createElement('button');b.type='button';b.className='mf-action '+cls;b.title=label;b.setAttribute('aria-label',label);b.innerHTML=content;b.addEventListener('mousedown',e=>e.preventDefault());b.onclick=()=>{if(api.isReadOnly()){api.toast('읽기 모드를 끄면 편집할 수 있습니다.');return;}fn(b);};parent.append(b);return b;}
   const style=document.createElement('select');style.id='mf-paragraph-style';style.setAttribute('aria-label','문단 형식');[['p','본문'],['h1','제목 1'],['h2','제목 2'],['h3','제목 3'],['h4','제목 4']].forEach(([v,l])=>style.add(new Option(l,v)));format.append(style);style.onchange=()=>{if(api.isReadOnly())return;api.setBlock(style.value);};
