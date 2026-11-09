@@ -6,7 +6,9 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>MarkFlow — WYSIWYG 마크다운 에디터</title>
+<title>노트플로우 — 메모</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%92%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%92%EF%B8%8F%3C/text%3E%3C/svg%3E" />
 <style id="tui-css">/*!
  * @toast-ui/editor
  * @version 3.2.2 | Fri Feb 17 2023
@@ -2783,7 +2785,7 @@ table.ProseMirror-selectednode {
         <div class="side-actions">
           <button class="newdoc" id="side-new"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>새 문서</button>
           <button class="newfolder" id="side-newfolder" title="새 폴더"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v4M10 13h4"/></svg></button>
-          <button class="newfolder" id="side-diary" title="일기 폴더(잠금) 만들기" style="font-size:16px">🔒</button>
+          <button class="newfolder" id="side-diary" title="잠금 폴더 만들기(비밀번호)" style="font-size:16px">🔒</button>
           <button class="newfolder" id="side-listset" title="목록 보기 설정 (번호·아이콘)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/><circle cx="18" cy="17" r="2.2"/></svg></button>
         </div>
         <div id="doc-list"></div>
@@ -2798,7 +2800,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.54</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.55</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38852,7 +38854,7 @@ window.markflowBootError=function(items,detail){
   if(document.getElementById("mf-boot-error")) return;
   var box=document.createElement("div"); box.id="mf-boot-error"; box.setAttribute("role","alert");
   box.style.cssText="position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;max-width:min(520px,92vw);background:#fff;color:#1f2328;border:1px solid #e5484d;border-left:5px solid #e5484d;border-radius:12px;padding:14px 16px;font:14px/1.6 -apple-system,'Segoe UI','Noto Sans KR',sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.18)";
-  var h=document.createElement("b"); h.textContent="MarkFlow를 시작하지 못했어요"; box.appendChild(h);
+  var h=document.createElement("b"); h.textContent="노트플로우를 시작하지 못했어요"; box.appendChild(h);
   var p=document.createElement("div"); p.textContent="저장된 문서·사진·영상은 지우거나 초기화하지 않았어요. 자동 저장도 멈춰 두었어요. 인터넷 연결을 확인한 뒤 새로고침해 주세요."; box.appendChild(p);
   var ul=document.createElement("ul"); ul.style.cssText="margin:6px 0;padding-left:18px;color:#59636e;font-size:13px"; (items||[]).forEach(function(x){ var li=document.createElement("li"); li.textContent=x; ul.appendChild(li); }); if(detail){ var li2=document.createElement("li"); li2.textContent=detail; ul.appendChild(li2); } box.appendChild(ul);
   var b=document.createElement("button"); b.type="button"; b.textContent="새로고침"; b.style.cssText="border:0;background:#e5484d;color:#fff;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer"; b.onclick=function(){ location.reload(); }; box.appendChild(b);
@@ -38893,7 +38895,7 @@ window.markflowBootError=function(items,detail){
   var vidBlobUrls={};
 
   var DEFAULT = [
-    "# MarkFlow에 오신 걸 환영합니다 👋",
+    "# 노트플로우에 오신 걸 환영합니다 👋",
     "",
     "이제 **이 창에서 바로** 글을 쓰면 서식이 즉시 적용돼요. 위 도구막대의 버튼을 쓰거나, 마크다운처럼 입력해도 됩니다.",
     "",
@@ -38903,7 +38905,7 @@ window.markflowBootError=function(items,detail){
     "- 줄 앞에서 `# ` 를 치면 제목이 됩니다",
     "- 아래 체크리스트를 클릭해 완료 표시하기",
     "",
-    "- [x] MarkFlow 열어보기",
+    "- [x] 노트플로우 열어보기",
     "- [ ] 첫 문서 만들기",
     "- [ ] 왼쪽 목록에서 문서 추가해보기",
     "",
@@ -38937,6 +38939,8 @@ window.markflowBootError=function(items,detail){
     var cleaned=(md||'').replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/⟦vid(?:file:| )[^⟧]*⟧/g,'').replace(/data:image\/[^\s)]+/g,'');
     var lines=cleaned.split('\n');for(var i=0;i<lines.length;i++){var t=lines[i].replace(/^#{1,6}\s+/,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/⟦c?[1-6]|⟦z[1-4]|⟦ct |⟧/g,'').replace(/[*_\x60~#>]/g,'').trim();if(t)return t.slice(0,100);}return '제목 없는 문서';
   }
+  // 목록 표시용 제목: 잠겨서 암호문이면 따로 보관한 평문 제목을, 아니면 내용에서 뽑은 제목을 쓴다 (잠금 티 없이 일반 메모처럼)
+  function listTitle(d){ return isEnc(d.content) ? (d.title||"제목 없는 메모") : docTitle(d.content); }
   function decodeVidMarkers(md){ return (md||"").replace(/⟦vid ([^⟧]+)⟧/g, function(_,e){ var u=(function(){ try{ return decodeURIComponent(escape(atob(e))); }catch(x){ return ""; } })(); return u?("[▶ 동영상]("+u+")"):_; }); }
   function countWords(t){
     var s=(t||"").trim(); if(!s) return 0;
@@ -39012,6 +39016,8 @@ window.markflowBootError=function(items,detail){
     var seq=++saveSeq, gen=changeGen;
     if(saveRetry){ clearTimeout(saveRetry); saveRetry=null; }
     state.savedAt=Date.now();
+    // 잠긴 문서는 '평문 제목'만 따로 보관(내용은 암호화) → 목록에 일반 메모처럼 제목이 보이게
+    try{ state.docs.forEach(function(d){ if((folderLocked(d.folder)||d.locked) && !isEnc(d.content)){ d.title=docTitle(d.content); } }); }catch(e){}
     return encDocsForSave().then(function(encDocs){
     var stForSave={}; for(var sk in state){ if(Object.prototype.hasOwnProperty.call(state,sk)) stForSave[sk]=state[sk]; } stForSave.docs=encDocs;
     var full=JSON.stringify(stForSave);
@@ -39230,9 +39236,9 @@ window.markflowBootError=function(items,detail){
     var numStr=fmtListNum(num); var numHtml=numStr?'<span class="dnum">'+numStr+'</span>':'';
     var diHtml=listIconOn()?'<span class="di">'+icoHtml+'</span>':'';
     row.innerHTML=numHtml+diHtml+'<div class="dm"><div class="dt"></div><div class="ds"></div></div><button class="dd" title="문서 메뉴">'+DOTS+'</button>';
-    row.querySelector(".dt").textContent = docLocked(d) ? "🔒 잠긴 일기" : docTitle(d.content);
+    row.querySelector(".dt").textContent = listTitle(d);
     var photos=((d.content||'').match(/!\[[^\]]*\]\(/g)||[]).length;var date=d.updated?new Date(d.updated).toLocaleDateString('ko-KR',{month:'short',day:'numeric'}):'';
-    row.querySelector('.ds').textContent=date+(photos?' · 사진 '+photos+'장':'')+(d.conflictOf?' · 동기화 충돌 사본':'')+(d.restoredCopyOf?' · 백업 복원 사본':'');row.title=docLocked(d)?"잠긴 일기 (비밀번호)":docTitle(d.content);
+    row.querySelector('.ds').textContent=date+(photos?' · 사진 '+photos+'장':'')+(d.conflictOf?' · 동기화 충돌 사본':'')+(d.restoredCopyOf?' · 백업 복원 사본':'');row.title=listTitle(d);
     row.addEventListener("click",function(){ if(docLocked(d)){ tryUnlock(function(){ if(d.id!==state.currentId) loadDoc(d.id); else { hideHome(); if(window.innerWidth<=760) toggleSidebar(false); } }); return; } if(d.id!==state.currentId) loadDoc(d.id); else { hideHome(); if(window.innerWidth<=760) toggleSidebar(false); } });
     row.addEventListener("dblclick",function(){ startRename(row,d); });
     row.querySelector(".dd").addEventListener("click",function(e){ e.stopPropagation(); openDocMenu(e.currentTarget,d); });
@@ -39250,7 +39256,7 @@ window.markflowBootError=function(items,detail){
       var collapsed=!docQuery&&state.collapsed.indexOf(name)>=0;
       var head=document.createElement("div"); head.className="folder-head"+(collapsed?" collapsed":"");
       head.innerHTML='<span class="fcaret">▾</span><span class="fname"></span><span class="fcount">'+docs.length+'</span>';
-      head.querySelector(".fname").textContent=(isUn?"미분류":name)+(folderLocked(name)?"  🔒":"");
+      head.querySelector(".fname").textContent=(isUn?"미분류":name);
       head.addEventListener("click",function(){ toggleFolder(name); });
       if(!isUn){ var mb=document.createElement("button"); mb.className="fmenu"; mb.innerHTML=DOTS; mb.title="폴더 메뉴"; mb.addEventListener("click",function(e){ e.stopPropagation(); openFolderMenu(e.currentTarget,name); }); head.appendChild(mb); }
       list.appendChild(head);
@@ -39401,7 +39407,7 @@ window.markflowBootError=function(items,detail){
   function tryUnlock(cb){
     if(__mfUnlocked){ cb(); return; }
     if(!hasLockPw()){ __mfUnlocked=true; cb(); return; }
-    pwModal({title:"🔒 잠긴 문서 열기", desc:"비밀번호를 입력하세요.", okLabel:"열기", onOk:function(v){
+    pwModal({title:"비밀번호 입력", desc:"이 메모를 열려면 비밀번호가 필요해요.", okLabel:"열기", onOk:function(v){
       unlockWith(v).then(function(){ try{persistNow();}catch(e){} try{renderDocs();}catch(e){} try{ if(homeIsOpen())renderHome(); }catch(e){} cb(); }).catch(function(e){ mfToast(e&&e.__bad?"비밀번호가 틀렸어요":("잠금 해제 실패: "+(e&&e.message?e.message:e))); });
     }});
   }
@@ -39415,10 +39421,11 @@ window.markflowBootError=function(items,detail){
     else { ensureLockPw(function(){ setFolderLock(name,true); mfToast("🔒 ‘"+name+"’ 폴더를 잠갔어요 (앱을 나가면 다시 잠겨요)"); }); }
   }
   function makeDiaryFolder(){
-    var name="일기"; if(state.folders.indexOf(name)<0) state.folders.push(name);
+    var base="메모", name=base, n=2; while(state.folders.indexOf(name)>=0 || folderTombs()[name]){ name=base+" "+n; n++; }
+    state.folders.push(name); clearFolderTomb(name);
     var c=state.collapsed.indexOf(name); if(c>=0) state.collapsed.splice(c,1);
     scheduleSave(); try{renderDocs();}catch(e){}
-    ensureLockPw(function(){ setFolderLock(name,true); mfToast("🔒 ‘일기’ 폴더를 만들고 잠갔어요. 일기는 이 폴더에 넣으세요."); });
+    ensureLockPw(function(){ setFolderLock(name,true); try{ startFolderRename(name); }catch(e){} mfToast("잠금 폴더를 만들었어요. 이름을 자유롭게 바꾸세요."); });
   }
   function openDocMenu(btn,d){
     var items=[{header:"폴더로 이동"}];
@@ -39503,7 +39510,7 @@ window.markflowBootError=function(items,detail){
   function homeIsOpen(){ return !!(homeEl && !homeEl.hidden); }
   function hideHome(){ if(homeEl) homeEl.hidden=true; document.body.classList.remove("mf-home-on"); try{ if(window.__mfJumpPeek) window.__mfJumpPeek(); }catch(e){} }
   function homeInfo(d){
-    if(docLocked(d)) return {u:d.updated,n:(d.content||"").length,title:"🔒 잠긴 일기",body:"비밀번호로 열 수 있어요",thumb:""};
+    if(docLocked(d)) return {u:d.updated,n:0,title:listTitle(d),body:"",thumb:""};
     var c=homeCache[d.id];
     if(c && c.u===d.updated && c.n===(d.content||"").length) return c;
     var raw=d.content||"";
@@ -39705,14 +39712,14 @@ window.markflowBootError=function(items,detail){
     var body=document.body, sb=document.getElementById("sidebar"), host=sb&&sb.parentNode; if(!sb||!host) return;
     var edge=document.createElement("div"); edge.className="mf-sbedge"; edge.title="마우스를 대면 문서·목차가 나와요"; host.appendChild(edge);
     var t=null;
-    function apply(){ var on=window.innerWidth>760; body.classList.toggle("mf-autosb", on); if(!on) sb.classList.remove("mf-peek"); }
+    function apply(){ var on=window.innerWidth>760; body.classList.toggle("mf-autosb", on); if(on){ body.classList.toggle("mf-pinned", sget("markflow_sidebar_pin")!=="0"); } else { sb.classList.remove("mf-peek"); } }
     function open(){ clearTimeout(t); sb.classList.add("mf-peek"); }
     function close(){ clearTimeout(t); t=setTimeout(function(){ var a=document.activeElement; if(a&&sb.contains(a)&&/^(INPUT|TEXTAREA)$/.test(a.tagName)) return; sb.classList.remove("mf-peek"); },350); }
     edge.addEventListener("mouseenter",open); sb.addEventListener("mouseenter",open); sb.addEventListener("mouseleave",close);
     apply(); window.addEventListener("resize",apply);
   })();
   function toggleSidebar(force){
-    if(force===undefined && document.body.classList.contains("mf-autosb")){ document.body.classList.toggle("mf-pinned"); try{ window.dispatchEvent(new Event("resize")); }catch(e){} return; }   // PC: 버튼은 '고정/자동숨김' 전환
+    if(force===undefined && document.body.classList.contains("mf-autosb")){ document.body.classList.toggle("mf-pinned"); try{ sset("markflow_sidebar_pin", document.body.classList.contains("mf-pinned")?"1":"0"); }catch(e){} try{ mfToast(document.body.classList.contains("mf-pinned")?"문서목록을 고정했어요":"문서목록 자동 숨김으로 바꿨어요"); }catch(e){} try{ window.dispatchEvent(new Event("resize")); }catch(e){} return; }   // PC: 버튼은 '고정 ↔ 자동숨김' 전환(기억됨)
     var sb=document.getElementById("sidebar");
     var hide = force===undefined ? !sb.classList.contains("hidden") : !force;
     sb.classList.toggle("hidden", hide);
@@ -41806,6 +41813,8 @@ window.markflowBootError=function(items,detail){
   }
 
   // init
+  // 시작 시 모든 폴더를 접힌 상태로 보여준다 (요청)
+  try{ (state.folders||[]).forEach(function(f){ if(state.collapsed.indexOf(f)<0) state.collapsed.push(f); }); }catch(e){}
   applyTheme(); applyNumHeadings(); renderDocs(); updateCounts(current().content);
   if(typeof applyUserFmt==="function") applyUserFmt();
   if(typeof applyMemoMode==="function") applyMemoMode();
