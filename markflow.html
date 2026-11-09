@@ -2646,6 +2646,21 @@ table.ProseMirror-selectednode {
   .hm-cT{margin-top:4px;font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .hm-cS{margin-top:4px;font-size:13px;color:var(--text-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .hm-go{flex:0 0 auto;font-weight:700;color:var(--accent);}
+  /* 홈 상단: 이어서 쓰기(작게) + 즐겨찾기 나란히 */
+  .hm-top2{display:flex;gap:14px;align-items:stretch;margin-top:14px;flex-wrap:wrap;}
+  .hm-top2 .hm-cont{flex:1 1 300px;min-width:0;margin-top:0;max-width:460px;padding:14px 16px;}
+  .hm-fav{flex:1 1 260px;min-width:0;border:1px solid var(--border);background:var(--bg-elev);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;max-height:200px;}
+  .hm-fav-h{font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--text-faint);margin-bottom:8px;}
+  .hm-fav-list{display:flex;flex-direction:column;gap:3px;overflow:auto;}
+  .hm-fav-item{display:flex;align-items:center;gap:4px;}
+  .hm-fav-open{flex:1;min-width:0;text-align:left;font:inherit;font-size:14px;font-weight:600;color:var(--text);background:transparent;border:0;padding:7px 8px;border-radius:8px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .hm-fav-open:hover{background:var(--bg-soft);}
+  .hm-fav-star{flex:0 0 auto;background:transparent;border:0;font-size:15px;cursor:pointer;padding:4px;line-height:1;}
+  .hm-fav-empty{font-size:12.5px;color:var(--text-faint);line-height:1.5;padding:6px 2px;}
+  .hm-card{position:relative;}
+  .hm-star{position:absolute;top:6px;right:6px;z-index:2;background:var(--bg-elev);border:1px solid var(--border);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1;cursor:pointer;opacity:.92;}
+  .hm-star:hover{opacity:1;border-color:var(--accent);}
+  .hm-grid.hm-list .hm-star{top:50%;transform:translateY(-50%);}
   .hm-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
   .hm-chip{font:inherit;font-size:13px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-soft);cursor:pointer;}
   .hm-chip.on{background:var(--accent);border-color:var(--accent);color:#fff;}
@@ -2775,7 +2790,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.49</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.50</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38853,7 +38868,7 @@ window.markflowBootError=function(items,detail){
 <script src="markflow/zip.js?v=3.10.0"></script>
 <script src="markflow/sync-merge.js?v=3.10.0"></script>
 <script src="markflow/backup.js?v=3.10.0"></script>
-<script src="markflow/usability.js?v=3.9.4"></script>
+<script src="markflow/usability.js?v=3.9.5"></script>
 <script src="markflow/ai-costs.js?v=3.9.1"></script>
 <script src="markflow/photo-recovery.js?v=3.9.2"></script>
 <script src="markflow/restore-v38.js?v=3.8-restored-1"></script>
@@ -39253,7 +39268,13 @@ window.markflowBootError=function(items,detail){
       popEl.appendChild(row);
     });
     document.body.appendChild(popEl);
-    if(!mobile){ var x=Math.min(r.right-170, window.innerWidth-176); if(x<6)x=6; var y=r.bottom+4; if(y>window.innerHeight-40) y=Math.max(8,r.top-6-40); popEl.style.left=x+"px"; popEl.style.top=y+"px"; }
+    if(!mobile){ var ph=popEl.offsetHeight||160, pw=popEl.offsetWidth||170;
+      var x=Math.min(r.right-pw, window.innerWidth-pw-6); if(x<6)x=6;
+      var y=r.bottom+4;
+      if(y+ph>window.innerHeight-8){ y=r.top-4-ph; }            // 아래로 넘치면 버튼 위로 띄운다
+      if(y<8){ y=Math.max(8, window.innerHeight-ph-8); }        // 위로도 넘치면 화면 안으로 끌어올린다
+      popEl.style.left=x+"px"; popEl.style.top=y+"px"; popEl.style.maxHeight=(window.innerHeight-16)+"px"; popEl.style.overflowY="auto";
+    }
     setTimeout(function(){ document.addEventListener("mousedown",popOutside); },0);
   }
   // ---- 일기·비밀 문서 잠금 + 잠긴 폴더 실제 암호화 ----
@@ -39286,8 +39307,18 @@ window.markflowBootError=function(items,detail){
   function encDocsForSave(){ return Promise.all(state.docs.map(function(d){ if(!folderLocked(d.folder)) return Promise.resolve(d); return cipherFor(d).then(function(ct){ if(ct===d.content) return d; var c={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) c[k]=d[k]; } c.content=ct; return c; }); })); }
   function decryptAllLocked(){ if(!__lockKey) return Promise.resolve(); return Promise.all(state.docs.map(function(d){ if(isEnc(d.content)){ var cipher=d.content; return decText(cipher).then(function(plain){ d.content=plain; encCache[d.id]={plain:plain,cipher:cipher}; }, function(){}); } return null; }).filter(Boolean)); }
   function relock(){ __mfUnlocked=false;
-    try{ if(__lockKey){ var jobs=state.docs.map(function(d){ if(folderLocked(d.folder) && !isEnc(d.content)){ return encText(d.content).then(function(ct){ d.content=ct; encCache[d.id]={plain:undefined,cipher:ct}; }, function(){}); } return null; }).filter(Boolean);
-      if(jobs.length){ Promise.all(jobs).then(function(){ __lockKey=null; encCache={}; try{persistNow();}catch(e){} try{renderDocs();}catch(e){} }); return; } }
+    try{ if(__lockKey){ var jobs=state.docs.map(function(d){
+        if(folderLocked(d.folder) && !isEnc(d.content)){
+          var c=encCache[d.id];
+          // 안 바뀐 글은 이전에 만든 '같은 암호문'을 그대로 재사용 → 암호문이 매번 달라져 동기화 충돌 사본이 양산되던 문제 해결
+          if(c && c.plain===d.content && c.cipher){ d.content=c.cipher; return null; }
+          var plain=d.content;
+          return encText(plain).then(function(ct){ d.content=ct; encCache[d.id]={plain:plain,cipher:ct}; }, function(){});
+        }
+        return null;
+      }).filter(Boolean);
+      Promise.all(jobs).then(function(){ __lockKey=null; encCache={}; try{persistNow();}catch(e){} try{renderDocs();}catch(e){} });
+      return; }
     }catch(e){}
     __lockKey=null; encCache={};
   }
@@ -39478,6 +39509,11 @@ window.markflowBootError=function(items,detail){
     bd.appendChild(mkEl("div","hm-cs",sn.slice(0,110)||"(내용 없음)"));
     var meta=mkEl("div","hm-cm",(d.folder?("📁 "+d.folder+" · "):"")+relTime(d.updated));
     bd.appendChild(meta); card.appendChild(bd);
+    // 카드에서 바로 즐겨찾기 토글 (버튼 안 버튼은 피하려고 span 사용)
+    var star=mkEl("span","hm-star"+(d.fav?" on":"")); star.textContent=d.fav?"⭐":"☆"; star.title=d.fav?"즐겨찾기 해제":"즐겨찾기 추가"; star.setAttribute("role","button");
+    star.addEventListener("mousedown",function(ev){ ev.stopPropagation(); });
+    star.addEventListener("click",function(ev){ ev.stopPropagation(); ev.preventDefault(); d.fav=!d.fav; try{delete homeCache[d.id];}catch(e){} scheduleSave(); try{ if(homeIsOpen())renderHome(); }catch(e){} });
+    card.appendChild(star);
     card.addEventListener("click",function(){ openFromHome(d.id); });
     return card;
   }
@@ -39518,18 +39554,31 @@ window.markflowBootError=function(items,detail){
       if(!docs.length){ area.appendChild(mkEl("div","hm-empty","아직 쓴 글이 없어요. 위의 ‘＋ 빈 문서’로 시작해 보세요.")); }
       else {
         var last=docs[0], lc=homeInfo(last);
+        // 상단: 이어서 쓰기(작게) + 즐겨찾기 나란히
+        var top2=mkEl("div","hm-top2");
         var cont=mkEl("button","hm-cont"); cont.type="button";
         var l1=mkEl("div","hm-cl"); l1.appendChild(mkEl("div","hm-ck","이어서 쓰기 · "+relTime(last.updated)));
-        l1.appendChild(mkEl("div","hm-cT",lc.title)); l1.appendChild(mkEl("div","hm-cS",lc.body.slice(0,120)));
+        l1.appendChild(mkEl("div","hm-cT",lc.title)); l1.appendChild(mkEl("div","hm-cS",lc.body.slice(0,70)));
         cont.appendChild(l1); cont.appendChild(mkEl("span","hm-go","열기 →"));
         cont.addEventListener("click",function(){ openFromHome(last.id); });
-        area.appendChild(cont);
-        // ⭐ 즐겨찾기 — 별표한 문서를 맨 위에 모아 보여준다
+        top2.appendChild(cont);
         var favs=docs.filter(function(d){ return d.fav; });
+        var favPanel=mkEl("div","hm-fav");
+        favPanel.appendChild(mkEl("div","hm-fav-h","⭐ 즐겨찾기"));
         if(favs.length){
-          area.appendChild(mkEl("div","hm-sec","⭐ 즐겨찾기"));
-          var gf=mkEl("div","hm-grid"+(homeView==="list"?" hm-list":"")); favs.slice(0,12).forEach(function(d){ gf.appendChild(homeCard(d)); }); area.appendChild(gf);
+          var flist=mkEl("div","hm-fav-list");
+          favs.slice(0,8).forEach(function(d){
+            var it=mkEl("div","hm-fav-item");
+            var ob=mkEl("button","hm-fav-open",homeInfo(d).title); ob.type="button"; ob.addEventListener("click",function(){ openFromHome(d.id); });
+            var st=mkEl("button","hm-fav-star","⭐"); st.type="button"; st.title="즐겨찾기 해제"; st.addEventListener("click",function(ev){ ev.stopPropagation(); d.fav=false; try{delete homeCache[d.id];}catch(e){} scheduleSave(); renderHome(); });
+            it.appendChild(ob); it.appendChild(st); flist.appendChild(it);
+          });
+          favPanel.appendChild(flist);
+        } else {
+          favPanel.appendChild(mkEl("div","hm-fav-empty","자주 보는 글 카드의 ☆ 를 눌러 즐겨찾기에 담아보세요."));
         }
+        top2.appendChild(favPanel);
+        area.appendChild(top2);
         // 폴더 칩
         var fl=[]; docs.forEach(function(d){ if(d.folder && fl.indexOf(d.folder)<0) fl.push(d.folder); });
         var hasUn=docs.some(function(d){ return !d.folder; });
@@ -41735,6 +41784,8 @@ window.markflowBootError=function(items,detail){
     callout:function(r){ openCalloutPickerAt(r||{left:60,bottom:120,top:90}, function(body){ editor.exec('blockQuote'); if(body) editor.insertText(body); editor.focus(); }); },
     table:function(r){ openTablePicker(r||{left:60,bottom:120,top:90}, function(rr,cc){ editor.focus(); editor.exec('addTable',{rowCount:rr,columnCount:cc}); }); },
     listSettings:function(b){ openListSettings(b||document.body); },
+    memoToggle:function(){ setMemoMode(!memoModeOn()); },
+    memoState:function(){ return memoModeOn(); },
     onCaret:function(fn){editor.on('caretChange',fn);},blockType:function(){var v=wwView();if(!v)return 'p';var n=v.state.selection.$from.parent;return n.type.name==='heading'?'h'+n.attrs.level:'p';}
   });
   // v3.8.16: 설정 안의 '나의 시스템 홈'(index.html) 버튼을 MarkFlow 이름 옆으로 뺀다
