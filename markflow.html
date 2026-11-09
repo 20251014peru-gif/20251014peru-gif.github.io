@@ -2266,6 +2266,15 @@ table.ProseMirror-selectednode {
   #side-listset{display:none!important;}
   /* AI 기능 숨김(요금 표시·문장 다듬기 포함): 달님 요청. 요소는 남겨 둠(앱 코드가 이 요소들을 찾음) */
   #btn-ai,#ai-menu,#ai-backdrop,#ai-pill,.mf-cost-total,.mf-cost-box,.mf-ai-cost-button{display:none!important;}
+  /* 글 속 목록 모양(보기 설정). 번호: data-mf-ol, 글머리: data-mf-ul (목록 메뉴에서 고름) */
+  @counter-style mf-circled{system:fixed;symbols:"①" "②" "③" "④" "⑤" "⑥" "⑦" "⑧" "⑨" "⑩" "⑪" "⑫" "⑬" "⑭" "⑮" "⑯" "⑰" "⑱" "⑲" "⑳";suffix:"";fallback:decimal;}
+  body[data-mf-ol="circle"] .toastui-editor-contents ol > li::before{content:counter(li,mf-circled);direction:ltr;margin-left:-30px;width:26px;}
+  body[data-mf-ul]:not([data-mf-ul="dot"]) .toastui-editor-contents ul > li:not(.task-list-item)::before{width:auto;height:auto;background:none;border-radius:0;margin-top:0;margin-left:-22px;font-size:.85em;line-height:inherit;color:#8a8f98;}
+  body[data-mf-ul="ring"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"○";}
+  body[data-mf-ul="star"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"★";}
+  body[data-mf-ul="square"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"■";}
+  body[data-mf-ul="diamond"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"◆";}
+  body[data-mf-ul="arrow"] .toastui-editor-contents ul > li:not(.task-list-item)::before{content:"➤";}
   /* 다단: 줄 간격을 조금 줄이고(1.6→1.45), 가로 스크롤바는 숨긴다(세로 휠로 한 페이지씩 넘김) */
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror :is(p,li),
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror :is(p,li){line-height:1.45!important;}
@@ -39324,7 +39333,7 @@ window.mfCol=(function(){
   function docRow(d,num){
     var row=document.createElement("div");
     row.className="doc"+(d.id===state.currentId?" active":"")+(d.color?" col-"+d.color:""); row.setAttribute("data-id",d.id);
-    var icoHtml=d.icon? '<span class="di-emo">'+d.icon+'</span>' : DOCIC;
+    var dfi=sget("markflow_list_docicon")||""; var icoHtml=d.icon? '<span class="di-emo">'+d.icon+'</span>' : (dfi?'<span class="di-emo">'+dfi+'</span>':DOCIC);
     var numStr=fmtListNum(num); var numHtml=numStr?'<span class="dnum">'+numStr+'</span>':'';
     var diHtml=listIconOn()?'<span class="di">'+icoHtml+'</span>':'';
     row.innerHTML=numHtml+diHtml+'<div class="dm"><div class="dt"></div><div class="ds"></div></div><button class="dd" title="문서 메뉴">'+DOTS+'</button>';
@@ -41999,13 +42008,27 @@ window.mfCol=(function(){
   (function(){ var bar=document.getElementById("ai-bar"), api=window.__mfApi; if(!bar||!api) return;
     [].forEach.call(bar.querySelectorAll(".fmt-act,.ai-bar-sep"),function(n){ n.remove(); });
     var busy=document.getElementById("ai-busy"), dropEl=null;
+    // 글 속 목록 모양(번호: 숫자/동그라미, 글머리: 점·별 등)은 화면에서만 바뀌는 보기 설정(문서 내용·내보내기는 그대로). 이 기기에 저장
+    window.mfApplyListStyle=function(){ document.body.setAttribute("data-mf-ol",listNumStyle()==="circle"?"circle":"num"); document.body.setAttribute("data-mf-ul",sget("markflow_ul_style")||"dot"); };
+    window.mfEnsureList=function(tag){ try{ var sel=window.getSelection(), n=sel&&sel.anchorNode, el=n&&(n.nodeType===1?n:n.parentElement), li=el&&el.closest&&el.closest("li"), ls=li&&li.parentElement;
+      if(ls&&ls.tagName===tag&&!li.classList.contains("task-list-item")){ return; }
+      editor.exec(tag==="OL"?"orderedList":"bulletList"); editor.focus(); }catch(e){} };
+    mfApplyListStyle();
     // 목록(문서 목록) 번호 모양·아이콘: 두 번 누르지 않게 목록 메뉴에 바로 펼쳐 보여준다
-    function shapeItems(){ var st=listNumStyle(), ic=listIconOn(); function t(on,x){ return (on?"✓ ":"")+x; }
-      return [["목록 번호 모양",null],[t(st==="num","숫자 (1 2 3)"),function(){ sset("markflow_list_numstyle","num"); renderDocs(); }],[t(st==="circle","동그라미 (① ② ③)"),function(){ sset("markflow_list_numstyle","circle"); renderDocs(); }],[t(st==="off","번호 없음"),function(){ sset("markflow_list_numstyle","off"); renderDocs(); }],[t(ic,"문서 아이콘 표시"),function(){ sset("markflow_list_icon",ic?"0":"1"); renderDocs(); }]]; }
+    function shapeItems(){ function t(on,x){ return (on?"✓ ":"")+x; }
+      var ol=(listNumStyle()==="circle")?"circle":"num", ul=sget("markflow_ul_style")||"dot", di=sget("markflow_list_docicon")||"", dOn=listIconOn();
+      function setOl(v){ return function(){ sset("markflow_list_numstyle",v); mfApplyListStyle(); renderDocs(); mfEnsureList("OL"); }; }
+      function setUl(v){ return function(){ sset("markflow_ul_style",v); mfApplyListStyle(); mfEnsureList("UL"); }; }
+      function setIc(v){ return function(){ if(v==="off"){ sset("markflow_list_icon","0"); } else { sset("markflow_list_icon","1"); sset("markflow_list_docicon",v==="def"?"":v); } renderDocs(); }; }
+      var out=[["번호 목록 (고르면 바로 번호 목록)",null],[t(ol==="num","숫자 (1 2 3)"),setOl("num")],[t(ol==="circle","동그라미 (① ② ③)"),setOl("circle")],["글머리 목록 (고르면 바로 글머리 목록)",null]];
+      [["dot","• 점 (기본)"],["ring","○ 빈 동그라미"],["star","★ 별"],["square","■ 네모"],["diamond","◆ 마름모"],["arrow","➤ 화살표"]].forEach(function(o){ out.push([t(ul===o[0],o[1]),setUl(o[0])]); });
+      out.push(["왼쪽 문서 목록 아이콘",null]);
+      [["def","📄 기본 문서 모양"],["📝","📝 메모"],["📒","📒 노트"],["📌","📌 핀"],["⭐","⭐ 별"],["off","아이콘 없음"]].forEach(function(o){ var on=o[0]==="off"?!dOn:(dOn&&(o[0]==="def"?di==="":di===o[0])); out.push([t(on,o[1]),setIc(o[0])]); });
+      return out; }
     // 위쪽 도구막대의 '목록' 메뉴(usability.js가 만듦)에도 같은 항목을 넣고, 두 번 눌러야 하던 '목록 번호 모양…' 줄은 없앤다
     try{ new MutationObserver(function(recs){ recs.forEach(function(r){ [].forEach.call(r.addedNodes,function(m){
         if(m.nodeType!==1||!m.classList||!m.classList.contains("mf-tooldrop")) return;
-        var rows=[].slice.call(m.querySelectorAll(".mf-tooldrop-item")), tg=null; rows.forEach(function(x){ if(x.textContent.indexOf("목록 번호 모양")===0) tg=x; }); if(!tg) return;
+        var rows=[].slice.call(m.querySelectorAll(".mf-tooldrop-item")), tg=null; rows.forEach(function(x){ var tx=x.textContent; if(tx.indexOf("목록 번호 모양")===0) tg=x; else if(tx==="글머리 목록"||tx==="번호 목록") x.remove(); }); if(!tg) return;
         shapeItems().forEach(function(it){ var el;
           if(!it[1]){ el=document.createElement("div"); el.textContent=it[0]; el.style.cssText="font-size:11px;font-weight:700;color:var(--text-faint);padding:6px 10px 2px;"; }
           else { el=document.createElement("button"); el.type="button"; el.className="mf-tooldrop-item"; el.textContent=it[0]; el.addEventListener("mousedown",function(e){ e.preventDefault(); m.remove(); it[1](); }); }
@@ -42029,7 +42052,7 @@ window.mfCol=(function(){
     mk("서식","서식",null,true,[["굵게",function(){ api.exec("bold"); }],["기울임",function(){ api.exec("italic"); }],["취소선",function(){ api.exec("strike"); }],["이모지",function(r){ api.emoji&&api.emoji(r); }]]);
     mk("색","색",null,true,[["형광펜",function(r){ api.highlight(r); }],["글자색",function(r){ api.textColor&&api.textColor(r); }],["글자 크기·인용색",function(r){ api.textSize&&api.textSize(r); }]]);
     sep();
-    mk("목록","목록",null,true,function(){ return [["글머리 목록",function(){ api.bulletList?api.bulletList():api.bullet(); }],["체크박스",function(){ api.checklist&&api.checklist(); }],["번호 목록",function(){ api.numberList&&api.numberList(); }],["인용",function(){ api.quote&&api.quote(); }]].concat(shapeItems()); });
+    mk("목록","목록",null,true,function(){ return [["체크박스",function(){ api.checklist&&api.checklist(); }],["인용",function(){ api.quote&&api.quote(); }]].concat(shapeItems()); });
     mk("⇤","내어쓰기",function(){ api.outdent(); }); mk("⇥","들여쓰기",function(){ api.indent(); }); mk("⌃⌄","모두 접기 / 펼치기",function(){ api.fold(); });
     sep();
     mk("넣기","넣기",null,true,[["사진",function(){ api.photos(); }],["링크",function(){ api.link(); }],["콜아웃",function(r){ api.callout&&api.callout(r); }],["표",function(r){ api.table&&api.table(r); }],["동영상",function(){ api.video(); }]]);
