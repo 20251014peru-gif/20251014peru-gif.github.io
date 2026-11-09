@@ -1,27 +1,26 @@
 {
- "updated_at": "2026-11-09T10:18:01.073586+09:00",
+ "updated_at": "2026-11-09T16:22:14.049066+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 13,
+   "video_count": 12,
    "channel_count": 7,
-   "total_views": 748379,
-   "latest": "2026-11-09T10:00:39+09:00",
+   "total_views": 1449832,
+   "latest": "2026-11-09T15:41:55+09:00",
    "video_ids": [
+    "H85JtnEh0G4",
+    "WE9uewib-nE",
+    "Qe8YPDua9eM",
     "FJ7J7iLz0YY",
-    "_JZtm8h-b20",
     "I2D1_MgAir8",
-    "ZAFOuEKr_Tw",
     "c45Uh32lx48",
     "EIQz8T1-cbE",
     "4J7qzmPk85E",
     "T1CW6_hNivg",
-    "u1ZHq4WVhro",
     "dkEtkF5yuyc",
     "TfCwVN7eUB0",
-    "q1UgfcKNAkQ",
-    "cRE_1Gor0ow"
+    "q1UgfcKNAkQ"
    ],
    "channels": [
     "815머니톡",
@@ -35,16 +34,16 @@
    "subtopics": [
     {
      "word": "데이터센터",
+     "videos": 4,
+     "channels": 4
+    },
+    {
+     "word": "대표",
      "videos": 2,
      "channels": 2
     },
     {
      "word": "악재",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "중단",
      "videos": 2,
      "channels": 2
     },
@@ -67,20 +66,56 @@
    "active": true
   },
   {
+   "id": "국내증시",
+   "name": "국내증시",
+   "video_count": 6,
+   "channel_count": 3,
+   "total_views": 1886887,
+   "latest": "2026-11-09T14:30:02+09:00",
+   "video_ids": [
+    "2MeIVl_23pE",
+    "7feT9YoAv7I",
+    "AaEEbLutco8",
+    "J9DkIpOyCmU",
+    "c45Uh32lx48",
+    "vNeSr5ZRIc8"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
+    "박종훈의 지식한방"
+   ],
+   "subtopics": [
+    {
+     "word": "코스피",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "긴급시황",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "대표",
+     "videos": 2,
+     "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 8,
+   "video_count": 5,
    "channel_count": 3,
-   "total_views": 504632,
-   "latest": "2026-11-09T10:00:39+09:00",
+   "total_views": 496095,
+   "latest": "2026-11-09T12:15:36+09:00",
    "video_ids": [
+    "uXvpOptvc9g",
     "FJ7J7iLz0YY",
     "c45Uh32lx48",
-    "PgfX324JOTY",
-    "Bcg1-MN2MaI",
-    "fjjcWOeLFjQ",
     "EJbBhrHVXzs",
-    "-IwG8xso3qs",
     "Z4SzpZvroU8"
    ],
    "channels": [
@@ -91,28 +126,8 @@
    "subtopics": [
     {
      "word": "SK하이닉스",
-     "videos": 6,
+     "videos": 3,
      "channels": 2
-    },
-    {
-     "word": "삼성전자",
-     "videos": 5,
-     "channels": 2
-    },
-    {
-     "word": "바닥인",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "팔면",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "외국인",
-     "videos": 2,
-     "channels": 1
     },
     {
      "word": "대표",
@@ -127,7 +142,7 @@
    "name": "유가·에너지",
    "video_count": 5,
    "channel_count": 3,
-   "total_views": 385597,
+   "total_views": 545659,
    "latest": "2026-11-09T08:29:16+09:00",
    "video_ids": [
     "I2D1_MgAir8",
@@ -151,49 +166,74 @@
    "active": true
   },
   {
-   "id": "국내증시",
-   "name": "국내증시",
-   "video_count": 5,
+   "id": "코인",
+   "name": "코인",
+   "video_count": 4,
    "channel_count": 3,
-   "total_views": 1898462,
-   "latest": "2026-11-09T06:05:06+09:00",
+   "total_views": 221097,
+   "latest": "2026-11-09T12:44:35+09:00",
    "video_ids": [
-    "J9DkIpOyCmU",
-    "c45Uh32lx48",
-    "PgfX324JOTY",
-    "fjjcWOeLFjQ",
-    "vNeSr5ZRIc8"
+    "747VS9UdkmE",
+    "qijw-Ul2ZBg",
+    "CC-acEQwQWA",
+    "IiF4GBLcxdA"
    ],
    "channels": [
-    "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "박종훈의 지식한방"
+    "달란트투자",
+    "삼프로TV 3PROTV",
+    "이효석아카데미"
    ],
    "subtopics": [
     {
-     "word": "코스피",
+     "word": "비트코인",
      "videos": 3,
      "channels": 3
     },
     {
-     "word": "SK하이닉스",
+     "word": "PLUS",
      "videos": 2,
      "channels": 1
     },
     {
-     "word": "삼성전자",
+     "word": "크립토",
      "videos": 2,
      "channels": 1
     },
     {
-     "word": "외국인",
+     "word": "서동주",
      "videos": 2,
      "channels": 1
     },
     {
-     "word": "이사",
+     "word": "김동환",
      "videos": 2,
      "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "2차전지",
+   "name": "2차전지",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 111095,
+   "latest": "2026-11-09T15:37:12+09:00",
+   "video_ids": [
+    "TZHWaNllnH0",
+    "DFGTEMxUhgI",
+    "T1CW6_hNivg"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "삼프로TV 3PROTV",
+    "언더스탠딩"
+   ],
+   "subtopics": [
+    {
+     "word": "스페이스X",
+     "videos": 2,
+     "channels": 2
     }
    ],
    "active": true
