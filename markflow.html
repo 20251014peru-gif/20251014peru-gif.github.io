@@ -2243,10 +2243,14 @@ table.ProseMirror-selectednode {
   #editor{flex:1;min-height:0;}
   /* 신문식 다단(3열/2열): 한 열이 화면 높이만큼 차면 다음 열로 이어짐. 넘치면 가로로 이동. 열 수는 아래 스크립트가 data-mf-cols 로 정함(1이면 아무 영향 없음) */
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror,
-  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-fill:auto;column-gap:64px;padding-left:64px!important;padding-right:64px!important;overflow-x:auto;overflow-y:auto;position:relative;}
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-fill:auto;column-gap:64px;padding-left:92px!important;padding-right:64px!important;overflow-x:auto;overflow-y:auto;position:relative;
+    /* 왼쪽 여백(92) 중 앞 열 글자 조각이 비치는 가장자리 28px(=92-64)만 가린다. 글자가 있는 자리는 안 건드림 */
+    -webkit-mask-image:linear-gradient(to right,transparent 0,transparent 28px,#000 28px);mask-image:linear-gradient(to right,transparent 0,transparent 28px,#000 28px);}
   /* 마지막 쪽이 덜 차도 열 위치가 어긋나지 않게(왼쪽·오른쪽 여백 유지) 끝에 투명한 자리를 둬서 스크롤 끝을 한 쪽 단위로 맞춘다. 값은 스크립트가 계산(--mf-fill) */
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror::after,
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror::after{content:"";position:absolute;left:var(--mf-fill,0px);top:0;width:1px;height:1px;pointer-events:none;}
+  /* 메모 모드는 손잡이가 없고 여백이 22px라 가림막이 글자를 잘라먹음 → 끔 */
+  body.mf-memo[data-mf-cols] .toastui-editor-ww-container .ProseMirror{-webkit-mask-image:none;mask-image:none;}
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror{column-count:2;}
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-count:3;}
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror :is(p,h1,h2,h3,h4,h5,h6,pre,blockquote,table,img,li>p),
@@ -2258,6 +2262,8 @@ table.ProseMirror-selectednode {
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror img:not([height]):not([style*="height"]){max-height:33.3vh;width:auto;height:auto;max-width:100%;object-fit:contain;}
   .mf-pageind{display:none;font-weight:700;color:var(--accent);}
   @media print{.mf-pageind{display:none!important;}}
+  /* AI 기능 숨김(요금 표시·문장 다듬기 포함): 달님 요청. 요소는 남겨 둠(앱 코드가 이 요소들을 찾음) */
+  #btn-ai,#ai-menu,#ai-backdrop,#ai-pill,.mf-cost-total,.mf-cost-box,.mf-ai-cost-button{display:none!important;}
   /* 다단: 줄 간격을 조금 줄이고(1.6→1.45), 가로 스크롤바는 숨긴다(세로 휠로 한 페이지씩 넘김) */
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror :is(p,li),
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror :is(p,li){line-height:1.45!important;}
@@ -2833,12 +2839,6 @@ table.ProseMirror-selectednode {
   <button class="ai-act fmt-act" data-fmt="hl" title="형광펜">🖊</button>
   <button class="ai-act fmt-act" data-fmt="tc" title="글자색">🎨</button>
   <button class="ai-act fmt-act" data-fmt="sz" title="글자 크기">🔠</button>
-  <span class="ai-bar-sep"></span>
-  <button class="ai-act" data-ai="polish">✨ 다듬기</button>
-  <button class="ai-act" data-ai="summary">📝 요약</button>
-  <button class="ai-act" data-ai="fix">✓ 교정</button>
-  <button class="ai-act" data-ai="continue">➕ 이어쓰기</button>
-  <button class="ai-act" data-ai="custom">✏️ 지시</button>
   <span class="ai-busy" id="ai-busy" style="display:none">AI 작업 중…</span>
 </div>
 <div class="mf-aipill" id="ai-pill"><span class="sp"></span><span id="ai-pill-tx">AI 작업 중…</span></div>
@@ -41793,7 +41793,7 @@ window.mfCol=(function(){
       aiRunning=false; hideAiBar(); editor.focus();
     }).catch(function(e){ aiRunning=false; aiBusy.textContent="오류: "+(e&&e.message?e.message.slice(0,70):"실패"); setTimeout(hideAiBar,2800); });
   }
-  [].forEach.call(document.querySelectorAll("#ai-bar .ai-act"),function(b){ b.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); runAi(b.getAttribute("data-ai")); }); });
+  [].forEach.call(document.querySelectorAll("#ai-bar .ai-act[data-ai]"),function(b){ b.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); runAi(b.getAttribute("data-ai")); }); });
   // 데스크톱: 글자를 드래그하면 뜨는 선택바. 터치기기(폰)에서는 OS 메뉴와 겹치므로 끔 → 대신 상단 AI 버튼 사용.
   var isCoarse=false; try{ isCoarse=window.matchMedia("(pointer:coarse)").matches; }catch(e){}
   if(!isCoarse){
@@ -41970,7 +41970,7 @@ window.mfCol=(function(){
   var search=document.createElement('input');search.type='search';search.className='mf-doc-search';search.placeholder='문서 제목 검색';search.setAttribute('aria-label','문서 제목 검색');document.querySelector('.side-actions').after(search);search.oninput=function(){docQuery=search.value.trim().toLowerCase();renderDocs();};
   // 문서목록 하단 '사진 확인' 박스 제거 — 사용자 요청 (저장 중단 보호 로직은 setViewMode로 별도 처리). '사진 복구본' 폴더 자동 생성도 함께 사라짐.
   if(photoRecovery.blocked){ try{ mfToast("저장 공간이 부족해 자동 저장이 잠시 멈췄어요. 공간을 확보한 뒤 새로고침해 주세요."); }catch(e){} }
-  window.installMarkflowUsability({
+  var __mfApiObj={
     closeMenus:function(){closeTbMore();closeVidInput();closeEmojiPop();closeHlPop();closeAiMenu();},
     isReadOnly:function(){return viewMode;},toast:mfToast,
     setBlock:function(t){var i=curTopIdx();if(i>=0)convertUnit({type:'block',domIdx:i},t);},
@@ -41991,7 +41991,35 @@ window.mfCol=(function(){
     memoToggle:function(){ setMemoMode(!memoModeOn()); },
     memoState:function(){ return memoModeOn(); },
     onCaret:function(fn){editor.on('caretChange',fn);},blockType:function(){var v=wwView();if(!v)return 'p';var n=v.state.selection.$from.parent;return n.type.name==='heading'?'h'+n.attrs.level:'p';}
-  });
+  };
+  window.__mfApi=__mfApiObj; window.installMarkflowUsability(__mfApiObj);
+  // 글자를 선택하면 뜨는 작은 창에 위쪽 도구막대 기능을 그대로 넣는다(같은 api 호출 — 위 도구막대와 똑같이 동작)
+  (function(){ var bar=document.getElementById("ai-bar"), api=window.__mfApi; if(!bar||!api) return;
+    [].forEach.call(bar.querySelectorAll(".fmt-act,.ai-bar-sep"),function(n){ n.remove(); });
+    var busy=document.getElementById("ai-busy"), dropEl=null;
+    function closeDrop(){ if(dropEl){ dropEl.remove(); dropEl=null; document.removeEventListener("mousedown",dropOutside,true); } }
+    function dropOutside(e){ if(dropEl&&!dropEl.contains(e.target)&&!(e.target.closest&&e.target.closest("#ai-bar"))) closeDrop(); }
+    function openDrop(anchor,items){ closeDrop(); var r=anchor.getBoundingClientRect(); var m=document.createElement("div"); m.className="mf-tooldrop";
+      items.forEach(function(it){ var row=document.createElement("button"); row.type="button"; row.className="mf-tooldrop-item"; row.textContent=it[0];
+        row.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); closeDrop(); it[1](r); }); m.appendChild(row); });
+      m.style.cssText="position:fixed;z-index:240;left:-9999px;top:0;visibility:hidden;"; document.body.appendChild(m); dropEl=m;
+      var w=m.offsetWidth||188, h=m.offsetHeight||200, left=Math.max(8,Math.min(r.left,window.innerWidth-w-8)), top=r.top-h-6; if(top<8) top=r.bottom+6;
+      m.style.left=left+"px"; m.style.top=top+"px"; m.style.visibility=""; document.addEventListener("mousedown",dropOutside,true); }
+    function mk(label,title,fn,isDrop,items){ var b=document.createElement("button"); b.type="button"; b.className="ai-act mf-fb"; b.title=title||label;
+      b.innerHTML=isDrop?"<span>"+label+"</span><span style=\"font-size:10px;opacity:.65\"> ▾</span>":label;
+      b.addEventListener("mousedown",function(e){ e.preventDefault(); e.stopPropagation(); if(api.isReadOnly()){ api.toast("읽기 모드를 끄면 편집할 수 있습니다."); return; } if(isDrop) openDrop(b,items); else fn(b); });
+      bar.insertBefore(b,busy); return b; }
+    function sep(){ var d=document.createElement("span"); d.className="ai-bar-sep"; bar.insertBefore(d,busy); }
+    mk("본문","문단 형식",null,true,[["본문",function(){ api.setBlock("p"); }],["제목 1",function(){ api.setBlock("h1"); }],["제목 2",function(){ api.setBlock("h2"); }],["제목 3",function(){ api.setBlock("h3"); }],["제목 4",function(){ api.setBlock("h4"); }]]);
+    mk("서식","서식",null,true,[["굵게",function(){ api.exec("bold"); }],["기울임",function(){ api.exec("italic"); }],["취소선",function(){ api.exec("strike"); }],["이모지",function(r){ api.emoji&&api.emoji(r); }]]);
+    mk("색","색",null,true,[["형광펜",function(r){ api.highlight(r); }],["글자색",function(r){ api.textColor&&api.textColor(r); }],["글자 크기·인용색",function(r){ api.textSize&&api.textSize(r); }]]);
+    sep();
+    mk("목록","목록",null,true,[["글머리 목록",function(){ api.bulletList?api.bulletList():api.bullet(); }],["체크박스",function(){ api.checklist&&api.checklist(); }],["번호 목록",function(){ api.numberList&&api.numberList(); }],["인용",function(){ api.quote&&api.quote(); }],["목록 번호 모양…",function(){ api.listSettings&&api.listSettings(document.querySelector(".mf-organized-toolbar [aria-label='목록']")); }]]);
+    mk("⇤","내어쓰기",function(){ api.outdent(); }); mk("⇥","들여쓰기",function(){ api.indent(); }); mk("⌃⌄","모두 접기 / 펼치기",function(){ api.fold(); });
+    sep();
+    mk("넣기","넣기",null,true,[["사진",function(){ api.photos(); }],["링크",function(){ api.link(); }],["콜아웃",function(r){ api.callout&&api.callout(r); }],["표",function(r){ api.table&&api.table(r); }],["동영상",function(){ api.video(); }]]);
+    mk("장식선","장식선",null,true,[["구분선",function(){ api.divider&&api.divider(); }],["가운데 장식선",function(){ api.centerLine&&api.centerLine(); }],["장식 구분선",function(){ api.decoLine&&api.decoLine(); }]]);
+  })();
   // v3.8.16: 설정 안의 '나의 시스템 홈'(index.html) 버튼을 MarkFlow 이름 옆으로 뺀다
   try{ var bh=document.getElementById("btn-home"), bn=document.querySelector(".mf-app-name");
     if(bh&&bn){ var hrow=bh.closest(".mf-setting-row"); bn.after(bh); if(hrow) hrow.remove(); bh.title="나의 시스템 홈 (다른 프로그램 모음)"; bh.setAttribute("aria-label","나의 시스템 홈"); } }catch(_){}
