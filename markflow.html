@@ -2163,7 +2163,7 @@ table.ProseMirror-selectednode {
   body.mf-autosb:not(.mf-pinned) .body{position:relative;}
   body.mf-autosb:not(.mf-pinned) .sidebar{position:absolute;left:0;top:0;bottom:0;z-index:45;transform:translateX(-100%);transition:transform .18s ease;box-shadow:var(--shadow);}
   body.mf-autosb:not(.mf-pinned) .sidebar.mf-peek{transform:translateX(0);}
-  body.mf-autosb:not(.mf-pinned) .mf-sbedge{display:block;position:absolute;left:0;top:0;bottom:0;width:10px;z-index:44;border-left:3px solid var(--border-strong);opacity:.55;}
+  body.mf-autosb:not(.mf-pinned) .mf-sbedge{display:block;position:absolute;left:0;top:0;bottom:0;width:14px;z-index:44;border-left:3px solid var(--border-strong);opacity:.55;}
   body.mf-autosb:not(.mf-pinned) .mf-sbedge:hover{opacity:1;border-left-color:var(--accent);}
   }
   .side-head{padding:12px 12px 6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);font-weight:700;}
@@ -2250,6 +2250,18 @@ table.ProseMirror-selectednode {
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror :is(p,h1,h2,h3,h4,h5,h6,pre,blockquote,table,img,li>p){break-inside:avoid;}
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror :is(h1,h2,h3,h4,h5,h6),
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror :is(h1,h2,h3,h4,h5,h6){break-after:avoid;}
+  /* 다단: 크기를 직접 정하지 않은 사진은 화면 세로의 1/3까지만(가로 비율 유지). 달님이 손잡이로 조절한 사진(height 지정)은 그대로 */
+  body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror img:not([height]):not([style*="height"]),
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror img:not([height]):not([style*="height"]){max-height:33.3vh;width:auto;height:auto;max-width:100%;object-fit:contain;}
+  .mf-pageind{display:none;position:absolute;right:18px;bottom:10px;z-index:30;font-size:12.5px;font-weight:700;color:var(--text-soft);background:var(--bg-elev);border:1px solid var(--border);border-radius:999px;padding:3px 11px;box-shadow:var(--shadow);pointer-events:none;font-family:var(--sans);}
+  @media print{.mf-pageind{display:none!important;}}
+  /* 다단: 줄 간격을 조금 줄이고(1.6→1.45), 가로 스크롤바는 숨긴다(세로 휠로 한 페이지씩 넘김) */
+  body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror :is(p,li),
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror :is(p,li){line-height:1.45!important;}
+  body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror,
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{scrollbar-width:none;}
+  body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror::-webkit-scrollbar,
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror::-webkit-scrollbar{display:none;}
 
   .status{display:flex;align-items:center;gap:16px;padding:6px 14px;background:var(--bg-elev);border-top:1px solid var(--border);font-size:12px;color:var(--text-faint);user-select:none;}
   .status .sf{color:var(--text-soft);font-weight:500;}
@@ -2809,7 +2821,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.57</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.58</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38911,12 +38923,12 @@ window.mfCol=(function(){
     if(document.body.getAttribute("data-mf-cols")!==String(n)){ document.body.setAttribute("data-mf-cols",n); try{ window.dispatchEvent(new Event("resize")); }catch(e){} if(C.snap) C.snap(); } }
   function init(){ var wrap=document.querySelector(".editor-wrap"); if(!wrap) return; apply();
     try{ new ResizeObserver(apply).observe(wrap); }catch(e){ window.addEventListener("resize",apply); }
-    // 다단일 땐 마우스 휠(위아래)을 가로 이동으로 바꾼다 — 열이 가로로 이어지므로
-    var lastW=0; // 휠/트랙패드 한 번 굴리면 한 열씩 넘어가며 열 경계에 맞춰 멈춘다(관성으로 이어지는 이벤트는 한 번으로 침)
+    // 다단일 땐 마우스 휠(위아래)을 한 페이지씩 이동으로 바꾼다 — 열이 가로로 이어지므로
+    var lastW=0; // 휠/트랙패드 한 번 굴리면 한 페이지(보이는 열 전체)씩 넘어가며 열 경계에 맞춰 멈춘다(관성으로 이어지는 이벤트는 한 번으로 침)
     wrap.addEventListener("wheel",function(e){ if(C.n()<2||e.ctrlKey) return; var pm=C.pm(); if(!pm||!pm.contains(e.target)) return;
-      if(Math.abs(e.deltaY)<Math.abs(e.deltaX)||pm.scrollWidth<=pm.clientWidth) return; e.preventDefault();
+      if(Math.abs(e.deltaY)<Math.abs(e.deltaX)||pm.scrollWidth<=pm.clientWidth||pm.scrollHeight>pm.clientHeight+2) return; e.preventDefault();
       var now=Date.now(), fresh=now-lastW>120; lastW=now; if(!fresh) return;
-      var st=C.step(), max=pm.scrollWidth-pm.clientWidth, t=(Math.round(pm.scrollLeft/st)+(e.deltaY>0?1:-1))*st;
+      var st=C.step(), max=pm.scrollWidth-pm.clientWidth, t=(Math.round(pm.scrollLeft/st)+(e.deltaY>0?1:-1))*st; // 휠 한 칸 = 한 열 이동
       pm.scrollTo({left:Math.max(0,Math.min(t,max)),behavior:"smooth"}); },{passive:false});
     // 스크롤바·트랙패드로 넘기다 멈추면 가장 가까운 열 경계로 자동 정렬(글자가 반쯤 잘려 보이지 않게). 타이핑 중이면 커서가 보이는 쪽으로.
     var tmr=0, snapping=false;
@@ -38931,7 +38943,22 @@ window.mfCol=(function(){
         snapping=true; pm.scrollTo({left:t,behavior:"smooth"}); setTimeout(function(){ snapping=false; },500); return; } }
     C.snap=function(){ clearTimeout(tmr); tmr=setTimeout(snap,250); };
     wrap.addEventListener("scroll",function(e){ if(e.target!==C.pm()||snapping) return; clearTimeout(tmr); tmr=setTimeout(snap,200); },true); }
-  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
+  // 빈 줄(글자 없는 문단, 안 보이는 글자만 있는 문단 포함) 높이를 줄인다. 사진·표가 든 문단은 제외. 앱의 열나누기·접기와 같은 '외부 스타일시트' 방식.
+  var blankEl=null, blankTmr=0;
+  function blankStyle(){ var pm=C.pm(); if(!pm) return; if(!blankEl){ blankEl=document.createElement("style"); blankEl.id="mf-blank-style"; document.head.appendChild(blankEl); }
+    var k=pm.children, sel=[];
+    for(var i=0;i<k.length;i++){ var el=k[i]; if(el.tagName==="P"&&!el.querySelector("img,video,iframe,svg,table")&&el.textContent.replace(/[​\s]/g,"")==="") sel.push("body:is([data-mf-cols='2'],[data-mf-cols='3']) .toastui-editor-ww-container .ProseMirror>:nth-child("+(i+1)+")"); }
+    blankEl.textContent=sel.length?sel.join(",")+"{line-height:.85!important;}":""; }
+  // 쪽 표시: 오른쪽 아래에 "쪽 n / N" (한 쪽 = 화면에 보이는 열 묶음). 다단일 때만 보임
+  var pgEl=null;
+  function pageInd(){ var wrap=document.querySelector(".editor-wrap"), pm=C.pm(); if(!wrap||!pm) return;
+    if(!pgEl){ pgEl=document.createElement("div"); pgEl.className="mf-pageind"; wrap.appendChild(pgEl); }
+    var n=C.n(), st=C.step(); if(n<2||!st){ pgEl.style.display="none"; return; }
+    var max=Math.max(0,pm.scrollWidth-pm.clientWidth), idx=Math.round(pm.scrollLeft/st), total=Math.max(1,Math.ceil((Math.round(max/st)+n)/n)), cur=Math.min(total,Math.ceil((idx+n)/n));
+    pgEl.style.display="block"; pgEl.textContent="쪽 "+cur+" / "+total; }
+  function watchBlank(){ var pm=C.pm(); if(!pm){ setTimeout(watchBlank,300); return; } blankStyle(); pageInd(); var wr0=document.querySelector(".editor-wrap"); if(wr0){ wr0.addEventListener("scroll",pageInd,true); try{ new ResizeObserver(pageInd).observe(pm); }catch(e){} window.addEventListener("resize",function(){ setTimeout(pageInd,100); }); }
+    try{ new MutationObserver(function(){ clearTimeout(blankTmr); blankTmr=setTimeout(function(){ blankStyle(); pageInd(); },150); }).observe(pm,{childList:true,subtree:true,characterData:true}); }catch(e){} }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",function(){ init(); watchBlank(); }); else { init(); watchBlank(); }
   return C;
 })();
 </script>
@@ -39789,12 +39816,13 @@ window.mfCol=(function(){
 
   (function autoSidebar(){
     var body=document.body, sb=document.getElementById("sidebar"), host=sb&&sb.parentNode; if(!sb||!host) return;
-    var edge=document.createElement("div"); edge.className="mf-sbedge"; edge.title="마우스를 대면 문서·목차가 나와요"; host.appendChild(edge);
+    var edge=document.createElement("div"); edge.className="mf-sbedge"; edge.title="두 번 누르면 문서·목차가 나와요"; host.appendChild(edge);
     var t=null;
     function apply(){ var on=window.innerWidth>760; body.classList.toggle("mf-autosb", on); if(on){ body.classList.toggle("mf-pinned", sget("markflow_sidebar_pin")!=="0"); } else { sb.classList.remove("mf-peek"); } }
     function open(){ clearTimeout(t); sb.classList.add("mf-peek"); }
     function close(){ clearTimeout(t); t=setTimeout(function(){ var a=document.activeElement; if(a&&sb.contains(a)&&/^(INPUT|TEXTAREA)$/.test(a.tagName)) return; sb.classList.remove("mf-peek"); },350); }
-    edge.addEventListener("mouseenter",open); sb.addEventListener("mouseenter",open); sb.addEventListener("mouseleave",close);
+    edge.addEventListener("dblclick",open); sb.addEventListener("mouseenter",function(){ clearTimeout(t); }); sb.addEventListener("mouseleave",close);
+    document.addEventListener("mousedown",function(ev){ if(sb.classList.contains("mf-peek")&&!sb.contains(ev.target)&&ev.target!==edge&&!(ev.target.closest&&ev.target.closest(".mf-emoji"))) sb.classList.remove("mf-peek"); },true);
     apply(); window.addEventListener("resize",apply);
   })();
   function toggleSidebar(force){
