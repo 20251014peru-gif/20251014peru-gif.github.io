@@ -2800,7 +2800,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.56</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.57</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38940,7 +38940,7 @@ window.markflowBootError=function(items,detail){
     var lines=cleaned.split('\n');for(var i=0;i<lines.length;i++){var t=lines[i].replace(/^#{1,6}\s+/,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/⟦c?[1-6]|⟦z[1-4]|⟦ct |⟧/g,'').replace(/[*_\x60~#>]/g,'').trim();if(t)return t.slice(0,100);}return '제목 없는 문서';
   }
   // 목록 표시용 제목: 잠겨서 암호문이면 따로 보관한 평문 제목을, 아니면 내용에서 뽑은 제목을 쓴다 (잠금 티 없이 일반 메모처럼)
-  function listTitle(d){ return isEnc(d.content) ? (d.title||"제목 없는 메모") : docTitle(d.content); }
+  function listTitle(d){ return isEnc(d.content) ? (d.title||"제목 없는 메모") : docTitle(stripCipher(d.content)); }
   function decodeVidMarkers(md){ return (md||"").replace(/⟦vid ([^⟧]+)⟧/g, function(_,e){ var u=(function(){ try{ return decodeURIComponent(escape(atob(e))); }catch(x){ return ""; } })(); return u?("[▶ 동영상]("+u+")"):_; }); }
   function countWords(t){
     var s=(t||"").trim(); if(!s) return 0;
@@ -39061,7 +39061,7 @@ window.markflowBootError=function(items,detail){
     t.appendChild(x); document.body.appendChild(t);
   }
   // 화면을 숨기거나 새로고침/앱전환 직전에 즉시 저장(디바운스 무시) → 최신 내용·목록이 사라지지 않게
-  function flushSave(){ try{ if(!loading){ var d=current(); if(d){ d.content=editor.getMarkdown(); d.updated=Date.now(); } } }catch(e){} if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; } try{ persistNow(); }catch(e){} }
+  function flushSave(){ try{ if(!loading){ var d=current(); if(d){ var md=editor.getMarkdown(); if(!isEnc(d.content)&&!hasEmbeddedCipher(d.content)&&md.indexOf(ENCP)<0){ d.content=md; d.updated=Date.now(); } } } }catch(e){} if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; } try{ persistNow(); }catch(e){} }
   document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="hidden") flushSave(); });
   // 앱을 나가거나 다른 작업으로 전환하면 일기를 바로 다시 잠근다
   // 자동 잠금: 앱을 벗어나면 다시 암호화 + '편집기 내용까지 비워' 복귀 시 평문이 남지 않게 한다(보안).
@@ -39154,7 +39154,7 @@ window.markflowBootError=function(items,detail){
     previewStyle: "tab",
     hideModeSwitch: true,
     usageStatistics: false,
-    initialValue: (typeof isEnc==="function"&&isEnc(current().content))?"":current().content,
+    initialValue: (typeof isEnc==="function"&&(isEnc(current().content)||hasEmbeddedCipher(current().content)))?"":current().content,
     autofocus: false,
     toolbarItems: [
       ["bold","italic","strike"],
@@ -39179,7 +39179,10 @@ window.markflowBootError=function(items,detail){
   editor.on("change", function(){
     if(loading) return;
     var md = editor.getMarkdown();
-    var cur = current(); cur.content = md; cur.updated = Date.now();
+    var cur = current();
+    // 손상(암호문 섞임)·암호문 문서는 편집기 내용으로 덮어쓰지 않는다 → 원문/암호문 보존(복구 가능하게)
+    if(isEnc(cur.content) || hasEmbeddedCipher(cur.content) || md.indexOf(ENCP)>=0){ return; }
+    cur.content = md; cur.updated = Date.now();
     updateCounts(md);
     // 제목만 바뀌면 목록 갱신
     var el=document.querySelector('.doc[data-id="'+cur.id+'"] .dt');
@@ -39197,9 +39200,11 @@ window.markflowBootError=function(items,detail){
       if(__lockKey){ var cipher=d.content; decText(cipher).then(function(plain){ d.content=plain; encCache[d.id]={plain:plain,cipher:cipher}; loadDoc(id); }, function(){ __mfUnlocked=false; __lockKey=null; tryUnlock(function(){ loadDoc(id); }); }); return; }
       tryUnlock(function(){ loadDoc(id); }); return;
     }
+    // 암호문이 글 안에 섞여 든 손상 문서 → 비밀번호로 복구한 뒤 보여준다(암호문 그대로 노출 방지)
+    if(hasEmbeddedCipher(d.content)){ recoverDoc(id); return; }
     if(docLocked(d)){ tryUnlock(function(){ loadDoc(id); }); return; }
     state.currentId=id; try{ hideHome(); }catch(_){} loading=true; try{ closePhotoPane(); }catch(_){}
-    editor.setMarkdown(isEnc(d.content)?"":(d.content||""), false);
+    editor.setMarkdown((isEnc(d.content)||hasEmbeddedCipher(d.content))?stripCipher(d.content||""):(d.content||""), false);
     loading=false; clearUndoHistory(); if(viewMode) applyEditable();
     if(window.__mfResetFold) window.__mfResetFold();
     updateCounts(d.content||""); renderDocs(); scheduleSave();
@@ -39327,6 +39332,27 @@ window.markflowBootError=function(items,detail){
   function folderLocked(name){ return !!(name && state.lockedFolders && state.lockedFolders.indexOf(name)>=0); }
   function cryptoOK(){ return !!(window.crypto && crypto.subtle && crypto.getRandomValues); }
   function isEnc(s){ return typeof s==="string" && s.slice(0,5)==="🔐v1:"; }
+  // 예전 버그로 '암호문이 일반 글 안에 글자로 섞여 들어간' 손상 감지/정리
+  var EMBRE=/🔐v1:[A-Za-z0-9+/=]+/g;
+  function hasEmbeddedCipher(s){ return typeof s==="string" && !isEnc(s) && s.indexOf(ENCP)>=0; }
+  function stripCipher(s){ return (typeof s==="string") ? s.replace(EMBRE,"🔒") : s; }
+  // 손상된 문서 복구: 섞여 있는 암호문 토큰을 비밀번호로 복호화해 원래 글자로 되돌린다
+  function recoverDoc(id){
+    var d=state.docs.find(function(x){return x.id===id;}); if(!d) return;
+    function run(key){
+      var toks=(d.content.match(EMBRE)||[]);
+      var p=Promise.resolve(d.content);
+      toks.forEach(function(t){ p=p.then(function(c){ return decText(t,key).then(function(plain){ return c.split(t).join(plain); }, function(){ return c; }); }); });
+      return p.then(function(nc){
+        if(nc===d.content || /🔐v1:/.test(nc)){ try{mfToast("비밀번호가 맞지 않아 복구하지 못했어요");}catch(e){} return false; }
+        d.content=nc; try{ delete homeCache[d.id]; }catch(e){} try{persistNow();}catch(e){} try{mfToast("섞여 있던 암호문을 복구했어요");}catch(e){} return true;
+      });
+    }
+    if(__lockKey){ run(__lockKey).then(function(ok){ if(ok) loadDoc(id); }); return; }
+    pwModal({title:"내용 복구", desc:"이 메모에 암호화된 내용이 섞여 있어요. 비밀번호를 넣으면 원래대로 되돌려요.", okLabel:"복구", onOk:function(v){
+      deriveLockKey(v).then(function(key){ return run(key).then(function(ok){ if(ok) loadDoc(id); }); }).catch(function(e){ try{mfToast("복구 실패: "+(e&&e.message||e));}catch(_){} });
+    }});
+  }
   function _b64(buf){ var u=new Uint8Array(buf),s=""; for(var i=0;i<u.length;i++)s+=String.fromCharCode(u[i]); return btoa(s); }
   function _unb64(s){ var bin=atob(s),u=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return u; }
   // 소금(salt)은 state.lockSalt에 넣어 동기화·백업으로 다른 기기에도 전달 → 같은 비밀번호면 어디서나 복호화 가능
@@ -39513,7 +39539,7 @@ window.markflowBootError=function(items,detail){
     if(docLocked(d)) return {u:d.updated,n:0,title:listTitle(d),body:"",thumb:""};
     var c=homeCache[d.id];
     if(c && c.u===d.updated && c.n===(d.content||"").length) return c;
-    var raw=d.content||"";
+    var raw=stripCipher(d.content||"");
     var txt=stripImages(raw).replace(/!\[[^\]]*\]\([^)]*\)/g," ").replace(/⟦[^⟧]*⟧/g," ").replace(/\[([^\]]*)\]\([^)]*\)/g,"$1").replace(/[#>*_`~|]/g," ").replace(/-{3,}/g," ").replace(/\s+/g," ").trim();
     var title=docTitle(raw)||"무제";
     var body=txt; if(body.indexOf(title)===0) body=body.slice(title.length).trim();
@@ -39536,8 +39562,8 @@ window.markflowBootError=function(items,detail){
   function mkEl(tag,cls,txt){ var e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
   function openFromHome(id){
     var ld=state.docs.find(function(x){return x.id===id;}); if(!ld) return;
-    // 잠겼거나 암호문이면 loadDoc이 복호화·비밀번호를 처리한다
-    if(isEnc(ld.content) || docLocked(ld)){ loadDoc(id); return; }
+    // 잠겼거나 암호문(섞임 포함)이면 loadDoc이 복호화·복구·비밀번호를 처리한다
+    if(isEnc(ld.content) || hasEmbeddedCipher(ld.content) || docLocked(ld)){ loadDoc(id); return; }
     if(id===state.currentId){ hideHome(); try{ editor.focus(); }catch(_){} }
     else loadDoc(id);
   }
