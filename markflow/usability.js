@@ -1,7 +1,7 @@
 /* Arrange existing actions without removing features or replacing the editor. */
 window.installMarkflowUsability=function(api){
   const $=id=>document.getElementById(id), top=document.querySelector('.topbar');
-  document.documentElement.dataset.markflowUi='3.9.6';
+  document.documentElement.dataset.markflowUi='3.9.7';
   let anchor=null;
   document.addEventListener('pointerdown',e=>{const b=e.target.closest('button,.dd,.fmenu,.mf-handle');if(b)anchor=b.getBoundingClientRect();},true);
   function place(el){
