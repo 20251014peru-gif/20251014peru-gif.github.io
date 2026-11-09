@@ -2664,6 +2664,9 @@ table.ProseMirror-selectednode {
   .hm-star{position:absolute;top:6px;right:6px;z-index:2;background:var(--bg-elev);border:1px solid var(--border);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1;cursor:pointer;opacity:.92;}
   .hm-star:hover{opacity:1;border-color:var(--accent);}
   .hm-grid.hm-list .hm-star{top:50%;transform:translateY(-50%);}
+  .hm-del{position:absolute;top:6px;right:36px;z-index:2;background:var(--bg-elev);border:1px solid var(--border);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1;cursor:pointer;opacity:.9;}
+  .hm-del:hover{opacity:1;border-color:#e5484d;color:#e5484d;}
+  .hm-grid.hm-list .hm-del{top:50%;transform:translateY(-50%);right:40px;}
   .hm-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
   .hm-chip{font:inherit;font-size:13px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg-elev);color:var(--text-soft);cursor:pointer;}
   .hm-chip.on{background:var(--accent);border-color:var(--accent);color:#fff;}
@@ -2795,7 +2798,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.52</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.53</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -39180,9 +39183,17 @@ window.markflowBootError=function(items,detail){
 
   function loadDoc(id){
     var d=state.docs.find(function(x){return x.id===id;}); if(!d) return;
+    // 다른 문서로 전환하면, 보던 '잠긴 문서'는 즉시 다시 잠근다 (사용자 요청)
+    var prev=current();
+    if(prev && prev.id!==id && __mfUnlocked && (prev.locked||folderLocked(prev.folder))){ relock(); }
+    // 암호문은 절대 그대로 화면에 띄우지 않는다 — 열쇠가 있으면 복호화, 없으면 비밀번호를 받는다
+    if(isEnc(d.content)){
+      if(__lockKey){ var cipher=d.content; decText(cipher).then(function(plain){ d.content=plain; encCache[d.id]={plain:plain,cipher:cipher}; loadDoc(id); }, function(){ __mfUnlocked=false; __lockKey=null; tryUnlock(function(){ loadDoc(id); }); }); return; }
+      tryUnlock(function(){ loadDoc(id); }); return;
+    }
     if(docLocked(d)){ tryUnlock(function(){ loadDoc(id); }); return; }
     state.currentId=id; try{ hideHome(); }catch(_){} loading=true; try{ closePhotoPane(); }catch(_){}
-    editor.setMarkdown(d.content||"", false);
+    editor.setMarkdown(isEnc(d.content)?"":(d.content||""), false);
     loading=false; clearUndoHistory(); if(viewMode) applyEditable();
     if(window.__mfResetFold) window.__mfResetFold();
     updateCounts(d.content||""); renderDocs(); scheduleSave();
@@ -39306,7 +39317,7 @@ window.markflowBootError=function(items,detail){
   function lockHashStr(s){ var h=5381; for(var i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return "v1:"+h.toString(36)+":"+s.length; }
   var LOCKCHK="MF_LOCK_CHECK_v1";
   function hasLockPw(){ try{ if(state && state.lockCheck) return true; }catch(e){} return !!sget("markflow_lock_pw"); }
-  function docLocked(d){ return !!(d && !__mfUnlocked && (d.locked || folderLocked(d.folder))); }
+  function docLocked(d){ return !!(d && (isEnc(d.content) || (!__mfUnlocked && (d.locked || folderLocked(d.folder))))); }
   function folderLocked(name){ return !!(name && state.lockedFolders && state.lockedFolders.indexOf(name)>=0); }
   function cryptoOK(){ return !!(window.crypto && crypto.subtle && crypto.getRandomValues); }
   function isEnc(s){ return typeof s==="string" && s.slice(0,5)==="🔐v1:"; }
@@ -39329,21 +39340,22 @@ window.markflowBootError=function(items,detail){
   }
   function encDocsForSave(){ return Promise.all(state.docs.map(function(d){ if(!folderLocked(d.folder)) return Promise.resolve(d); return cipherFor(d).then(function(ct){ if(ct===d.content) return d; var c={}; for(var k in d){ if(Object.prototype.hasOwnProperty.call(d,k)) c[k]=d[k]; } c.content=ct; return c; }); })); }
   function decryptAllLocked(){ if(!__lockKey) return Promise.resolve(); return Promise.all(state.docs.map(function(d){ if(isEnc(d.content)){ var cipher=d.content; return decText(cipher).then(function(plain){ d.content=plain; encCache[d.id]={plain:plain,cipher:cipher}; }, function(){}); } return null; }).filter(Boolean)); }
-  function relock(){ __mfUnlocked=false;
-    try{ if(__lockKey){ var jobs=state.docs.map(function(d){
-        if(folderLocked(d.folder) && !isEnc(d.content)){
-          var c=encCache[d.id];
-          // 안 바뀐 글은 이전에 만든 '같은 암호문'을 그대로 재사용 → 암호문이 매번 달라져 동기화 충돌 사본이 양산되던 문제 해결
-          if(c && c.plain===d.content && c.cipher){ d.content=c.cipher; return null; }
-          var plain=d.content;
-          return encText(plain).then(function(ct){ d.content=ct; encCache[d.id]={plain:plain,cipher:ct}; }, function(){});
-        }
-        return null;
-      }).filter(Boolean);
-      Promise.all(jobs).then(function(){ __lockKey=null; encCache={}; try{persistNow();}catch(e){} try{renderDocs();}catch(e){} });
-      return; }
-    }catch(e){}
-    __lockKey=null; encCache={};
+  function relock(){
+    if(!__mfUnlocked && !__lockKey){ return; }
+    var key=__lockKey;
+    __mfUnlocked=false; __lockKey=null;   // 즉시 잠금 상태로 전환 → 이후 게이트가 바로 올바르게 동작(평문 노출 방지)
+    if(!key){ encCache={}; return; }
+    var jobs=state.docs.map(function(d){
+      if(folderLocked(d.folder) && !isEnc(d.content)){
+        var c=encCache[d.id];
+        // 안 바뀐 글은 이전에 만든 '같은 암호문' 재사용 → 암호문이 매번 달라져 충돌 사본이 양산되던 문제 방지
+        if(c && c.plain===d.content && c.cipher){ d.content=c.cipher; return null; }
+        var plain=d.content;
+        return encText(plain, key).then(function(ct){ d.content=ct; }, function(){});
+      }
+      return null;
+    }).filter(Boolean);
+    Promise.all(jobs).then(function(){ encCache={}; try{persistNow();}catch(e){} try{renderDocs();}catch(e){} });
   }
   function pwModal(opts){
     var back=document.createElement("div"); back.className="modal-back"; back.style.zIndex="340";
@@ -39516,8 +39528,9 @@ window.markflowBootError=function(items,detail){
   }
   function mkEl(tag,cls,txt){ var e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
   function openFromHome(id){
-    var ld=state.docs.find(function(x){return x.id===id;});
-    if(ld && docLocked(ld)){ tryUnlock(function(){ openFromHome(id); }); return; }
+    var ld=state.docs.find(function(x){return x.id===id;}); if(!ld) return;
+    // 잠겼거나 암호문이면 loadDoc이 복호화·비밀번호를 처리한다
+    if(isEnc(ld.content) || docLocked(ld)){ loadDoc(id); return; }
     if(id===state.currentId){ hideHome(); try{ editor.focus(); }catch(_){} }
     else loadDoc(id);
   }
@@ -39539,6 +39552,11 @@ window.markflowBootError=function(items,detail){
     star.addEventListener("mousedown",function(ev){ ev.stopPropagation(); });
     star.addEventListener("click",function(ev){ ev.stopPropagation(); ev.preventDefault(); d.fav=!d.fav; try{delete homeCache[d.id];}catch(e){} scheduleSave(); try{ if(homeIsOpen())renderHome(); }catch(e){} });
     card.appendChild(star);
+    // 카드에서 바로 삭제
+    var del=mkEl("span","hm-del"); del.textContent="🗑"; del.title="삭제"; del.setAttribute("role","button");
+    del.addEventListener("mousedown",function(ev){ ev.stopPropagation(); });
+    del.addEventListener("click",function(ev){ ev.stopPropagation(); ev.preventDefault(); if(confirm((docLocked(d)?"잠긴 문서":"이 문서")+"를 삭제할까요?")){ try{delete homeCache[d.id];}catch(e){} delDoc(d.id); try{ if(homeIsOpen())renderHome(); }catch(e){} } });
+    card.appendChild(del);
     card.addEventListener("click",function(){ openFromHome(d.id); });
     return card;
   }
@@ -39678,7 +39696,7 @@ window.markflowBootError=function(items,detail){
     state.docs=state.docs.filter(function(x){return x.id!==id;});
     if(!state.docs.length){ var nd={id:uid(),content:"# 무제\n\n",updated:Date.now()}; state.docs=[nd]; state.currentId=nd.id; }
     else if(id===state.currentId){ state.currentId=state.docs[0].id; }
-    loading=true; editor.setMarkdown(current().content,false); loading=false; clearUndoHistory();
+    loading=true; editor.setMarkdown(isEnc(current().content)?"":(current().content||""),false); loading=false; clearUndoHistory();
     if(window.__mfResetFold) window.__mfResetFold();
     updateCounts(current().content); renderDocs(); scheduleSave();
   }
@@ -41496,6 +41514,8 @@ window.markflowBootError=function(items,detail){
     // 잠금 소금·검증 토큰은 다른 기기와 공유되어야 함 — 아직 없으면 원격 것을 받아온다
     try{ if(remote.lockSalt && !state.lockSalt){ state.lockSalt=remote.lockSalt; try{ sset("markflow_lock_salt",remote.lockSalt); }catch(e){} } }catch(e){}
     try{ if(remote.lockCheck && !state.lockCheck){ state.lockCheck=remote.lockCheck; } }catch(e){}
+    // 어느 폴더가 잠겼는지(lockedFolders)도 기기 간에 맞춰야 함 — 안 그러면 한쪽은 암호화, 한쪽은 평문으로 취급돼 일기가 새거나 암호문이 보임
+    try{ if(Array.isArray(remote.lockedFolders)){ remote.lockedFolders.forEach(function(f){ if(f && state.lockedFolders.indexOf(f)<0 && !folderTombs()[f]) state.lockedFolders.push(f); }); } }catch(e){}
     mergeTombstones(remote.deleted); mergeFolderTombs(remote.deletedFolders);
     var m=window.markflowSyncMerge.merge({docs:state.docs,folders:state.folders},{docs:remote.docs,folders:remote.folders},loadSyncBase());
     pruneTombstones(); m.docs=applyTombstones(m.docs);
@@ -41504,9 +41524,11 @@ window.markflowBootError=function(items,detail){
     if(changed){
       state.docs=m.docs; state.folders=m.folders; migrate();
       if(!state.docs.some(function(x){return x.id===state.currentId;})) state.currentId=state.docs[0].id;
-      var nc=current();
-      if(nc!==cur||(nc.content||"")!==editor.getMarkdown()){ loading=true; editor.setMarkdown(nc.content||"",false); loading=false; clearUndoHistory(); if(window.__mfResetFold) window.__mfResetFold(); }
-      renderDocs(); updateCounts(current().content||""); scheduleSave();
+      renderDocs();
+      // 잠금 해제 상태라면, 동기화로 새로 들어온 암호문 글을 복호화한 뒤 화면을 갱신한다. 암호문은 절대 그대로 띄우지 않는다.
+      var refreshEditor=function(){ var nc=current(); if(nc!==cur||((isEnc(nc.content)?"":(nc.content||""))!==editor.getMarkdown())){ loading=true; editor.setMarkdown(isEnc(nc.content)?"":(nc.content||""),false); loading=false; clearUndoHistory(); if(window.__mfResetFold) window.__mfResetFold(); } updateCounts(isEnc(current().content)?"":(current().content||"")); };
+      if(__lockKey){ decryptAllLocked().then(function(){ try{renderDocs();}catch(e){} refreshEditor(); }); } else { refreshEditor(); }
+      scheduleSave();
     }
     if(m.report.conflicts.length) mfToast("동기화 충돌 "+m.report.conflicts.length+"건 · 양쪽 내용을 모두 남겼어요 (‘동기화 충돌 사본’)");
     return remote;
