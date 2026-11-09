@@ -2775,7 +2775,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.48</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.49</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -38853,7 +38853,7 @@ window.markflowBootError=function(items,detail){
 <script src="markflow/zip.js?v=3.10.0"></script>
 <script src="markflow/sync-merge.js?v=3.10.0"></script>
 <script src="markflow/backup.js?v=3.10.0"></script>
-<script src="markflow/usability.js?v=3.9.3"></script>
+<script src="markflow/usability.js?v=3.9.4"></script>
 <script src="markflow/ai-costs.js?v=3.9.1"></script>
 <script src="markflow/photo-recovery.js?v=3.9.2"></script>
 <script src="markflow/restore-v38.js?v=3.8-restored-1"></script>
@@ -40608,20 +40608,9 @@ window.markflowBootError=function(items,detail){
       chips.appendChild(c); });
     tbMoreMenu.appendChild(chips);
     var sep=document.createElement("div"); sep.className="bmenu-sep"; tbMoreMenu.appendChild(sep);
-    // 2) 새 블록 넣기
-    var cap2=document.createElement("div"); cap2.className="tbmore-cap"; cap2.textContent="새 블록 넣기"; tbMoreMenu.appendChild(cap2);
-    var INS=SLASH.filter(function(it){ return ["callout","table","hr","dots","video"].indexOf(it.k)>=0; });
-    INS.forEach(function(it){ var row=document.createElement("div"); row.className="slash-item";
-      row.innerHTML='<span class="slash-ic">'+it.ic+'</span><div class="slash-tx"><div class="slash-lb">'+it.lb+'</div><div class="slash-ht">'+it.ht+'</div></div>';
-      row.addEventListener("mousedown",function(ev){ ev.preventDefault(); var r=rect; closeTbMore();
-        if(it.pick==="callout"){ focusCur(); setTimeout(function(){ openCalloutPickerAt(r, function(body){ editor.exec("blockQuote"); editor.insertText(body); editor.focus(); }); },0); return; }
-        if(it.pick==="table"){ focusCur(); setTimeout(function(){ openTablePicker(r, function(rr,cc){ editor.focus(); editor.exec("addTable",{rowCount:rr,columnCount:cc}); }); },0); return; }
-        if(it.pick==="video"){ focusCur(); setTimeout(function(){ openVideoInput(function(m){ insertParaMarker(m); }); },0); return; }
-        setTimeout(function(){ focusCur(); try{ it.run(); }catch(e){} editor.focus(); },0);
-      });
-      tbMoreMenu.appendChild(row); });
+    // 표·콜아웃·구분선·동영상·글자색·이모지·가운데 장식선 등은 위 툴바 드롭다운으로 옮겨 중복을 없앴습니다.
     var extra=document.createElement('div');extra.className='bmenu-chips';
-    [['글자색',function(){ restoreSel(); setTimeout(function(){ openTcPicker(rect); },0); }],['글자 크기·인용색',function(){ openFmtPicker(rect); }],['메모↔마크다운 모드',function(){ setMemoMode(!memoModeOn()); }],['취소선',function(){editor.exec('strike');}],['이모지',function(){openInlineEmoji(rect);}],['가운데 장식선',function(){ if(curIdx<0){ if(typeof mfToast==="function") mfToast("먼저 줄을 눌러 커서를 두세요"); return; } focusCur(); setTimeout(function(){ applyCenterLine(); },0); }]].forEach(function(item){var b=document.createElement('button');b.type='button';b.className='bchip';b.textContent=item[0];b.addEventListener('mousedown',function(e){e.preventDefault();closeTbMore();item[1]();});extra.appendChild(b);});tbMoreMenu.appendChild(extra);
+    [['✍️ 메모 ↔ 마크다운 모드',function(){ setMemoMode(!memoModeOn()); }]].forEach(function(item){var b=document.createElement('button');b.type='button';b.className='bchip';b.textContent=item[0];b.addEventListener('mousedown',function(e){e.preventDefault();closeTbMore();item[1]();});extra.appendChild(b);});tbMoreMenu.appendChild(extra);
     document.body.appendChild(tbMoreMenu);
     if(!mobile){ var x=Math.min(rect.left, window.innerWidth-262); if(x<6)x=6; var y=rect.bottom+6; tbMoreMenu.style.left=x+"px"; tbMoreMenu.style.top=y+"px"; tbMoreMenu.style.maxHeight=(window.innerHeight-y-12)+"px"; tbMoreMenu.style.overflowY="auto"; }
     setTimeout(function(){ document.addEventListener("mousedown",tbMoreOutside); },0);
@@ -41735,6 +41724,17 @@ window.markflowBootError=function(items,detail){
     exec:function(c){editor.exec(c);editor.focus();},
     link:function(){var v=wwView();var sel=v.state.selection;var label=v.state.doc.textBetween(sel.from,sel.to,' ');var url=prompt('링크 주소 (https://…)', 'https://');if(!url)return;try{var parsed=new URL(url);if(!['https:','http:','mailto:','tel:'].includes(parsed.protocol))throw Error();}catch(e){mfToast('올바른 링크 주소를 입력해 주세요.');return;}editor.exec('addLink',{linkUrl:url,linkText:label||url});editor.focus();},
     highlight:openHlPicker,textColor:openTcPicker,textSize:openFmtPicker,bullet:function(){bulletBtn.click();},outdent:function(){outdentBtn.click();},indent:function(){indentBtn.click();},fold:function(){foldAllBtn.click();},photos:function(b){ if(b&&b.getBoundingClientRect) openPhotoSource(b); else openPhotoSource(document.querySelector('.mf-organized-toolbar [aria-label=\"사진 넣기\"]')||document.body); },video:openVideoInput,more:openTbMore,
+    emoji:function(r){ openInlineEmoji(r||{left:60,bottom:120,top:90}); },
+    bulletList:function(){ editor.exec('bulletList'); editor.focus(); },
+    numberList:function(){ editor.exec('orderedList'); editor.focus(); },
+    checklist:function(){ editor.exec('taskList'); editor.focus(); },
+    quote:function(){ editor.exec('blockQuote'); editor.focus(); },
+    divider:function(){ editor.exec('hr'); editor.focus(); },
+    decoLine:function(){ editor.insertText('·   ·   ·'); editor.focus(); },
+    centerLine:function(){ try{ var i=curTopIdx(); if(i>=0) caretInUnit({domIdx:i}); }catch(e){} setTimeout(function(){ try{ applyCenterLine(); }catch(e){} },0); },
+    callout:function(r){ openCalloutPickerAt(r||{left:60,bottom:120,top:90}, function(body){ editor.exec('blockQuote'); if(body) editor.insertText(body); editor.focus(); }); },
+    table:function(r){ openTablePicker(r||{left:60,bottom:120,top:90}, function(rr,cc){ editor.focus(); editor.exec('addTable',{rowCount:rr,columnCount:cc}); }); },
+    listSettings:function(b){ openListSettings(b||document.body); },
     onCaret:function(fn){editor.on('caretChange',fn);},blockType:function(){var v=wwView();if(!v)return 'p';var n=v.state.selection.$from.parent;return n.type.name==='heading'?'h'+n.attrs.level:'p';}
   });
   // v3.8.16: 설정 안의 '나의 시스템 홈'(index.html) 버튼을 MarkFlow 이름 옆으로 뺀다
