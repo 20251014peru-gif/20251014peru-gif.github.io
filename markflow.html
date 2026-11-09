@@ -2243,9 +2243,7 @@ table.ProseMirror-selectednode {
   #editor{flex:1;min-height:0;}
   /* 신문식 다단(3열/2열): 한 열이 화면 높이만큼 차면 다음 열로 이어짐. 넘치면 가로로 이동. 열 수는 아래 스크립트가 data-mf-cols 로 정함(1이면 아무 영향 없음) */
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror,
-  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-fill:auto;column-gap:72px;padding-left:120px!important;padding-right:120px!important;overflow-x:auto;overflow-y:auto;position:relative;
-    /* 양쪽 여백 안에 옆 열 글자 조각이 비치지 않게 가장자리를 가린다 */
-    -webkit-mask-image:linear-gradient(to right,transparent 0,transparent 120px,#000 120px,#000 calc(100% - 120px),transparent calc(100% - 120px));mask-image:linear-gradient(to right,transparent 0,transparent 120px,#000 120px,#000 calc(100% - 120px),transparent calc(100% - 120px));}
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-fill:auto;column-gap:64px;padding-left:64px!important;padding-right:64px!important;overflow-x:auto;overflow-y:auto;position:relative;}
   /* 마지막 쪽이 덜 차도 열 위치가 어긋나지 않게(왼쪽·오른쪽 여백 유지) 끝에 투명한 자리를 둬서 스크롤 끝을 한 쪽 단위로 맞춘다. 값은 스크립트가 계산(--mf-fill) */
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror::after,
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror::after{content:"";position:absolute;left:var(--mf-fill,0px);top:0;width:1px;height:1px;pointer-events:none;}
@@ -40786,7 +40784,7 @@ window.mfCol=(function(){
   }
   function unitAtY(y,x){ var us=movableUnits(); var M=window.mfCol&&mfCol.n()>1;
     for(var i=0;i<us.length;i++){ var rs=M?us[i].el.getClientRects():[us[i].el.getBoundingClientRect()];
-      for(var k=0;k<rs.length;k++){ var r=rs[k]; if(r.height===0) continue; if(y>=r.top-3&&y<=r.bottom+3&&(!M||(x>=r.left-72&&x<=r.right))) return us[i]; } } return null; }
+      for(var k=0;k<rs.length;k++){ var r=rs[k]; if(r.height===0) continue; if(y>=r.top-3&&y<=r.bottom+3&&(!M||(x>=r.left-64&&x<=r.right))) return us[i]; } } return null; }
   function positionHandleForUnit(u){
     var wrap=document.querySelector(".editor-wrap"); if(!u||!wrap){ if(hEl)hEl.style.display="none"; return; }
     var wr=wrap.getBoundingClientRect(); var r=window.mfCol?mfCol.fr(u.el):u.el.getBoundingClientRect();
@@ -40983,10 +40981,11 @@ window.mfCol=(function(){
   }
   // ---- 글자 크기 · 인용 색 (이 기기에 저장) ----
   var FS_MIN=13, FS_MAX=26;
-  function fmtGet(){ var fs=parseInt(sget("markflow_edfs"),10); if(!(fs>=FS_MIN&&fs<=FS_MAX)) fs=16; return { fs:fs, qbar:sget("markflow_qbar")||"", qtext:sget("markflow_qtext")||"" }; }
+  function fmtGet(){ var fs=parseInt(sget("markflow_edfs"),10); if(!(fs>=FS_MIN&&fs<=FS_MAX)) fs=16; return { fs:fs, qbar:sget("markflow_qbar")||"", qtext:sget("markflow_qtext")||"", just:sget("markflow_just")!=="0" }; }
   function applyUserFmt(){ var f=fmtGet(); var st=document.getElementById("mf-userfmt"); if(!st){ st=document.createElement("style"); st.id="mf-userfmt"; document.head.appendChild(st); }
     var css=".toastui-editor-contents{--mf-fs:"+f.fs+"px;font-size:"+f.fs+"px !important;}";
     css+="body[data-mf-cols='2'] .toastui-editor-contents,body[data-mf-cols='3'] .toastui-editor-contents{font-size:calc(var(--mf-fs) * .8) !important;}"; // 다단 보기: 한 열에 더 많이 들어가도록 글자 80%
+    if(f.just) css+=".toastui-editor-contents :where(p,li):not([style*='text-align']){text-align:justify;text-justify:inter-character;text-align-last:left;}";
     if(f.qbar) css+=".toastui-editor-contents blockquote{border-left-color:"+f.qbar+" !important;}";
     if(f.qtext) css+=".toastui-editor-contents blockquote,.toastui-editor-contents blockquote p,.toastui-editor-contents blockquote ul,.toastui-editor-contents blockquote ol{color:"+f.qtext+" !important;}";
     st.textContent=css;
@@ -41024,6 +41023,10 @@ window.mfCol=(function(){
       s.addEventListener("mousedown",function(ev){ ev.preventDefault(); setQuoteColor(o[1],o[2]); });
       row.appendChild(s); });
     fmtPop.appendChild(row);
+    var capJ=document.createElement("div"); capJ.className="cap"; capJ.textContent="문장 오른쪽 끝"; fmtPop.appendChild(capJ);
+    var jb=document.createElement("button"); jb.type="button"; jb.className="hl-clear"; function jbT(){ jb.textContent=fmtGet().just?"✓ 양쪽 맞춤 켜짐 (누르면 끔)":"양쪽 맞춤 꺼짐 (누르면 켬)"; } jbT();
+    jb.addEventListener("mousedown",function(ev){ ev.preventDefault(); sset("markflow_just",fmtGet().just?"0":"1"); applyUserFmt(); jbT(); });
+    fmtPop.appendChild(jb);
     document.body.appendChild(fmtPop);
     if(!mobile&&rect){ var x=Math.min(rect.left, window.innerWidth-270); var y=rect.bottom+6; if(y>window.innerHeight-210) y=Math.max(8,rect.top-6-200); fmtPop.style.left=Math.max(8,x)+"px"; fmtPop.style.top=y+"px"; }
     setTimeout(function(){ document.addEventListener("mousedown",closeFmtOutside); },0);
