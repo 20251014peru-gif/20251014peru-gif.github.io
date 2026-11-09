@@ -2243,7 +2243,12 @@ table.ProseMirror-selectednode {
   #editor{flex:1;min-height:0;}
   /* 신문식 다단(3열/2열): 한 열이 화면 높이만큼 차면 다음 열로 이어짐. 넘치면 가로로 이동. 열 수는 아래 스크립트가 data-mf-cols 로 정함(1이면 아무 영향 없음) */
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror,
-  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-fill:auto;column-gap:96px;padding-left:96px!important;overflow-x:auto;overflow-y:auto;}
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-fill:auto;column-gap:72px;padding-left:120px!important;padding-right:120px!important;overflow-x:auto;overflow-y:auto;position:relative;
+    /* 양쪽 여백 안에 옆 열 글자 조각이 비치지 않게 가장자리를 가린다 */
+    -webkit-mask-image:linear-gradient(to right,transparent 0,transparent 120px,#000 120px,#000 calc(100% - 120px),transparent calc(100% - 120px));mask-image:linear-gradient(to right,transparent 0,transparent 120px,#000 120px,#000 calc(100% - 120px),transparent calc(100% - 120px));}
+  /* 마지막 쪽이 덜 차도 열 위치가 어긋나지 않게(왼쪽·오른쪽 여백 유지) 끝에 투명한 자리를 둬서 스크롤 끝을 한 쪽 단위로 맞춘다. 값은 스크립트가 계산(--mf-fill) */
+  body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror::after,
+  body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror::after{content:"";position:absolute;left:var(--mf-fill,0px);top:0;width:1px;height:1px;pointer-events:none;}
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror{column-count:2;}
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror{column-count:3;}
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror :is(p,h1,h2,h3,h4,h5,h6,pre,blockquote,table,img,li>p),
@@ -2253,7 +2258,7 @@ table.ProseMirror-selectednode {
   /* 다단: 크기를 직접 정하지 않은 사진은 화면 세로의 1/3까지만(가로 비율 유지). 달님이 손잡이로 조절한 사진(height 지정)은 그대로 */
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror img:not([height]):not([style*="height"]),
   body[data-mf-cols="3"] .toastui-editor-ww-container .ProseMirror img:not([height]):not([style*="height"]){max-height:33.3vh;width:auto;height:auto;max-width:100%;object-fit:contain;}
-  .mf-pageind{display:none;position:absolute;right:18px;bottom:10px;z-index:30;font-size:12.5px;font-weight:700;color:var(--text-soft);background:var(--bg-elev);border:1px solid var(--border);border-radius:999px;padding:3px 11px;box-shadow:var(--shadow);pointer-events:none;font-family:var(--sans);}
+  .mf-pageind{display:none;font-weight:700;color:var(--accent);}
   @media print{.mf-pageind{display:none!important;}}
   /* 다단: 줄 간격을 조금 줄이고(1.6→1.45), 가로 스크롤바는 숨긴다(세로 휠로 한 페이지씩 넘김) */
   body[data-mf-cols="2"] .toastui-editor-ww-container .ProseMirror :is(p,li),
@@ -38928,7 +38933,7 @@ window.mfCol=(function(){
     wrap.addEventListener("wheel",function(e){ if(C.n()<2||e.ctrlKey) return; var pm=C.pm(); if(!pm||!pm.contains(e.target)) return;
       if(Math.abs(e.deltaY)<Math.abs(e.deltaX)||pm.scrollWidth<=pm.clientWidth||pm.scrollHeight>pm.clientHeight+2) return; e.preventDefault();
       var now=Date.now(), fresh=now-lastW>120; lastW=now; if(!fresh) return;
-      var st=C.step(), max=pm.scrollWidth-pm.clientWidth, t=(Math.round(pm.scrollLeft/st)+(e.deltaY>0?1:-1))*st; // 휠 한 칸 = 한 열 이동
+      var st=C.step(), max=pm.scrollWidth-pm.clientWidth, t=(Math.round(pm.scrollLeft/st)+(e.deltaY>0?1:-1)*C.n())*st; // 휠 한 칸 = 한 페이지(보이는 열 전체, 3열이면 3칸) 이동
       pm.scrollTo({left:Math.max(0,Math.min(t,max)),behavior:"smooth"}); },{passive:false});
     // 스크롤바·트랙패드로 넘기다 멈추면 가장 가까운 열 경계로 자동 정렬(글자가 반쯤 잘려 보이지 않게). 타이핑 중이면 커서가 보이는 쪽으로.
     var tmr=0, snapping=false;
@@ -38951,11 +38956,13 @@ window.mfCol=(function(){
     blankEl.textContent=sel.length?sel.join(",")+"{line-height:.85!important;}":""; }
   // 쪽 표시: 오른쪽 아래에 "쪽 n / N" (한 쪽 = 화면에 보이는 열 묶음). 다단일 때만 보임
   var pgEl=null;
-  function pageInd(){ var wrap=document.querySelector(".editor-wrap"), pm=C.pm(); if(!wrap||!pm) return;
-    if(!pgEl){ pgEl=document.createElement("div"); pgEl.className="mf-pageind"; wrap.appendChild(pgEl); }
+  function fillPad(){ var pm=C.pm(); if(!pm) return; var n=C.n(), st=C.step(); pm.style.setProperty("--mf-fill","0px"); if(n<2||!st) return;
+    var max=pm.scrollWidth-pm.clientWidth, target=Math.ceil(max/st-0.02)*st; if(target>max+1) pm.style.setProperty("--mf-fill",Math.round(pm.clientWidth+target)+"px"); }
+  function pageInd(){ fillPad(); var wrap=document.querySelector(".editor-wrap"), pm=C.pm(); if(!wrap||!pm) return;
+    if(!pgEl){ var wcw=document.getElementById("wc-words"); if(!wcw) return; pgEl=document.createElement("span"); pgEl.id="mf-pageind"; pgEl.className="mf-pageind"; wcw.parentNode.insertBefore(pgEl,wcw); }
     var n=C.n(), st=C.step(); if(n<2||!st){ pgEl.style.display="none"; return; }
     var max=Math.max(0,pm.scrollWidth-pm.clientWidth), idx=Math.round(pm.scrollLeft/st), total=Math.max(1,Math.ceil((Math.round(max/st)+n)/n)), cur=Math.min(total,Math.ceil((idx+n)/n));
-    pgEl.style.display="block"; pgEl.textContent="쪽 "+cur+" / "+total; }
+    pgEl.style.display="inline"; pgEl.textContent="쪽 "+cur+" / "+total; }
   function watchBlank(){ var pm=C.pm(); if(!pm){ setTimeout(watchBlank,300); return; } blankStyle(); pageInd(); var wr0=document.querySelector(".editor-wrap"); if(wr0){ wr0.addEventListener("scroll",pageInd,true); try{ new ResizeObserver(pageInd).observe(pm); }catch(e){} window.addEventListener("resize",function(){ setTimeout(pageInd,100); }); }
     try{ new MutationObserver(function(){ clearTimeout(blankTmr); blankTmr=setTimeout(function(){ blankStyle(); pageInd(); },150); }).observe(pm,{childList:true,subtree:true,characterData:true}); }catch(e){} }
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",function(){ init(); watchBlank(); }); else { init(); watchBlank(); }
@@ -40779,7 +40786,7 @@ window.mfCol=(function(){
   }
   function unitAtY(y,x){ var us=movableUnits(); var M=window.mfCol&&mfCol.n()>1;
     for(var i=0;i<us.length;i++){ var rs=M?us[i].el.getClientRects():[us[i].el.getBoundingClientRect()];
-      for(var k=0;k<rs.length;k++){ var r=rs[k]; if(r.height===0) continue; if(y>=r.top-3&&y<=r.bottom+3&&(!M||(x>=r.left-96&&x<=r.right))) return us[i]; } } return null; }
+      for(var k=0;k<rs.length;k++){ var r=rs[k]; if(r.height===0) continue; if(y>=r.top-3&&y<=r.bottom+3&&(!M||(x>=r.left-72&&x<=r.right))) return us[i]; } } return null; }
   function positionHandleForUnit(u){
     var wrap=document.querySelector(".editor-wrap"); if(!u||!wrap){ if(hEl)hEl.style.display="none"; return; }
     var wr=wrap.getBoundingClientRect(); var r=window.mfCol?mfCol.fr(u.el):u.el.getBoundingClientRect();
