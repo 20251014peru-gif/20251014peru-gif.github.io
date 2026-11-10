@@ -2849,7 +2849,7 @@ table.ProseMirror-selectednode {
     <div class="grow"></div>
     <span id="wc-words">0 단어</span>
     <span id="wc-chars">0 자</span>
-    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.61</span>
+    <span class="ver-foot" id="ver-badge" title="탭하면 최신 버전으로 새로고침">v3.8.62</span>
   </div>
 </div>
 <input type="file" id="file-input" accept=".md,.markdown,.txt,text/markdown,text/plain" />
@@ -16787,7 +16787,7 @@ table.ProseMirror-selectednode {
     var hook = function(imageUrl, altText) {
       eventEmitter.emit("command", "addImage", {
         imageUrl,
-        altText: altText || blob.name || "image"
+        altText: altText || ""
       });
     };
     eventEmitter.emit("addImageBlobHook", blob, hook, type);
@@ -38959,12 +38959,18 @@ window.mfCol=(function(){
       var rc=r.getClientRects()[0]||(el&&el.getClientRects()[0]); if(!rc) return false; var pr=pm.getBoundingClientRect(), d=pm.scrollLeft-t;
       return rc.left+d>=pr.left+4&&rc.right+d<=pr.right-4; }
     function caretIn(pm){ var s=window.getSelection(); return !!(s&&s.rangeCount&&pm.contains(s.focusNode)); }
-    function snap(){ var pm=C.pm(); if(!pm||C.n()<2||snapping) return; var st=C.step(), max=pm.scrollWidth-pm.clientWidth; if(max<=0||!st) return;
-      var k=pm.scrollLeft/st, a=Math.round(k), b=(a===Math.floor(k))?Math.ceil(k):Math.floor(k), cand=[a,b], need=caretOk(pm,pm.scrollLeft)&&caretIn(pm); // 지금 커서가 화면에 보이면(타이핑 중) 정렬 후에도 보여야 함
-      for(var i=0;i<2;i++){ var t=Math.max(0,Math.min(cand[i]*st,max)); if(need&&!caretOk(pm,t)) continue; if(Math.abs(t-pm.scrollLeft)<3) return;
-        snapping=true; pm.scrollTo({left:t,behavior:"smooth"}); setTimeout(function(){ snapping=false; },500); return; } }
+    function caretRect(pm){ var s=window.getSelection(); if(!s||!s.rangeCount||!pm.contains(s.focusNode)) return null;
+      var r=s.getRangeAt(0).cloneRange(); r.collapse(false); var el=s.focusNode.nodeType===1?s.focusNode:s.focusNode.parentElement;
+      return r.getClientRects()[0]||(el&&el.getClientRects()[0])||null; }
+    // 쪽 단위 정렬: 한 쪽 = 화면에 보이는 열 묶음(3열이면 1~3열, 다음 쪽은 4~6열). 타이핑·화살표로 커서가 다음 쪽 열로 넘어가면 그 쪽의 첫 열로 화면이 넘어간다.
+    function snap(){ var pm=C.pm(); if(!pm||C.n()<2||snapping) return; try{ fillPad(); }catch(e){} var n=C.n(), st=C.step(); if(!st) return; var pst=st*n, max=pm.scrollWidth-pm.clientWidth; if(max<=0) return;
+      var t=Math.round(pm.scrollLeft/pst)*pst, rc=caretRect(pm), pr=pm.getBoundingClientRect();
+      if(rc&&rc.right>pr.left&&rc.left<pr.right){ t=Math.floor(C.idx(rc.left+2)/n)*pst; }   // 커서가 (일부라도) 보이면 커서가 있는 쪽으로
+      t=Math.max(0,Math.min(t,max)); if(Math.abs(t-pm.scrollLeft)<3) return;
+      snapping=true; pm.scrollTo({left:t,behavior:"smooth"}); setTimeout(function(){ snapping=false; },500); }
     C.snap=function(){ clearTimeout(tmr); tmr=setTimeout(snap,250); };
-    wrap.addEventListener("scroll",function(e){ if(e.target!==C.pm()||snapping) return; clearTimeout(tmr); tmr=setTimeout(snap,200); },true); }
+    wrap.addEventListener("scroll",function(e){ if(e.target!==C.pm()||snapping) return; clearTimeout(tmr); tmr=setTimeout(snap,200); },true)
+    wrap.addEventListener("input",function(){ if(C.n()>=2) C.snap(); },true); wrap.addEventListener("keyup",function(e){ if(C.n()>=2&&/^(Arrow|Page|Home|End|Enter)/.test(e.key)) C.snap(); },true); }
   // 빈 줄(글자 없는 문단, 안 보이는 글자만 있는 문단 포함) 높이를 줄인다. 사진·표가 든 문단은 제외. 앱의 열나누기·접기와 같은 '외부 스타일시트' 방식.
   var blankEl=null, blankTmr=0;
   function blankStyle(){ var pm=C.pm(); if(!pm) return; if(!blankEl){ blankEl=document.createElement("style"); blankEl.id="mf-blank-style"; document.head.appendChild(blankEl); }
@@ -38973,8 +38979,13 @@ window.mfCol=(function(){
     blankEl.textContent=sel.length?sel.join(",")+"{line-height:.85!important;}":""; }
   // 쪽 표시: 오른쪽 아래에 "쪽 n / N" (한 쪽 = 화면에 보이는 열 묶음). 다단일 때만 보임
   var pgEl=null;
-  function fillPad(){ var pm=C.pm(); if(!pm) return; var n=C.n(), st=C.step(); pm.style.setProperty("--mf-fill","0px"); if(n<2||!st) return;
-    var max=pm.scrollWidth-pm.clientWidth, target=Math.ceil(max/st-0.02)*st; if(target>max+1) pm.style.setProperty("--mf-fill",Math.round(pm.clientWidth+target)+"px"); }
+  function fillPad(){ var pm=C.pm(); if(!pm) return; var n=C.n(), st=C.step(), cur=pm.style.getPropertyValue("--mf-fill")||"0px";
+    if(n<2||!st){ if(cur!=="0px") pm.style.setProperty("--mf-fill","0px"); return; }
+    // 글 끝(마지막 조각의 오른쪽)으로 '채움 없는' 가로 길이를 재서, 쪽 단위로 끝나게 채움 — 채움을 지웠다 다시 넣지 않아 스크롤 도중 위치가 튕기지 않는다
+    var k=pm.children, rt=null; for(var i=k.length-1;i>=0&&rt===null;i--){ var rs=k[i].getClientRects(); for(var j=rs.length-1;j>=0;j--){ if(rs[j].width>0||rs[j].height>0){ rt=rs[j].right; break; } } }
+    if(rt===null) return; var cs=getComputedStyle(pm), pr=pm.getBoundingClientRect(), nat=rt-pr.left-pm.clientLeft+pm.scrollLeft+(parseFloat(cs.paddingRight)||0), max0=Math.max(0,nat-pm.clientWidth);
+    var cols=Math.round(max0/st)+n, target=(Math.ceil(cols/n-0.02)-1)*n*st, want=(target>max0+1)?Math.round(pm.clientWidth+target)+"px":"0px";
+    if(want!==cur) pm.style.setProperty("--mf-fill",want); }
   function pageInd(){ fillPad(); var wrap=document.querySelector(".editor-wrap"), pm=C.pm(); if(!wrap||!pm) return;
     if(!pgEl){ var wcw=document.getElementById("wc-words"); if(!wcw) return; pgEl=document.createElement("span"); pgEl.id="mf-pageind"; pgEl.className="mf-pageind"; wcw.parentNode.insertBefore(pgEl,wcw); }
     var n=C.n(), st=C.step(); if(n<2||!st){ pgEl.style.display="none"; return; }
