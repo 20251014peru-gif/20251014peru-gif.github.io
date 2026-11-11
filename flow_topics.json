@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-11-11T08:48:56.540321+09:00",
+ "updated_at": "2026-11-11T10:35:13.325295+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 12,
-   "channel_count": 10,
-   "total_views": 3271710,
-   "latest": "2026-11-11T06:05:07+09:00",
+   "video_count": 13,
+   "channel_count": 11,
+   "total_views": 3381822,
+   "latest": "2026-11-11T08:52:25+09:00",
    "video_ids": [
+    "9eo33jaSfwU",
     "8Td-6lXEZSU",
     "hpZF_zMPXvk",
     "4-y8e6UGd88",
@@ -27,6 +28,7 @@
     "경제 읽어주는 남자 (김광석)",
     "내일은 투자왕 - 김단테",
     "미주은 (미국주식으로 은퇴하기)",
+    "삼프로TV 3PROTV",
     "슈카월드",
     "슈퍼개미 이세무사TV",
     "언더스탠딩",
@@ -56,12 +58,12 @@
      "channels": 2
     },
     {
-     "word": "대표",
+     "word": "중국",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "9일",
+     "word": "대표",
      "videos": 2,
      "channels": 2
     }
@@ -73,12 +75,12 @@
    "name": "반도체",
    "video_count": 12,
    "channel_count": 8,
-   "total_views": 770002,
-   "latest": "2026-11-11T06:05:07+09:00",
+   "total_views": 738891,
+   "latest": "2026-11-11T10:31:47+09:00",
    "video_ids": [
+    "kyUbMfnczE0",
     "8Td-6lXEZSU",
     "Fe38pY16twA",
-    "PE6AgAya4Fc",
     "6SRwY3Qt-uQ",
     "rcOrvqKq9Kg",
     "fUaXLMEP0oM",
@@ -121,12 +123,12 @@
      "channels": 2
     },
     {
-     "word": "스캔들",
+     "word": "외국인",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "9일",
+     "word": "스캔들",
      "videos": 2,
      "channels": 2
     }
@@ -138,7 +140,7 @@
    "name": "금리·연준",
    "video_count": 6,
    "channel_count": 5,
-   "total_views": 643535,
+   "total_views": 767308,
    "latest": "2026-11-11T08:42:54+09:00",
    "video_ids": [
     "shtVJUHtbps",
@@ -184,7 +186,7 @@
    "name": "국내증시",
    "video_count": 5,
    "channel_count": 5,
-   "total_views": 225838,
+   "total_views": 241686,
    "latest": "2026-11-11T06:05:07+09:00",
    "video_ids": [
     "8Td-6lXEZSU",
@@ -219,7 +221,7 @@
    "name": "미국증시",
    "video_count": 5,
    "channel_count": 4,
-   "total_views": 637311,
+   "total_views": 653349,
    "latest": "2026-11-10T20:03:18+09:00",
    "video_ids": [
     "ra5nRE3x9qk",
@@ -258,7 +260,7 @@
    "name": "환율·달러",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 195776,
+   "total_views": 247026,
    "latest": "2026-11-11T08:30:13+09:00",
    "video_ids": [
     "DgGf6V9iERU",
@@ -292,11 +294,47 @@
    "active": true
   },
   {
+   "id": "중국경제",
+   "name": "중국경제",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 2106306,
+   "latest": "2026-11-11T08:52:25+09:00",
+   "video_ids": [
+    "9eo33jaSfwU",
+    "hZbdmIVUkh0",
+    "ZncDID-TP-w"
+   ],
+   "channels": [
+    "경제사냥꾼",
+    "삼프로TV 3PROTV",
+    "슈카월드"
+   ],
+   "subtopics": [
+    {
+     "word": "중국",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "엔비디아",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "스파이",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "배당_ETF",
    "name": "배당·ETF",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 102677,
+   "total_views": 108003,
    "latest": "2026-11-10T19:28:14+09:00",
    "video_ids": [
     "7XfZGYta18k",
@@ -316,7 +354,7 @@
    "name": "물가·인플레",
    "video_count": 4,
    "channel_count": 2,
-   "total_views": 245593,
+   "total_views": 287657,
    "latest": "2026-11-11T08:08:24+09:00",
    "video_ids": [
     "jBC9WbOmaP0",
@@ -350,14 +388,14 @@
      "channels": 1
     }
    ],
-   "active": true
+   "active": false
   },
   {
    "id": "고용_경기",
    "name": "고용·경기",
    "video_count": 4,
    "channel_count": 2,
-   "total_views": 163772,
+   "total_views": 170707,
    "latest": "2026-11-10T23:00:30+09:00",
    "video_ids": [
     "av_-vajgmnQ",
@@ -377,7 +415,7 @@
    "name": "실적시즌",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 443458,
+   "total_views": 482226,
    "latest": "2026-11-11T08:30:13+09:00",
    "video_ids": [
     "DgGf6V9iERU",
@@ -402,7 +440,7 @@
    "name": "부동산",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 86733,
+   "total_views": 88820,
    "latest": "2026-11-10T19:30:01+09:00",
    "video_ids": [
     "_HdvL23pMKM",
