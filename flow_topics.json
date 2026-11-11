@@ -1,39 +1,42 @@
 {
- "updated_at": "2026-11-11T16:20:13.859931+09:00",
+ "updated_at": "2026-11-12T02:32:13.635231+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 16,
-   "channel_count": 11,
-   "total_views": 3391900,
-   "latest": "2026-11-11T16:00:08+09:00",
+   "video_count": 21,
+   "channel_count": 9,
+   "total_views": 1904899,
+   "latest": "2026-11-11T21:25:29+09:00",
    "video_ids": [
+    "TFKYVSvgjlo",
+    "QBSm6BJko4A",
+    "jCNfUmT7lbs",
+    "eUahwnXoR6o",
+    "mUDFchF8rj8",
+    "noVF3SZYWKs",
+    "MNJANd25Tp0",
+    "2yRQVzDTUPk",
+    "DDR_Xmc88D8",
+    "_UfmxQrxu3s",
+    "t8OJHL6q3T4",
+    "Siv7J1r5RaA",
     "kUOygKNl-zY",
-    "8rpbJXLs9OQ",
-    "_mLVtIxjwB8",
     "IkccPzk-gNo",
-    "MBS0YRkGBV4",
     "8Td-6lXEZSU",
     "hpZF_zMPXvk",
     "aOnxzN0P0iw",
     "OJSmTCoUL0w",
     "6Omv_KD9l98",
-    "R3txVv_YmMM",
     "EcHgekbZ57Q",
-    "ZYuxRkuzf30",
-    "ZncDID-TP-w",
-    "eO4oBy1qtWk",
-    "6QJyjB4fXUo"
+    "ZYuxRkuzf30"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "경제사냥꾼",
-    "내일은 투자왕 - 김단테",
     "미주은 (미국주식으로 은퇴하기)",
+    "삼프로TV 3PROTV",
     "슈카월드",
-    "슈퍼개미 이세무사TV",
     "언더스탠딩",
     "이효석아카데미",
     "증시각도기TV",
@@ -41,32 +44,98 @@
    ],
    "subtopics": [
     {
+     "word": "대표",
+     "videos": 6,
+     "channels": 3
+    },
+    {
      "word": "데이터센터",
+     "videos": 5,
+     "channels": 3
+    },
+    {
+     "word": "11월",
+     "videos": 4,
+     "channels": 3
+    },
+    {
+     "word": "실적",
+     "videos": 4,
+     "channels": 3
+    },
+    {
+     "word": "한국",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "코스피",
+     "videos": 3,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "국내증시",
+   "name": "국내증시",
+   "video_count": 12,
+   "channel_count": 9,
+   "total_views": 1488265,
+   "latest": "2026-11-11T20:22:17+09:00",
+   "video_ids": [
+    "QBSm6BJko4A",
+    "jCNfUmT7lbs",
+    "eUahwnXoR6o",
+    "kOn1fXg4fOE",
+    "OStY_MsvuWg",
+    "mUDFchF8rj8",
+    "oKrTVcHxm8s",
+    "JZkFU34roCg",
+    "yeD0fHK51cc",
+    "_UfmxQrxu3s",
+    "rqXMe4wlYko",
+    "8Td-6lXEZSU"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
+    "김영익의 경제스쿨",
+    "달란트투자",
+    "삼프로TV 3PROTV",
+    "슈카월드",
+    "슈퍼개미 이세무사TV",
+    "증시각도기TV",
+    "체슬리TV (박세익)"
+   ],
+   "subtopics": [
+    {
+     "word": "코스피",
+     "videos": 7,
+     "channels": 6
+    },
+    {
+     "word": "코스닥",
+     "videos": 4,
+     "channels": 3
+    },
+    {
+     "word": "AI",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "실적",
      "videos": 3,
      "channels": 2
     },
     {
-     "word": "코어위브",
-     "videos": 3,
+     "word": "엔비디아",
+     "videos": 2,
      "channels": 2
     },
     {
      "word": "11월",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "SK하이닉스",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "삼성전자",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "젠슨황",
      "videos": 2,
      "channels": 2
     }
@@ -76,63 +145,62 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 13,
+   "video_count": 12,
    "channel_count": 8,
-   "total_views": 664190,
-   "latest": "2026-11-11T15:30:29+09:00",
+   "total_views": 586089,
+   "latest": "2026-11-11T21:00:33+09:00",
    "video_ids": [
+    "yFAAd8X_MzM",
+    "eUahwnXoR6o",
+    "2qyDFFWObpA",
+    "DDR_Xmc88D8",
+    "1gHEmiuNqGA",
+    "t8OJHL6q3T4",
     "C0TXqKsm_dI",
-    "8rpbJXLs9OQ",
-    "qBclj8fHejw",
     "IkccPzk-gNo",
-    "MBS0YRkGBV4",
     "8Td-6lXEZSU",
     "6SRwY3Qt-uQ",
     "rcOrvqKq9Kg",
-    "fUaXLMEP0oM",
-    "dB74AqgBKiU",
-    "Pd0-RjbdUQQ",
-    "EzWNB7tX1nE",
-    "6QJyjB4fXUo"
+    "fUaXLMEP0oM"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "경제사냥꾼",
     "미주은 (미국주식으로 은퇴하기)",
+    "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
+    "언더스탠딩",
     "염블리와 함께 (염승환)",
-    "증시각도기TV",
     "체슬리TV (박세익)"
    ],
    "subtopics": [
     {
      "word": "SK하이닉스",
-     "videos": 5,
+     "videos": 3,
      "channels": 3
     },
     {
      "word": "삼성전자",
-     "videos": 5,
+     "videos": 3,
      "channels": 3
     },
     {
-     "word": "젠슨황",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "11월",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "스캔들",
+     "word": "코어위브",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "AI",
+     "word": "급반등",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "하락장",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "젠슨황",
      "videos": 2,
      "channels": 2
     }
@@ -142,37 +210,32 @@
   {
    "id": "금리_연준",
    "name": "금리·연준",
-   "video_count": 8,
-   "channel_count": 7,
-   "total_views": 1818936,
-   "latest": "2026-11-11T12:19:12+09:00",
+   "video_count": 9,
+   "channel_count": 6,
+   "total_views": 1071781,
+   "latest": "2026-11-11T20:30:30+09:00",
    "video_ids": [
-    "SPzaAg5L15k",
-    "BJYRChkhW-M",
+    "1PJbkfGan2w",
+    "mUDFchF8rj8",
+    "VBVYPLwduoM",
+    "PemOLQT9yVo",
     "shtVJUHtbps",
     "DgGf6V9iERU",
     "0EB7n1GwF1A",
     "NVcPiorA7Pw",
-    "ZYuxRkuzf30",
-    "VCiuosfZ5Io"
+    "ZYuxRkuzf30"
    ],
    "channels": [
-    "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "김영익의 경제스쿨",
+    "경제사냥꾼",
     "내일은 투자왕 - 김단테",
-    "삼프로TV 3PROTV",
     "슈퍼개미 이세무사TV",
+    "이효석아카데미",
     "증시각도기TV"
    ],
    "subtopics": [
     {
-     "word": "12월",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "미국",
+     "word": "인상",
      "videos": 3,
      "channels": 3
     },
@@ -182,59 +245,22 @@
      "channels": 2
     },
     {
-     "word": "CPI",
+     "word": "한국",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "물가",
+     "word": "이사",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "우려",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "미국증시",
-   "name": "미국증시",
-   "video_count": 7,
-   "channel_count": 5,
-   "total_views": 1315845,
-   "latest": "2026-11-11T12:15:54+09:00",
-   "video_ids": [
-    "BJYRChkhW-M",
-    "IkccPzk-gNo",
-    "ra5nRE3x9qk",
-    "aOnxzN0P0iw",
-    "wiTydSuyYBI",
-    "ucXMFfhriSw",
-    "dB74AqgBKiU"
-   ],
-   "channels": [
-    "내일은 투자왕 - 김단테",
-    "미주은 (미국주식으로 은퇴하기)",
-    "삼프로TV 3PROTV",
-    "소수몽키",
-    "염블리와 함께 (염승환)"
-   ],
-   "subtopics": [
-    {
-     "word": "젠슨황",
-     "videos": 2,
-     "channels": 2
+     "word": "11월",
+     "videos": 3,
+     "channels": 1
     },
     {
-     "word": "나스닥",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "민주당",
+     "word": "미국시황",
      "videos": 2,
      "channels": 1
     }
@@ -244,79 +270,54 @@
   {
    "id": "실적시즌",
    "name": "실적시즌",
-   "video_count": 5,
-   "channel_count": 4,
-   "total_views": 540322,
-   "latest": "2026-11-11T16:00:08+09:00",
+   "video_count": 7,
+   "channel_count": 5,
+   "total_views": 870541,
+   "latest": "2026-11-11T20:00:15+09:00",
    "video_ids": [
+    "jCNfUmT7lbs",
+    "_UfmxQrxu3s",
+    "Siv7J1r5RaA",
     "kUOygKNl-zY",
-    "_mLVtIxjwB8",
     "UU2D4kTtb_c",
     "DgGf6V9iERU",
     "2w8usAwS1wc"
    ],
    "channels": [
     "815머니톡",
+    "삼프로TV 3PROTV",
     "이효석아카데미",
     "증시각도기TV",
     "체슬리TV (박세익)"
    ],
    "subtopics": [
     {
-     "word": "코어위브",
-     "videos": 4,
-     "channels": 4
-    },
-    {
      "word": "실적",
-     "videos": 4,
+     "videos": 5,
      "channels": 4
     },
     {
-     "word": "시작되나",
-     "videos": 2,
-     "channels": 2
+     "word": "코어위브",
+     "videos": 3,
+     "channels": 3
     },
     {
-     "word": "AI",
-     "videos": 2,
-     "channels": 2
+     "word": "다시",
+     "videos": 3,
+     "channels": 3
     },
     {
      "word": "11월",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "국내증시",
-   "name": "국내증시",
-   "video_count": 4,
-   "channel_count": 4,
-   "total_views": 396178,
-   "latest": "2026-11-11T15:30:28+09:00",
-   "video_ids": [
-    "rqXMe4wlYko",
-    "SPzaAg5L15k",
-    "8Td-6lXEZSU",
-    "dB74AqgBKiU"
-   ],
-   "channels": [
-    "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "달란트투자",
-    "염블리와 함께 (염승환)"
-   ],
-   "subtopics": [
+     "videos": 3,
+     "channels": 2
+    },
     {
-     "word": "코스피",
+     "word": "앤트로픽",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "젠슨황",
+     "word": "시작되나",
      "videos": 2,
      "channels": 2
     }
@@ -326,31 +327,36 @@
   {
    "id": "물가_인플레",
    "name": "물가·인플레",
-   "video_count": 6,
-   "channel_count": 3,
-   "total_views": 1198812,
-   "latest": "2026-11-11T15:30:29+09:00",
+   "video_count": 5,
+   "channel_count": 4,
+   "total_views": 443440,
+   "latest": "2026-11-11T19:14:01+09:00",
    "video_ids": [
+    "kOn1fXg4fOE",
+    "2qyDFFWObpA",
     "C0TXqKsm_dI",
-    "4S6gdm-KoTc",
-    "SPzaAg5L15k",
-    "BJYRChkhW-M",
     "BI1zu4tUgKc",
     "NVcPiorA7Pw"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "삼프로TV 3PROTV"
+    "김영익의 경제스쿨",
+    "염블리와 함께 (염승환)"
    ],
    "subtopics": [
     {
-     "word": "CPI",
-     "videos": 5,
+     "word": "미국",
+     "videos": 3,
      "channels": 3
     },
     {
-     "word": "우려",
+     "word": "CPI",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "폭등",
      "videos": 2,
      "channels": 2
     },
@@ -358,87 +364,128 @@
      "word": "즉시분석",
      "videos": 2,
      "channels": 1
-    },
-    {
-     "word": "예상치",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "확산",
-     "videos": 2,
-     "channels": 1
     }
    ],
    "active": true
   },
   {
-   "id": "환율_달러",
-   "name": "환율·달러",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 348557,
-   "latest": "2026-11-11T08:30:13+09:00",
+   "id": "배당_ETF",
+   "name": "배당·ETF",
+   "video_count": 4,
+   "channel_count": 4,
+   "total_views": 119518,
+   "latest": "2026-11-11T23:30:24+09:00",
    "video_ids": [
-    "DgGf6V9iERU",
-    "_HdvL23pMKM",
-    "EcHgekbZ57Q"
+    "VaPZ4gt8sP8",
+    "2yRQVzDTUPk",
+    "Yq77F1zaxuo",
+    "7XfZGYta18k"
    ],
    "channels": [
-    "달란트투자",
-    "언더스탠딩",
-    "증시각도기TV"
+    "경제 읽어주는 남자 (김광석)",
+    "경제사냥꾼",
+    "삼프로TV 3PROTV",
+    "홍춘욱의 경제강의노트"
    ],
    "subtopics": [],
    "active": true
   },
   {
-   "id": "고용_경기",
-   "name": "고용·경기",
+   "id": "유가_에너지",
+   "name": "유가·에너지",
    "video_count": 4,
-   "channel_count": 2,
-   "total_views": 165524,
-   "latest": "2026-11-11T16:00:01+09:00",
+   "channel_count": 4,
+   "total_views": 487520,
+   "latest": "2026-11-11T17:59:10+09:00",
    "video_ids": [
-    "ahpwowdsCRE",
-    "av_-vajgmnQ",
-    "9Dksvq2zDIw",
-    "VCiuosfZ5Io"
-   ],
-   "channels": [
-    "경제사냥꾼",
-    "김영익의 경제스쿨"
-   ],
-   "subtopics": [
-    {
-     "word": "한국",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": false
-  },
-  {
-   "id": "부동산",
-   "name": "부동산",
-   "video_count": 3,
-   "channel_count": 2,
-   "total_views": 102369,
-   "latest": "2026-11-10T19:30:01+09:00",
-   "video_ids": [
-    "_HdvL23pMKM",
-    "kQHmm8EWcPk",
-    "HSxSkegXJHs"
+    "2yRQVzDTUPk",
+    "uzrCGuJvPPo",
+    "fUaXLMEP0oM",
+    "ZYuxRkuzf30"
    ],
    "channels": [
     "달란트투자",
-    "언더스탠딩"
+    "삼프로TV 3PROTV",
+    "염블리와 함께 (염승환)",
+    "증시각도기TV"
    ],
    "subtopics": [
     {
-     "word": "전세계",
+     "word": "11월",
      "videos": 2,
-     "channels": 1
+     "channels": 2
+    },
+    {
+     "word": "10일",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "AI",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "한국",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "급락",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "미국증시",
+   "name": "미국증시",
+   "video_count": 4,
+   "channel_count": 3,
+   "total_views": 459467,
+   "latest": "2026-11-11T11:02:39+09:00",
+   "video_ids": [
+    "IkccPzk-gNo",
+    "ra5nRE3x9qk",
+    "aOnxzN0P0iw",
+    "wiTydSuyYBI"
+   ],
+   "channels": [
+    "내일은 투자왕 - 김단테",
+    "미주은 (미국주식으로 은퇴하기)",
+    "소수몽키"
+   ],
+   "subtopics": [],
+   "active": false
+  },
+  {
+   "id": "중국경제",
+   "name": "중국경제",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 49466,
+   "latest": "2026-11-11T22:00:10+09:00",
+   "video_ids": [
+    "b-P8sffAfeM",
+    "LD1Mmw-OMkE",
+    "Siv7J1r5RaA"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제사냥꾼",
+    "증시각도기TV"
+   ],
+   "subtopics": [
+    {
+     "word": "중국",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "대표",
+     "videos": 2,
+     "channels": 2
     }
    ],
    "active": false
