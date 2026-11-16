@@ -1,24 +1,24 @@
 {
- "updated_at": "2026-11-16T10:28:58.371549+09:00",
+ "updated_at": "2026-11-16T16:27:13.759307+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 21,
-   "channel_count": 10,
-   "total_views": 2641731,
-   "latest": "2026-11-16T09:10:58+09:00",
+   "video_count": 18,
+   "channel_count": 9,
+   "total_views": 2718467,
+   "latest": "2026-11-16T15:38:28+09:00",
    "video_ids": [
-    "LagAldYbD8M",
-    "ue4sG-vBq7Y",
+    "JARdkbqxqDE",
+    "OK2FJONMpGA",
+    "G9xGEntpZOw",
+    "KHKXu_kP8_Y",
+    "rdGRHVkn2hA",
+    "SiPUXeRHkow",
     "bN_KFx1_uaM",
-    "UihZAstNiGU",
-    "mLfghqfrG1g",
     "IiYZBZjljAg",
     "WbRzJAiFTIg",
     "DgpgHDdInkg",
-    "GzDMiPDUZr0",
-    "P1m0QaKWzG0",
     "TyeDV2AfXzQ",
     "y4SfVrms8u0",
     "jeCTp_v_8-w",
@@ -26,10 +26,7 @@
     "3CpNdq7TYjM",
     "ebl3lHghkA8",
     "yagCF3JqwAE",
-    "WIhXr3Q0pU0",
-    "b82ouw7oVC0",
-    "naFa2zJEjpc",
-    "c9IrjtmkYrE"
+    "WIhXr3Q0pU0"
    ],
    "channels": [
     "815머니톡",
@@ -37,7 +34,6 @@
     "경제사냥꾼",
     "삼프로TV 3PROTV",
     "슈카월드",
-    "슈퍼개미 이세무사TV",
     "이효석아카데미",
     "증시각도기TV",
     "체슬리TV (박세익)",
@@ -46,79 +42,33 @@
    "subtopics": [
     {
      "word": "젠슨황",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "실적",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "대표",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "한국",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "전무",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "데이터센터",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "실적시즌",
-   "name": "실적시즌",
-   "video_count": 6,
-   "channel_count": 5,
-   "total_views": 302381,
-   "latest": "2026-11-16T09:10:58+09:00",
-   "video_ids": [
-    "LagAldYbD8M",
-    "WbRzJAiFTIg",
-    "mW4Bp0uo0eQ",
-    "GzDMiPDUZr0",
-    "WIhXr3Q0pU0",
-    "naFa2zJEjpc"
-   ],
-   "channels": [
-    "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "경제사냥꾼",
-    "삼프로TV 3PROTV",
-    "이효석아카데미"
-   ],
-   "subtopics": [
-    {
-     "word": "엔비디아",
      "videos": 4,
      "channels": 4
     },
     {
-     "word": "실적",
+     "word": "반도체",
      "videos": 3,
      "channels": 3
     },
     {
-     "word": "젠슨황",
+     "word": "SK하이닉스",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "새로운",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "이사",
+     "word": "차장",
      "videos": 2,
-     "channels": 1
+     "channels": 2
+    },
+    {
+     "word": "대표",
+     "videos": 2,
+     "channels": 2
     }
    ],
    "active": true
@@ -126,42 +76,100 @@
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 5,
-   "channel_count": 3,
-   "total_views": 373602,
-   "latest": "2026-11-15T20:00:00+09:00",
+   "video_count": 8,
+   "channel_count": 4,
+   "total_views": 690793,
+   "latest": "2026-11-16T15:30:30+09:00",
    "video_ids": [
-    "mW4Bp0uo0eQ",
-    "P1m0QaKWzG0",
-    "xrqbovX16L8",
+    "OK2FJONMpGA",
+    "G9xGEntpZOw",
+    "UhA5xmTjqJ4",
+    "KHKXu_kP8_Y",
+    "nRr8HYVQvMY",
+    "SiPUXeRHkow",
     "3CpNdq7TYjM",
     "ebl3lHghkA8"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "경제사냥꾼"
+    "경제사냥꾼",
+    "삼프로TV 3PROTV"
    ],
    "subtopics": [
     {
      "word": "AI",
+     "videos": 4,
+     "channels": 4
+    },
+    {
+     "word": "SK하이닉스",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "새로운",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "삼성전자",
+     "word": "차장",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "긴급시황",
      "videos": 2,
      "channels": 1
     },
     {
-     "word": "외국인",
+     "word": "엔비디아",
      "videos": 2,
      "channels": 1
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "실적시즌",
+   "name": "실적시즌",
+   "video_count": 5,
+   "channel_count": 4,
+   "total_views": 459405,
+   "latest": "2026-11-16T12:41:29+09:00",
+   "video_ids": [
+    "fsNl1qHldUo",
+    "KHKXu_kP8_Y",
+    "rdGRHVkn2hA",
+    "WbRzJAiFTIg",
+    "WIhXr3Q0pU0"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
+    "삼프로TV 3PROTV",
+    "이효석아카데미"
+   ],
+   "subtopics": [
+    {
+     "word": "젠슨황",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "엔비디아",
+     "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "실적",
+     "videos": 3,
+     "channels": 2
     },
     {
      "word": "대표",
      "videos": 2,
-     "channels": 1
+     "channels": 2
     }
    ],
    "active": true
@@ -170,17 +178,18 @@
    "id": "중국경제",
    "name": "중국경제",
    "video_count": 4,
-   "channel_count": 3,
-   "total_views": 347839,
-   "latest": "2026-11-15T14:55:14+09:00",
+   "channel_count": 4,
+   "total_views": 318960,
+   "latest": "2026-11-16T12:59:23+09:00",
    "video_ids": [
+    "60b1Ra7tCBc",
     "PlmuR8-saqQ",
     "Zdc7tqRXOeQ",
-    "mISlVnc8HPg",
     "3CpNdq7TYjM"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
+    "뉴욕주민",
     "달란트투자",
     "언더스탠딩"
    ],
@@ -188,7 +197,7 @@
     {
      "word": "중국",
      "videos": 3,
-     "channels": 2
+     "channels": 3
     },
     {
      "word": "한국",
@@ -199,30 +208,45 @@
    "active": true
   },
   {
+   "id": "금리_연준",
+   "name": "금리·연준",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 795854,
+   "latest": "2026-11-16T12:14:01+09:00",
+   "video_ids": [
+    "nRr8HYVQvMY",
+    "bN_KFx1_uaM",
+    "DgpgHDdInkg"
+   ],
+   "channels": [
+    "삼프로TV 3PROTV",
+    "이효석아카데미",
+    "증시각도기TV"
+   ],
+   "subtopics": [],
+   "active": true
+  },
+  {
    "id": "환율_달러",
    "name": "환율·달러",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 418695,
-   "latest": "2026-11-16T06:05:12+09:00",
+   "total_views": 129872,
+   "latest": "2026-11-16T12:09:47+09:00",
    "video_ids": [
+    "9dTjRAFYBBo",
     "IiYZBZjljAg",
-    "DgpgHDdInkg",
-    "b82ouw7oVC0"
+    "DgpgHDdInkg"
    ],
    "channels": [
     "경제 읽어주는 남자 (김광석)",
-    "이효석아카데미",
-    "증시각도기TV"
+    "삼프로TV 3PROTV",
+    "이효석아카데미"
    ],
    "subtopics": [
     {
      "word": "AI",
-     "videos": 3,
-     "channels": 3
-    },
-    {
-     "word": "흔들리",
      "videos": 2,
      "channels": 2
     }
@@ -234,7 +258,7 @@
    "name": "정책·정치",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 124951,
+   "total_views": 145896,
    "latest": "2026-11-16T04:15:34+09:00",
    "video_ids": [
     "A758V4qMjJs",
