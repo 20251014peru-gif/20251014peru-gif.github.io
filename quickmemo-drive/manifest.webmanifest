@@ -1,0 +1,26 @@
+{
+  "id": "/quickmemo-drive/",
+  "name": "순간메모",
+  "short_name": "순간메모",
+  "lang": "ko",
+  "description": "메모와 사진을 기기에 저장하고 Google Drive로 동기화합니다.",
+  "start_url": "/quickmemo-drive/?source=homescreen",
+  "scope": "/quickmemo-drive/",
+  "display": "standalone",
+  "background_color": "#faf9f7",
+  "theme_color": "#fff9f5",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
