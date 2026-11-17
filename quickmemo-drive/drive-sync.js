@@ -10,7 +10,21 @@ async function request(path,opts={}){
  const r=await fetch(path.startsWith('https://')?path:API+path,{...opts,headers:{...opts.headers,Authorization:'Bearer '+token}});
  if(!r.ok){if(r.status===401){token='';connected=false;await window.QMDriveSession?.clear();}throw Error('Drive 요청 실패 ('+r.status+'): '+(await r.text()).slice(0,160))}return r;
 }
-async function list(){let out=[],page='';do{const q=new URLSearchParams({q:"trashed=false and appProperties has { key='qmDrive' and value='v1' }",fields:'nextPageToken,files(id,name,mimeType,appProperties)',pageSize:'1000'});if(page)q.set('pageToken',page);const r=await(await request('files?'+q)).json();out.push(...r.files);page=r.nextPageToken||''}while(page);return out}
+async function fullList(){let out=[],page='';do{const q=new URLSearchParams({q:"trashed=false and appProperties has { key='qmDrive' and value='v1' }",fields:'nextPageToken,files(id,name,mimeType,appProperties)',pageSize:'1000'});if(page)q.set('pageToken',page);const r=await(await request('files?'+q)).json();out.push(...r.files);page=r.nextPageToken||''}while(page);return out}
+const INDEX='__qm_drive_index_v1';
+async function list(){
+ let checkpoint=await getOne('revisions',INDEX);
+ if(!checkpoint?.cursor){const start=await(await request('changes/startPageToken?fields=startPageToken')).json();const files=await fullList();await enqueue(()=>put('revisions',{id:INDEX,cursor:start.startPageToken,files}));return files}
+ const files=new Map(checkpoint.files.map(f=>[f.id,f]));let cursor=checkpoint.cursor;
+ try{do{const q=new URLSearchParams({pageToken:cursor,pageSize:'1000',spaces:'drive',fields:'nextPageToken,newStartPageToken,changes(fileId,removed,file(id,name,mimeType,appProperties,trashed))'});
+ const page=await(await request('changes?'+q)).json();for(const c of page.changes||[]){if(c.removed||c.file?.trashed)files.delete(c.fileId);else if(c.file?.appProperties?.qmDrive==='v1')files.set(c.fileId,c.file);else files.delete(c.fileId)}
+ if(page.nextPageToken){cursor=page.nextPageToken;continue}if(!page.newStartPageToken)throw Error('변경 확인 응답 오류');cursor=page.newStartPageToken;break}while(true)
+ }catch(e){if(e.message.includes('(410)')){await enqueue(()=>put('revisions',{id:INDEX,cursor:null,files:[]}));return list()}throw e}
+ const out=[...files.values()];await enqueue(()=>put('revisions',{id:INDEX,cursor,files:out}));return out;
+}
+async function pool(items,fn){let next=0;const out=new Array(items.length);await Promise.all(Array.from({length:Math.min(2,items.length)},async()=>{while(next<items.length){const i=next++;out[i]=await fn(items[i],i)}}));return out}
+const assetJobs=new Map();
+async function imageHash(item){if(item.sha256&&item.hashSize===item.blob.size&&item.hashType===item.blob.type)return item.sha256;const key=await hash(await item.blob.arrayBuffer());await enqueue(()=>put('images',{...item,sha256:key,hashSize:item.blob.size,hashType:item.blob.type}));return key}
 async function create(meta,blob){
  const boundary='qm_'+crypto.randomUUID();const form=new Blob(['--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+boundary+'\r\nContent-Type: '+(blob.type||'application/octet-stream')+'\r\n\r\n',blob,'\r\n--'+boundary+'--'],{type:'multipart/related; boundary='+boundary});
  return (await request(UP+'files?uploadType=multipart&fields=id,name,appProperties',{method:'POST',headers:{'Content-Type':form.type},body:form})).json();
@@ -19,15 +33,15 @@ async function getFolder(){const f=remoteFiles.find(x=>x.appProperties?.kind==='
  return (await(await request('files?fields=id',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'순간메모',mimeType:'application/vnd.google-apps.folder',appProperties:{qmDrive:'v1',kind:'folder'}})})).json()).id;
 }
 async function uploadAsset(id){const item=await getOne('images',id);if(!item?.blob)throw Error('기기에 사진이 없습니다: '+id);
- const key=await hash(await item.blob.arrayBuffer());let f=remoteFiles.find(f=>f.appProperties?.asset===key);
- if(!f){f=await create({name:key,parents:[folder],appProperties:{qmDrive:'v1',kind:'asset',asset:key}},item.blob);remoteFiles.push(f)}return key;
+ const key=await imageHash(item);if(assetJobs.has(key))return assetJobs.get(key);
+ const job=(async()=>{let f=remoteFiles.find(f=>f.appProperties?.asset===key);if(!f){say('사진을 Drive에 올리는 중…');f=await create({name:key,parents:[folder],appProperties:{qmDrive:'v1',kind:'asset',asset:key}},item.blob);remoteFiles.push(f)}return key})();assetJobs.set(key,job);try{return await job}finally{assetJobs.delete(key)};
 }
-async function prepareImages(r){for(const id of r.note.images){const key=r.assets[id],present=await getOne('images',id);if(present){if(await hash(await present.blob.arrayBuffer())!==key)throw Error('사진 ID 충돌: '+id);continue}
+async function prepareImages(r){await pool(r.note.images,async id=>{const key=r.assets[id],present=await getOne('images',id);if(present){if(await imageHash(present)!==key)throw Error('사진 ID 충돌: '+id);return}
  const f=remoteFiles.find(f=>f.appProperties?.asset===key);if(!f)throw Error('클라우드 사진 누락: '+id);
- const blob=await(await request('files/'+encodeURIComponent(f.id)+'?alt=media')).blob();if(blob.size>20*1024*1024||!blob.type.startsWith('image/'))throw Error('잘못된 사진 파일');if(await hash(await blob.arrayBuffer())!==key)throw Error('사진 검증 실패');
- await enqueue(()=>put('images',{id,blob,type:blob.type,name:id}));}}
-async function cacheRevisions(){let result=[];for(const f of remoteFiles.filter(f=>f.appProperties?.kind==='revision')){let r=await getOne('revisions',f.id);if(!r){r=await(await request('files/'+encodeURIComponent(f.id)+'?alt=media')).json();if(!C.valid(r))throw Error('잘못된 클라우드 메모');await enqueue(()=>put('revisions',{...r,id:f.id}))}result.push(r)}return result}
-async function publish(n){const assets={};for(const id of n.images||[])assets[id]=await uploadAsset(id);
+ say('사진을 기기에 받는 중…');const blob=await(await request('files/'+encodeURIComponent(f.id)+'?alt=media')).blob();if(blob.size>20*1024*1024||!blob.type.startsWith('image/'))throw Error('잘못된 사진 파일');if(await hash(await blob.arrayBuffer())!==key)throw Error('사진 검증 실패');
+ await enqueue(()=>put('images',{id,blob,type:blob.type,name:id,sha256:key,hashSize:blob.size,hashType:blob.type}));})}
+async function cacheRevisions(){const cache=new Map((await getAll('revisions')).map(r=>[r.id,r]));return pool(remoteFiles.filter(f=>f.appProperties?.kind==='revision'),async f=>{let r=cache.get(f.id);if(!r){r=await(await request('files/'+encodeURIComponent(f.id)+'?alt=media')).json();if(!C.valid(r))throw Error('잘못된 클라우드 메모');await enqueue(()=>put('revisions',{...r,id:f.id}))}return r})}
+async function publish(n){const assets={};await pool(n.images||[],async id=>{assets[id]=await uploadAsset(id)});
  const r={v:1,rid:crypto.randomUUID(),parents:n._sync?.parents||[],note:{...C.clean(n),updated:n.updated},assets};
  const f=await create({name:'note-'+r.rid+'.json',parents:[folder],mimeType:'application/json',appProperties:{qmDrive:'v1',kind:'revision'}},new Blob([JSON.stringify(r)],{type:'application/json'}));
  remoteFiles.push(f);await enqueue(()=>put('revisions',{...r,id:f.id}));
@@ -35,6 +49,7 @@ async function publish(n){const assets={};for(const id of n.images||[])assets[id
 }
 async function apply(r,id,parents,conflict=false){
  if(active?.id===id){rerun=true;return}
+ const prior=await getOne('notes',id);if(conflict&&prior)return;if(prior&&prior._sync?.signature===C.signature(prior)&&JSON.stringify(prior._sync.parents)===JSON.stringify(parents)){await prepareImages(r);return}
  await prepareImages(r);
  await enqueue(async()=>{const existing=await getOne('notes',id);if(existing&&existing._sync?.signature!==C.signature(existing))return;
  if(conflict&&existing)return;
@@ -46,7 +61,7 @@ async function cycle(){
  say('Drive 동기화 중…');rerun=false;
  await pendingWrites;
  remoteFiles=await list();folder=await getFolder();const revisions=await cacheRevisions();
- for(const n of await getAll('notes')){if(n._sync?.signature===C.signature(n))continue;revisions.push(await publish(structuredClone(n)))}
+ for(const n of (await getAll('notes')).sort((a,b)=>(a.images?.length||0)-(b.images?.length||0))){if(n._sync?.signature===C.signature(n))continue;revisions.push(await publish(structuredClone(n)))}
  for(const [id,rs] of C.groups(revisions)){const hs=C.heads(rs);if(!hs.length)throw Error('메모 이력 오류');const winner=hs[hs.length-1];
  await apply(winner,id,hs.map(r=>r.rid));for(const conflict of hs.slice(0,-1))await apply(conflict,'conflict-'+conflict.rid,[],true)}
  render();say(rerun?'기기 저장 완료 · 편집 중인 메모는 닫은 뒤 병합합니다':'✓ Drive 동기화 완료 · '+new Date().toLocaleTimeString('ko-KR'));
@@ -72,3 +87,4 @@ async function restoreSession(){try{const saved=await window.QMDriveSession?.loa
 if(typeof db!=='undefined'&&db)restoreSession();else window.addEventListener('qm-ready',restoreSession,{once:true});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>say('오프라인 화면 준비 실패 · 온라인에서 새로고침하세요'));
 })();
+
