@@ -1,4 +1,4 @@
-const CACHE='quickmemo-drive-v3-session';
+const CACHE='quickmemo-drive-v4-incremental';
 const FILES=['./','./index.html','./drive-config.js','./sync-core.js','./drive-sync.js','./install.js','./install.html','./session-cache.js','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES))));
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
