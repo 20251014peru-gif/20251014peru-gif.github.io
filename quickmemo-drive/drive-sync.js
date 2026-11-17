@@ -6,9 +6,9 @@ let token='',expiry=0,client,folder='',remoteFiles=[],timer,connected=false,reru
 const say=s=>state.textContent=s;
 const hash=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(x=>x.toString(16).padStart(2,'0')).join('');
 async function request(path,opts={}){
- if(!token||Date.now()>=expiry)throw Error('Google Drive 연결 버튼으로 다시 로그인하세요');
+ if(!token||Date.now()>=expiry){connected=false;document.getElementById('cloudLogin').textContent='Drive 다시 연결';throw Error('연결 계정은 기억하고 있습니다. Google 권한 만료로 다시 연결해 주세요')}
  const r=await fetch(path.startsWith('https://')?path:API+path,{...opts,headers:{...opts.headers,Authorization:'Bearer '+token}});
- if(!r.ok){if(r.status===401){token='';connected=false}throw Error('Drive 요청 실패 ('+r.status+'): '+(await r.text()).slice(0,160))}return r;
+ if(!r.ok){if(r.status===401){token='';connected=false;await window.QMDriveSession?.clear();}throw Error('Drive 요청 실패 ('+r.status+'): '+(await r.text()).slice(0,160))}return r;
 }
 async function list(){let out=[],page='';do{const q=new URLSearchParams({q:"trashed=false and appProperties has { key='qmDrive' and value='v1' }",fields:'nextPageToken,files(id,name,mimeType,appProperties)',pageSize:'1000'});if(page)q.set('pageToken',page);const r=await(await request('files?'+q)).json();out.push(...r.files);page=r.nextPageToken||''}while(page);return out}
 async function create(meta,blob){
@@ -59,13 +59,16 @@ async function loginResult(response){try{
  const info=await(await request('about?fields=user(permissionId,emailAddress)')).json(),account=info.user?.permissionId;if(!account)throw Error('계정 확인 실패');
  const bound=localStorage.getItem('qm-drive-owner');if(bound&&bound!==account){token='';throw Error('이 브라우저는 다른 계정에 연결돼 있습니다. 계정 혼합을 방지하기 위해 연결을 중단했습니다.')}
  if(!bound){if((await getAll('notes')).length&&!confirm('이 기기의 메모를 '+info.user.emailAddress+'의 Drive에 연결할까요?')){token='';return}localStorage.setItem('qm-drive-owner',account)}
- connected=true;document.getElementById('cloudSync').hidden=false;document.getElementById('cloudLogout').hidden=false;say('연결됨: '+info.user.emailAddress);await sync();
+ try{await window.QMDriveSession?.save({token,expiry,account,email:info.user.emailAddress})}catch(e){say('연결 정보 저장 불가 · 현재 창에서는 연결됩니다')}
+ connected=true;document.getElementById('cloudLogin').textContent='Drive 연결됨';document.getElementById('cloudSync').hidden=false;document.getElementById('cloudLogout').hidden=false;say('연결됨: '+info.user.emailAddress);await sync();
  }catch(e){say('⚠ '+e.message)}}
 document.getElementById('cloudLogin').onclick=()=>{if(!window.google?.accounts?.oauth2){say('Google 로그인 로딩 중입니다. 인터넷 연결을 확인하고 다시 눌러주세요.');return}if(!navigator.locks){say('최신 Chrome 또는 Safari에서 열어주세요.');return}
- client=google.accounts.oauth2.initTokenClient({client_id:window.QM_DRIVE.clientId,scope:'https://www.googleapis.com/auth/drive.file',callback:loginResult,error_callback:e=>say('로그인 창을 열지 못했습니다: '+e.type)});client.requestAccessToken({prompt:'select_account'})};
+ client=google.accounts.oauth2.initTokenClient({client_id:window.QM_DRIVE.clientId,scope:'https://www.googleapis.com/auth/drive.file',callback:loginResult,error_callback:e=>say('로그인 창을 열지 못했습니다: '+e.type)});client.requestAccessToken({prompt:localStorage.getItem('qm-drive-owner')?'':'select_account'})};
 document.getElementById('cloudSync').onclick=sync;
-document.getElementById('cloudLogout').onclick=()=>{if(busy){say('동기화가 끝난 뒤 연결을 해제하세요.');return}token='';connected=false;document.getElementById('cloudSync').hidden=true;document.getElementById('cloudLogout').hidden=true;say('연결 해제 · 기기 기록 유지 · 계정 보호를 위해 연결 계정은 유지됩니다')};
+document.getElementById('cloudLogout').onclick=async()=>{if(busy){say('동기화가 끝난 뒤 연결을 해제하세요.');return}await window.QMDriveSession?.clear();token='';connected=false;document.getElementById('cloudLogin').textContent='Google Drive 연결';document.getElementById('cloudSync').hidden=true;document.getElementById('cloudLogout').hidden=true;say('연결 해제 · 기기 기록 유지 · 계정 보호를 위해 연결 계정은 유지됩니다')};
 window.addEventListener('qm-local-save',schedule);window.addEventListener('online',schedule);window.addEventListener('offline',()=>say('오프라인 · 기기에 저장 중'));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});setInterval(()=>{if(!document.hidden)sync()},60000);
+async function restoreSession(){try{const saved=await window.QMDriveSession?.load();if(!saved){if(localStorage.getItem('qm-drive-owner')){say('연결 계정 기억됨 · Drive 연결 버튼으로 재연결');document.getElementById('cloudLogin').textContent='Drive 다시 연결'}return}if(saved.account!==localStorage.getItem('qm-drive-owner'))return;if(saved.expiry<=Date.now()){await window.QMDriveSession.clear();say('연결 계정 기억됨 · Google 권한 갱신 필요');document.getElementById('cloudLogin').textContent='Drive 다시 연결';return}token=saved.token;expiry=saved.expiry;connected=true;document.getElementById('cloudLogin').textContent='Drive 연결됨';document.getElementById('cloudSync').hidden=false;document.getElementById('cloudLogout').hidden=false;say('Drive 연결 복원됨');await sync()}catch(e){say('연결 복원 실패 · Drive 연결을 눌러주세요')}}
+if(typeof db!=='undefined'&&db)restoreSession();else window.addEventListener('qm-ready',restoreSession,{once:true});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>say('오프라인 화면 준비 실패 · 온라인에서 새로고침하세요'));
 })();
