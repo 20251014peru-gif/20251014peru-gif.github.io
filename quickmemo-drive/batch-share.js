@@ -1,0 +1,17 @@
+(()=>{'use strict';let dialog=null,opening=false;const button=document.getElementById('shareSelected');
+function update(){button.disabled=!selected.size;button.textContent=selected.size?'선택 '+selected.size+'건 공유':'선택 메모 공유'}
+const previousRender=render;render=function(){previousRender();update()};document.addEventListener('change',e=>{if(e.target.matches?.('[data-select]'))update()});
+function close(){if(dialog?.open)dialog.close()}
+async function open(){if(opening||!selected.size)return;opening=true;button.disabled=true;let text='',privateData=false;const chosen=[...selected],blocks=[];try{close();
+ for(const id of chosen){const raw=notes.find(n=>n.id===id);if(!raw)throw Error('선택한 메모가 변경되었습니다. 다시 선택하세요.');let note;try{note=await QMDailyGate.open(raw);if(!note)return;privateData||=note.type==='daily';const type=TYPES.find(t=>t[0]===note.type)?.[1]||'메모';blocks.push('['+type+'] '+dateLabel(dateKey(note.created))+'\n'+(note.person?'상대: '+note.person+'\n':'')+(note.phone?'전화: '+note.phone+'\n':'')+(note.type==='money'?(note.scope==='work'?'업무':'개인')+' '+(note.direction==='income'?'수입':'지출')+' '+money(note.amount)+'\n':'')+(note.body||'')+(note.images?.length?'\n[사진 '+note.images.length+'장 · 사진은 개별 공유]':''))}finally{if(raw.type==='daily')QMDailyGate.release(id)}}
+ text=blocks.join('\n\n──────────\n\n');blocks.length=0;
+ const d=document.createElement('dialog');dialog=d;d.className='qm-share-dialog';d.setAttribute('aria-label','선택 메모 공유');if(privateData)d.dataset.privateNote='batch';
+ d.innerHTML='<h2></h2><p>공유창에서 카카오톡과 받을 사람을 선택하세요.</p><pre style="max-height:45dvh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere"></pre><div class="footerline"><button type="button" class="primary" data-send>카카오톡 등으로 공유</button><button type="button" class="softbtn" data-copy>내용 복사</button><button type="button" class="softbtn" data-file>텍스트 파일 저장</button><button type="button" class="softbtn" data-close>닫기</button></div><p role="status"></p>';
+ d.querySelector('h2').textContent='메모 '+chosen.length+'건 공유';d.querySelector('pre').textContent=text;const status=d.querySelector('[role=status]');
+ d.querySelector('[data-send]').onclick=()=>{if(!navigator.share){status.textContent='이 PC 브라우저는 공유창을 지원하지 않습니다. 내용을 복사해서 카카오톡에 붙여넣으세요.';return}navigator.share({title:'순간메모 '+chosen.length+'건',text}).then(()=>{if(d.open)status.textContent='공유창 전달 완료'}).catch(e=>{if(e.name!=='AbortError'&&d.open)status.textContent='공유창을 열지 못했습니다. 내용 복사를 이용하세요.'})};
+ d.querySelector('[data-copy]').onclick=async()=>{try{await navigator.clipboard.writeText(text);if(d.open)status.textContent='복사했습니다. 카카오톡에 붙여넣으세요.'}catch{if(d.open)status.textContent='위 내용을 선택해 복사하세요.'}};
+ d.querySelector('[data-file]').onclick=()=>download(new Blob([text],{type:'text/plain;charset=utf-8'}),'순간메모_'+chosen.length+'건.txt');d.querySelector('[data-close]').onclick=close;
+ d.addEventListener('close',()=>{text='';d.querySelector('pre').textContent='';for(const b of d.querySelectorAll('button'))b.onclick=null;d.remove();if(dialog===d)dialog=null},{once:true});document.body.append(d);d.showModal();
+ }catch(e){alert('메모 공유 실패: '+e.message)}finally{blocks.length=0;opening=false;update()}}
+button.onclick=open;document.addEventListener('visibilitychange',()=>{if(document.hidden&&dialog?.dataset.privateNote)close()});window.addEventListener('pagehide',close);const oldPrivate=QMMedia.closePrivate;QMMedia.closePrivate=function(){if(dialog?.dataset.privateNote)close();oldPrivate()};if(window.QMAppReady)update();else window.addEventListener('qm-ready',update,{once:true});
+})();
