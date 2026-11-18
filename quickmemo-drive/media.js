@@ -1,7 +1,7 @@
 (()=>{'use strict';const gate=window.QMDailyGate;let gallery,shareDialog,photos=[],photoIndex=0,current=null,objectUrl='',serial=0,scale=1,tx=0,ty=0,gesture=null;let galleryNoteId=null,deleting=false;const pointers=new Map();
 const status=text=>document.getElementById('cloudState').textContent=text;
 const allowed=async n=>!gate.isLocked(n)||await gate.require(n.id);
-function memoText(n){const type=TYPES.find(t=>t[0]===n.type)?.[1]||'메모';return '['+type+'] '+dateLabel(dateKey(n.created))+'\n'+(n.person?'상대: '+n.person+'\n':'')+(n.phone?'전화: '+n.phone+'\n':'')+(n.type==='money'?'사용일: '+recordDate(n)+'\n'+(n.scope==='work'?'업무':'개인')+' '+(n.direction==='income'?'수입':'지출')+' '+money(n.amount)+'\n':'')+(n.body||'')}
+function memoText(n){const type=TYPES.find(t=>t[0]===n.type)?.[1]||'메모';return '['+type+'] '+dateLabel(recordDate(n))+'\n'+(n.person?'상대: '+n.person+'\n':'')+(n.phone?'전화: '+n.phone+'\n':'')+(n.type==='money'?'사용일: '+recordDate(n)+'\n'+(n.scope==='work'?'업무':'개인')+' '+(n.direction==='income'?'수입':'지출')+' '+money(n.amount)+'\n':'')+(n.body||'')}
 function failure(e){if(e.name!=='AbortError')alert('이 기기에서 공유창을 열 수 없습니다. 복사 또는 저장 버튼을 이용해 주세요.')}
 function share(data){if(navigator.share)return navigator.share(data).catch(failure);return Promise.reject(Error('공유 미지원'))}
 function closeGallery(){serial++;current=null;pointers.clear();gesture=null;if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=''}if(gallery?.open)gallery.close();if(galleryNoteId)gate.release(galleryNoteId)}
