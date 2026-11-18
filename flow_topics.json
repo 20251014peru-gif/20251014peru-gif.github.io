@@ -1,14 +1,16 @@
 {
- "updated_at": "2026-11-18T21:24:46.104333+09:00",
+ "updated_at": "2026-11-19T05:57:53.343423+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 31,
-   "channel_count": 18,
-   "total_views": 2475816,
-   "latest": "2026-11-18T20:40:03+09:00",
+   "video_count": 29,
+   "channel_count": 17,
+   "total_views": 2610409,
+   "latest": "2026-11-19T04:44:40+09:00",
    "video_ids": [
+    "EspZGxZgc8w",
+    "-QDAH1yDHVw",
     "Z4fzVAS4KCc",
     "5ejfTU3cvac",
     "TuFJU0Awido",
@@ -22,11 +24,9 @@
     "LQobCa9j_xo",
     "mYrEXYkomO4",
     "LkOjLGHY4vQ",
-    "EspZGxZgc8w",
     "1XhjKyvVEQg",
     "H5P_50Vg1vA",
     "dHmiFEuyjWw",
-    "KmpQIVj1gTQ",
     "JhrRZWnM0tA",
     "kZAYyNhv5p4",
     "SydABw5Krys",
@@ -37,9 +37,7 @@
     "vb60Y8hT9wU",
     "k_knS1d1FJI",
     "CGNAZL0GdHE",
-    "tXq_SjCHvek",
-    "tfcHULzioZc",
-    "-DfxOd9YQI8"
+    "tXq_SjCHvek"
    ],
    "channels": [
     "815머니톡",
@@ -54,7 +52,6 @@
     "소수몽키",
     "슈카월드",
     "슈퍼개미 이세무사TV",
-    "언더스탠딩",
     "염블리와 함께 (염승환)",
     "이효석아카데미",
     "증시각도기TV",
@@ -64,8 +61,8 @@
    "subtopics": [
     {
      "word": "실적",
-     "videos": 6,
-     "channels": 4
+     "videos": 7,
+     "channels": 5
     },
     {
      "word": "젠슨",
@@ -100,7 +97,7 @@
    "name": "반도체",
    "video_count": 12,
    "channel_count": 9,
-   "total_views": 1875403,
+   "total_views": 2116739,
    "latest": "2026-11-18T20:01:26+09:00",
    "video_ids": [
     "mTo4nBwQ3RA",
@@ -166,7 +163,7 @@
    "name": "국내증시",
    "video_count": 9,
    "channel_count": 6,
-   "total_views": 567236,
+   "total_views": 817968,
    "latest": "2026-11-18T20:00:22+09:00",
    "video_ids": [
     "5ejfTU3cvac",
@@ -226,14 +223,14 @@
    "name": "실적시즌",
    "video_count": 8,
    "channel_count": 6,
-   "total_views": 805573,
-   "latest": "2026-11-18T19:11:25+09:00",
+   "total_views": 889415,
+   "latest": "2026-11-18T22:00:03+09:00",
    "video_ids": [
+    "-QDAH1yDHVw",
     "EsqB5CuzaWE",
     "tJnXBPZH_74",
     "w5MbDMJWVSI",
     "H5P_50Vg1vA",
-    "KmpQIVj1gTQ",
     "JhrRZWnM0tA",
     "kZAYyNhv5p4",
     "TZFEsDeRWNE"
@@ -254,8 +251,8 @@
     },
     {
      "word": "실적",
-     "videos": 5,
-     "channels": 4
+     "videos": 6,
+     "channels": 5
     },
     {
      "word": "애플",
@@ -281,45 +278,11 @@
    "active": true
   },
   {
-   "id": "정책_정치",
-   "name": "정책·정치",
-   "video_count": 5,
-   "channel_count": 4,
-   "total_views": 676798,
-   "latest": "2026-11-18T16:55:32+09:00",
-   "video_ids": [
-    "Kvj3OOxS_v0",
-    "eKQHEGJ_Ayg",
-    "MQ8gneRrYuw",
-    "tD2Ehtle4hk",
-    "tXq_SjCHvek"
-   ],
-   "channels": [
-    "경제사냥꾼",
-    "소수몽키",
-    "언더스탠딩",
-    "증시각도기TV"
-   ],
-   "subtopics": [
-    {
-     "word": "미국",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "규제",
-     "videos": 2,
-     "channels": 2
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "관세_무역",
    "name": "관세·무역",
    "video_count": 4,
    "channel_count": 3,
-   "total_views": 500963,
+   "total_views": 657680,
    "latest": "2026-11-18T18:05:08+09:00",
    "video_ids": [
     "PozFDkmVkG8",
@@ -342,37 +305,47 @@
    "active": true
   },
   {
-   "id": "중국경제",
-   "name": "중국경제",
-   "video_count": 3,
+   "id": "정책_정치",
+   "name": "정책·정치",
+   "video_count": 4,
    "channel_count": 3,
-   "total_views": 149877,
-   "latest": "2026-11-18T16:30:05+09:00",
+   "total_views": 759204,
+   "latest": "2026-11-18T16:55:32+09:00",
    "video_ids": [
-    "xNqk5NWoNR8",
-    "eKQHEGJ_Ayg",
-    "k_knS1d1FJI"
+    "Kvj3OOxS_v0",
+    "MQ8gneRrYuw",
+    "tD2Ehtle4hk",
+    "tXq_SjCHvek"
    ],
    "channels": [
-    "경제사냥꾼",
-    "달란트투자",
+    "소수몽키",
+    "언더스탠딩",
+    "증시각도기TV"
+   ],
+   "subtopics": [],
+   "active": true
+  },
+  {
+   "id": "2차전지",
+   "name": "2차전지",
+   "video_count": 3,
+   "channel_count": 2,
+   "total_views": 477417,
+   "latest": "2026-11-18T21:25:34+09:00",
+   "video_ids": [
+    "NssIoVZGVS8",
+    "w5MbDMJWVSI",
+    "HCLJqLCO8yY"
+   ],
+   "channels": [
+    "언더스탠딩",
     "염블리와 함께 (염승환)"
    ],
    "subtopics": [
     {
-     "word": "반도체",
+     "word": "테슬라",
      "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "미국",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "규제",
-     "videos": 2,
-     "channels": 2
+     "channels": 1
     }
    ],
    "active": true
