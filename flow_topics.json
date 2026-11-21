@@ -1,14 +1,15 @@
 {
- "updated_at": "2026-11-21T09:26:33.091324+09:00",
+ "updated_at": "2026-11-21T11:55:25.883123+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 17,
+   "video_count": 18,
    "channel_count": 11,
-   "total_views": 1611786,
-   "latest": "2026-11-21T02:17:22+09:00",
+   "total_views": 1759439,
+   "latest": "2026-11-21T11:32:59+09:00",
    "video_ids": [
+    "pevfIGVAFFs",
     "cQHMzYRaexc",
     "_PhQeyrefkg",
     "3PTKmp5zdh8",
@@ -57,12 +58,12 @@
      "channels": 3
     },
     {
-     "word": "IPO",
-     "videos": 3,
+     "word": "11월",
+     "videos": 4,
      "channels": 2
     },
     {
-     "word": "11월",
+     "word": "IPO",
      "videos": 3,
      "channels": 2
     },
@@ -79,7 +80,7 @@
    "name": "반도체",
    "video_count": 13,
    "channel_count": 9,
-   "total_views": 569538,
+   "total_views": 659656,
    "latest": "2026-11-21T08:43:08+09:00",
    "video_ids": [
     "UIzSvimZ2s0",
@@ -146,16 +147,16 @@
    "name": "국내증시",
    "video_count": 9,
    "channel_count": 5,
-   "total_views": 1033286,
-   "latest": "2026-11-21T08:30:26+09:00",
+   "total_views": 1039272,
+   "latest": "2026-11-21T11:00:02+09:00",
    "video_ids": [
+    "cJj2TjoiV10",
     "TbCOzdqUfMw",
     "uPfwN34xlpE",
     "FPJXbdEXDdM",
     "F8itDHJlalE",
     "_bZb9_odt9c",
     "2gvPe2UYxNI",
-    "-HaqruPY5Rg",
     "ODiEz3dslcE",
     "VyhZerMnGNQ"
    ],
@@ -169,8 +170,13 @@
    "subtopics": [
     {
      "word": "코스피",
-     "videos": 4,
+     "videos": 5,
      "channels": 3
+    },
+    {
+     "word": "대표",
+     "videos": 4,
+     "channels": 2
     },
     {
      "word": "증시",
@@ -178,22 +184,17 @@
      "channels": 2
     },
     {
-     "word": "외국인",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "대표",
-     "videos": 3,
-     "channels": 2
-    },
-    {
-     "word": "공매",
-     "videos": 3,
+     "word": "한국증시",
+     "videos": 2,
      "channels": 2
     },
     {
      "word": "앤트로픽",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "금요일",
      "videos": 2,
      "channels": 2
     }
@@ -205,7 +206,7 @@
    "name": "일본·엔화",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 909827,
+   "total_views": 974476,
    "latest": "2026-11-21T08:30:26+09:00",
    "video_ids": [
     "TbCOzdqUfMw",
@@ -238,7 +239,7 @@
    "name": "관세·무역",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 522251,
+   "total_views": 535158,
    "latest": "2026-11-20T20:00:20+09:00",
    "video_ids": [
     "uPfwN34xlpE",
@@ -271,7 +272,7 @@
    "name": "금리·연준",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 359080,
+   "total_views": 372558,
    "latest": "2026-11-20T19:24:21+09:00",
    "video_ids": [
     "IkpZbg19GV0",
@@ -289,23 +290,39 @@
    "active": true
   },
   {
-   "id": "환율_달러",
-   "name": "환율·달러",
+   "id": "미국증시",
+   "name": "미국증시",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 440098,
-   "latest": "2026-11-20T18:05:09+09:00",
+   "total_views": 392414,
+   "latest": "2026-11-21T08:40:28+09:00",
    "video_ids": [
-    "f_TIWYq6hfI",
-    "-vR1-SjKtXI",
-    "nOCg8pjv08M"
+    "20qFPmna5rU",
+    "cQHMzYRaexc",
+    "3PTKmp5zdh8"
    ],
    "channels": [
-    "경제 읽어주는 남자 (김광석)",
-    "뉴욕주민",
-    "증시각도기TV"
+    "815머니톡",
+    "내일은 투자왕 - 김단테",
+    "이효석아카데미"
    ],
-   "subtopics": [],
+   "subtopics": [
+    {
+     "word": "나스닥",
+     "videos": 3,
+     "channels": 3
+    },
+    {
+     "word": "앤트로픽",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "AI",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
    "active": true
   },
   {
@@ -313,7 +330,7 @@
    "name": "고용·경기",
    "video_count": 5,
    "channel_count": 2,
-   "total_views": 577891,
+   "total_views": 616865,
    "latest": "2026-11-20T18:45:13+09:00",
    "video_ids": [
     "PHU46Tg0Msw",
