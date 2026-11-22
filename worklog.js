@@ -6784,7 +6784,8 @@ async function pwChangeMaster(){
    순서 ① 암호화해서 복사  ② 풀어서 원문과 같은지 확인  ③ 클라우드에 올라갔는지 확인
         ④ 달님이 허락하면 원본 삭제.  ④ 전에는 원본을 건드리지 않고(표시만 남김),
         어느 단계든 실패하면 원본은 그대로 둔다. */
-const PW_MOVE_CAT="이전된 메모", PW_MOVE_SUB="비밀 메모";
+/* 비번 탭 목록은 「업무시스템」 분류만 그린다(pwRenderList) — 다른 분류로 옮기면 저장돼도 화면에 안 보인다 */
+const PW_MOVE_CAT="업무시스템", PW_MOVE_SUB="비밀 메모";
 function pwSecretMemos(){
   return (entries||[]).filter(e=>e && e.kind==="memo" && (e.secret===true || String(e.title||"").indexOf("🔒")===0));
 }
@@ -23866,7 +23867,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v403-1122-2305';
+  var JS_BUILD = 'v403-1122-2326';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
