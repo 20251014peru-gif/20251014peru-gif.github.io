@@ -1378,6 +1378,9 @@ main.wrap{ max-width:1600px !important; width:100% !important; margin-left:auto 
 .memo-filter-btn {
   /* 입체감 버튼 스타일 */
 }
+
+/* 2026-11-22 — 노션으로 옮긴 탭 숨김 */
+.v43-tab[data-v43tab="life"],.v43-tab[data-v43tab="main"],.v43-tab[data-v43tab="data"],.v43-tab[data-v43tab="calendar"],.v43-tab[data-v43tab="accident"],.v43-tab[data-v43tab="progress"],.v43-tab[data-v43tab="material"],.v43-tab[data-v43tab="diag"],.v43-tab[data-v43tab="ai"]{display:none!important}
 </style>
 
 <!-- 🐞 디버그 패널 -->
@@ -3591,6 +3594,10 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     /* 2026-11-22 달님 : 「개인 탭은 노션으로 옮겼다 — 프로그램에서 개인 탭만 뺀다」
        데이터는 그대로 두고 화면만 막는다. 개인으로 가려 하면 📋 기록으로 보낸다. */
     if(name==='life') name='main';
+    /* 2026-11-22 달님 : 「지출정산·파일/폴더 링크만 남기고 나머지는 노션으로」
+       숨긴 탭으로 가려 하면 📅 월별정산으로 보낸다. 기록·코드는 그대로(되살리기: 아래 목록에서 빼기).
+       📝 메모·🔐 비번은 비밀번호·키를 옮길 곳이 정해질 때까지 남겨 둔다. */
+    if(['life','main','data','calendar','accident','progress','material','diag','ai'].indexOf(name) >= 0) name='expense';
     document.querySelectorAll('.v43-tab').forEach(b => b.classList.toggle('active', b.dataset.v43tab===name));
     document.querySelectorAll('.v43-panel').forEach(p => p.classList.remove('active'));
     const panel = document.getElementById('v43-'+name);
@@ -21813,7 +21820,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=401-20261122-dshide"></script>
+<script src="personal.js?v=402-20261122-slim"></script>
 <script src="habits.js?v=333-20261022t1245"></script>
 <script src="mode-bar.js?v=333-20261022t1245"></script>
 <script>
