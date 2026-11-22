@@ -164,7 +164,7 @@ if(typeof kstNow==='undefined'){
      ※ CSS 링크는 예전과 똑같은 자리에서 만들어진다(순서가 바뀌면 디자인이 깨짐).
      ══════════════════════════════════════════════════════════════════ -->
 <script>
-  window.APP_VERSION = "v399-1104-2038";      /* ★ 여기 한 줄만 고친다 ★ */
+  window.APP_VERSION = "v403-1122-2305";      /* ★ 여기 한 줄만 고친다 ★ */
   (function(){
     try{
       document.title = "업무일지 " + window.APP_VERSION;
@@ -1557,9 +1557,6 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <a class="nav-btn nav-home" href="index.html">🏠 홈</a>
-        <a class="nav-btn" href="contacts.html" target="_blank" style="background:#0891b2;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">📋 연락처</a>
-        <a class="nav-btn" href="staff.html" target="_blank" style="background:#6366f1;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none">👥 직원</a>
-        <button class="nav-btn" id="btnQuickJournal" style="background:#f59e0b;color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer" title="자주 쓰는 일지 빠른 진입">📓 일지</button>
         <button class="nav-btn nav-back" id="btnBack" title="이전 화면" disabled>↶ 뒤로</button>
         <span id="status" class="status" style="margin-left:auto"><span class="dot"></span><span id="statusText">연결 중…</span></span>
         <button class="nav-btn" id="btnGCal" title="구글 캘린더 연동" style="background:#fff;border:1.5px solid #dbe6f4;color:#444;display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
@@ -3285,7 +3282,7 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="worklog.js?v=399-20261104t2038"></script>
+<script src="worklog.js?v=403-20261122-pwmove"></script>
 <script>
 /* ═══ worklog.js 캐시 버전이 APP_VERSION 과 어긋나면 알려준다 ═══
    (HTML 만 올리고 worklog.js 의 ?v= 를 안 고치면 옛 JS 가 계속 쓰인다) */
@@ -18182,11 +18179,12 @@ if('serviceWorker' in navigator){
     if(document.getElementById('btnMonthReport') && document.getElementById('btnEntryBackup')){
       clearInterval(_hdT); return;
     }
-    var host = document.getElementById('btnQuickJournal');
+    /* v403 — 📓 일지 버튼을 없앴다. 월보고·백업 버튼은 이제 「뒤로」 버튼 옆에 붙는다 */
+    var host = document.getElementById('btnQuickJournal') || document.getElementById('btnBack');
     if(!host || !host.parentNode) return;
     if(!document.getElementById('btnMonthReport')){
       var b = document.createElement('button');
-      b.id = 'btnMonthReport'; b.className = host.className; b.type = 'button';
+      b.id = 'btnMonthReport'; b.className = 'nav-btn'; b.type = 'button';
       b.textContent = '📊 월보고';
       b.style.cssText = 'background:#0f766e;color:#fff;border:none;border-radius:10px;padding:6px 12px;'
         + 'font-size:13px;font-weight:700;cursor:pointer;margin-left:4px';
@@ -21820,7 +21818,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=402-20261122-slim"></script>
+<script src="personal.js?v=403-20261122-slim"></script>
 <script src="habits.js?v=333-20261022t1245"></script>
 <script src="mode-bar.js?v=333-20261022t1245"></script>
 <script>

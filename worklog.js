@@ -1806,7 +1806,7 @@ if(f.type==="timepick"){
   }
 
   if(f.type==="workvendor"){
-    return `<div class="field" style="position:relative"><label>${esc(f.label)} <a href="contacts.html" target="_blank" style="margin-left:4px;font-size:11px;padding:2px 7px;border:1px solid #dbe6f4;border-radius:6px;background:#f7faff;color:#3f7cb8;font-weight:700;text-decoration:none">📋 연락처관리</a></label>
+    return `<div class="field" style="position:relative"><label>${esc(f.label)}</label>
       <input type="text" id="m-${f.k}" placeholder="업체명 검색..." autocomplete="off"
         style="width:100%;box-sizing:border-box;height:32px;padding:0 10px;border:1.5px solid #dbe6f4;border-radius:8px;font-size:13px;font-family:inherit;background:#f7faff;outline:none">
       <div id="m-${f.k}-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #dbe6f4;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:500;max-height:220px;overflow:auto"></div>
@@ -2407,7 +2407,6 @@ function openVendorPickerPopup(){
       <div style="padding:16px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;position:sticky;top:0;background:#fff">
         <span style="font-size:18px">🏢</span>
         <span style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">담당업체 입력</span>
-        <a href="contacts.html" target="_blank" style="font-size:11px;padding:3px 10px;border:1px solid #dbe6f4;border-radius:7px;background:#f7faff;color:#3f7cb8;font-weight:700;text-decoration:none;margin-right:6px">연락처 관리</a>
         <button id="vpClose" type="button" style="border:none;background:none;font-size:20px;color:#94a3b8;cursor:pointer;padding:4px">✕</button>
       </div>
       <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px">
@@ -3059,7 +3058,6 @@ function openTpContactForm(phoneInpRef, defaultType){
           '<input type="text" id="tpCfAddr" placeholder="예: 서울시 강남구 …" autocomplete="off" style="'+SI+'"></div>'+
         '<div><label style="'+LB+'">메모</label>'+
           '<input type="text" id="tpCfMemo" placeholder="간단한 메모" style="'+SI+'"></div>'+
-        '<a href="contacts.html" target="_blank" style="font-size:11.5px;color:#3f7cb8;font-weight:700;text-decoration:none;text-align:center;padding:2px 0">📋 자세히 고치기는 연락처 앱에서 →</a>'+
       '</div>'+
       '<div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:6px">'+
         '<button id="tpCfSaveReg" type="button" style="width:100%;height:48px;border:none;border-radius:12px;background:'+(isOne?'#f1f5f9':'#3f7cb8')+';color:'+(isOne?'#94a3b8':'#fff')+';font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">'+
@@ -6677,11 +6675,14 @@ function renderPassword(){
   const lock=$("pwLockScreen"), main=$("pwMainArea"), hdr=$("pwHeaderBtns");
   if(masterPassword){
     lock.style.display="none"; main.style.display="";
+    const _smCnt = pwSecretMemos().length;
     hdr.innerHTML=`<button class="btn btn-primary btn-sm" id="pwAddBtn">➕ 비번 추가</button>
+      ${_smCnt?`<button class="btn btn-ghost btn-sm" id="pwMoveBtn" style="border-color:#f59e0b;color:#b45309">📥 비밀 메모 ${_smCnt}개 옮기기</button>`:""}
       <button class="btn btn-ghost btn-sm" id="pwCatMgrBtn">⚙ 카테고리</button>
       <button class="btn btn-ghost btn-sm" id="pwChgMaster">🔑 마스터 변경</button>
       <button class="btn btn-danger btn-sm" id="pwLockBtn">🔒 잠그기</button>`;
     $("pwAddBtn").addEventListener("click",()=>pwOpenEditor(null));
+    if($("pwMoveBtn")) $("pwMoveBtn").addEventListener("click",pwMoveSecretMemos);
     $("pwCatMgrBtn").addEventListener("click",()=>openCatMgr("password"));
     $("pwChgMaster").addEventListener("click",pwChangeMaster);
     $("pwLockBtn").addEventListener("click",()=>{ masterKey=null; masterPassword=null; pwShownIds.clear(); renderPassword(); toast("🔒 비밀번호 탭을 잠갔습니다"); });
@@ -6775,6 +6776,67 @@ async function pwChangeMaster(){
     toast(`✅ 마스터 비번 변경됨 (${updates.length}건 재암호화)`);
     renderPassword();
   }catch(e){ toast("변경 실패: "+e.message); }
+}
+/* ── v403-1122: 비밀 메모(🔒) → 비번 탭(암호화)으로 옮기기 ─────────────────
+   달님 요청(2026-11-22). 일반 메모는 클라우드에 평문으로 저장되므로, 키·토큰·비번이 든
+   🔒 메모를 암호화되는 비번 탭으로 옮긴다. 마스터 비번은 달님 기기에만 있으니
+   잠금을 푼 상태에서 이 버튼을 눌러야 한다.
+   순서 ① 암호화해서 복사  ② 풀어서 원문과 같은지 확인  ③ 클라우드에 올라갔는지 확인
+        ④ 달님이 허락하면 원본 삭제.  ④ 전에는 원본을 건드리지 않고(표시만 남김),
+        어느 단계든 실패하면 원본은 그대로 둔다. */
+const PW_MOVE_CAT="이전된 메모", PW_MOVE_SUB="비밀 메모";
+function pwSecretMemos(){
+  return (entries||[]).filter(e=>e && e.kind==="memo" && (e.secret===true || String(e.title||"").indexOf("🔒")===0));
+}
+async function pwMoveSecretMemos(){
+  if(!masterPassword){ toast("먼저 잠금을 해제하세요"); return; }
+  const memos=pwSecretMemos();
+  if(!memos.length){ toast("옮길 비밀 메모가 없습니다"); return; }
+  const copied=m=>!!(m.pwMovedTo && entries.some(x=>x.id===m.pwMovedTo));
+  const todo=memos.filter(m=>!copied(m));
+  if(todo.length){
+    if(!confirm(`🔒 비밀 메모 ${todo.length}개를 암호화해서 비번 탭(「${PW_MOVE_CAT}」 분류)으로 복사합니다.\n\n· 복사본이 제대로 풀리는지, 클라우드에 올라갔는지 확인한 뒤에만 원본 삭제를 물어봅니다.\n· 그 전까지 원본은 그대로 있습니다.\n\n계속할까요?`)) return;
+    try{
+      if(!CATEGORIES.password.includes(PW_MOVE_CAT)){ CATEGORIES.password.push(PW_MOVE_CAT); saveCategories(); }
+      for(const m of todo){
+        const name=String(m.title||"").replace(/^🔒\s*/,"").trim()||"(제목 없음)";
+        const enc=await encryptStr(JSON.stringify({username:"",password:"",url:"",memo:String(m.body||"")}), masterPassword);
+        const rec=addRecord({kind:"password",name,category:PW_MOVE_CAT,subcategory:PW_MOVE_SUB,createdAt:Date.now(),starred:false,encrypted:enc});
+        updateRecord(m.id,{pwMovedTo:rec.id});
+      }
+    }catch(e){ toast("복사 중 오류 — 원본은 그대로 있습니다: "+e.message); renderPassword(); return; }
+  }
+  /* ② 복사본이 원문과 같은지 확인 */
+  const pairs=[]; let bad=0;
+  for(const m of pwSecretMemos()){
+    const c=m.pwMovedTo && entries.find(x=>x.id===m.pwMovedTo);
+    let ok=false;
+    if(c){ try{ const back=JSON.parse(await decryptStr(c.encrypted, masterPassword)); ok=(back.memo===String(m.body||"")); }catch(e){} }
+    if(ok) pairs.push([m,c]);
+    else{ bad++; if(c){ deleteRecord(c.id); updateRecord(m.id,{pwMovedTo:null}); } }   // 깨진 복사본은 치우고 다시 시도할 수 있게
+  }
+  if(bad){ toast(`${bad}개가 확인에 실패했습니다 — 원본은 그대로 있습니다. 한 번 더 눌러 보세요`); renderPassword(); return; }
+  /* ③ 클라우드에 올라갔는지 확인 (서버에서 직접 읽어 본다) */
+  if(!online || !db){ toast("클라우드에 연결되지 않아 저장 확인을 못 했습니다 — 원본은 그대로 둡니다. 연결된 뒤 다시 눌러 주세요"); renderPassword(); return; }
+  /* 저장은 「창구」 대기함을 거쳐 천천히 올라간다 — 먼저 지금 보내게 하고, 올라갈 때까지 최대 약 40초 기다린다 */
+  try{ if(window.wlWrite && typeof window.wlWrite.now==="function") window.wlWrite.now(); }catch(e){}
+  toast("☁️ 클라우드에 올라갔는지 확인 중… (최대 40초)");
+  for(const [m,c] of pairs){
+    let ok=false;
+    for(let t=0;t<50 && !ok;t++){
+      try{ const s=await db.collection(colOf("password")).doc(c.id).get({source:"server"}); ok=!!(s.exists && (s.data()||{}).encrypted); }catch(e){}
+      if(!ok) await new Promise(r=>setTimeout(r,800));
+    }
+    if(!ok){ toast("클라우드 저장을 확인하지 못했습니다 — 원본은 그대로 둡니다. 잠시 뒤 다시 눌러 주세요"); renderPassword(); return; }
+  }
+  /* ④ 달님 허락 후 원본 삭제 */
+  if(!confirm(`✅ 암호화 복사본 ${pairs.length}개가 정상으로 풀리고 클라우드에도 올라간 것을 확인했습니다.\n\n원본(평문) 비밀 메모 ${pairs.length}개를 지울까요?\n지우면 되돌릴 수 없습니다. 먼저 비번 탭에서 내용을 보고 싶으면 [취소]를 누르세요.`)){
+    toast("원본은 남겨 두었습니다. 확인한 뒤 같은 버튼을 다시 누르면 지울 수 있어요"); renderPassword(); return;
+  }
+  pairs.forEach(([m])=>deleteRecord(m.id));
+  try{ renderAll(); }catch(e){}
+  renderPassword();
+  toast(`🔒 비밀 메모 ${pairs.length}개를 비번 탭으로 옮기고 원본을 지웠습니다`);
 }
 function pwBindSearch(){
   const s=$("pwSearch"); if(s && !s._bound){ s._bound=true; s.addEventListener("input",e=>{ CAT_FILTER.password.q=e.target.value; pwRenderList(); }); }
