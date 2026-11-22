@@ -1,14 +1,16 @@
 {
- "updated_at": "2026-11-23T02:28:36.462821+09:00",
+ "updated_at": "2026-11-23T08:56:58.091977+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 14,
+   "video_count": 15,
    "channel_count": 10,
-   "total_views": 3309148,
-   "latest": "2026-11-22T23:47:18+09:00",
+   "total_views": 3735035,
+   "latest": "2026-11-23T08:31:29+09:00",
    "video_ids": [
+    "UoO5-aM9W3Q",
+    "YQ5YCnAwbbY",
     "ecUIGwLMhfc",
     "tvxhRcd8H40",
     "vhAlRhO25CA",
@@ -20,7 +22,6 @@
     "3LipybrcW5U",
     "Q0bSxAG_pTI",
     "aKPG-NTpgBs",
-    "8xsfQnUGgNg",
     "7de2izwgrvk",
     "pevfIGVAFFs"
    ],
@@ -43,27 +44,65 @@
      "channels": 3
     },
     {
+     "word": "버블",
+     "videos": 3,
+     "channels": 2
+    },
+    {
      "word": "대표",
      "videos": 3,
+     "channels": 2
+    },
+    {
+     "word": "증안펀드",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "월요일",
+     "videos": 2,
      "channels": 2
     },
     {
      "word": "코스피",
      "videos": 2,
      "channels": 2
-    },
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "미국증시",
+   "name": "미국증시",
+   "video_count": 4,
+   "channel_count": 4,
+   "total_views": 360262,
+   "latest": "2026-11-23T07:12:45+09:00",
+   "video_ids": [
+    "qWBPcJiyKP4",
+    "4hl0kIjQLno",
+    "ZKBcv-SrmHA",
+    "3LipybrcW5U"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
+    "미주은 (미국주식으로 은퇴하기)",
+    "삼프로TV 3PROTV"
+   ],
+   "subtopics": [
     {
-     "word": "버블",
+     "word": "나스닥",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "다시",
+     "word": "월요일",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "않는",
+     "word": "시작인",
      "videos": 2,
      "channels": 2
     }
@@ -73,16 +112,15 @@
   {
    "id": "일본_엔화",
    "name": "일본·엔화",
-   "video_count": 5,
+   "video_count": 4,
    "channel_count": 4,
-   "total_views": 112499,
+   "total_views": 130590,
    "latest": "2026-11-22T19:00:09+09:00",
    "video_ids": [
     "Q0iqaX3Kpvo",
     "UB1e9uzumd4",
     "7de2izwgrvk",
-    "f_rhRBkWgUE",
-    "HnA3S89Dpo4"
+    "f_rhRBkWgUE"
    ],
    "channels": [
     "경제사냥꾼",
@@ -90,33 +128,18 @@
     "언더스탠딩",
     "티타임즈TV"
    ],
-   "subtopics": [
-    {
-     "word": "컴퍼니케",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "이강수",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "대표",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
+   "subtopics": [],
    "active": true
   },
   {
    "id": "반도체",
    "name": "반도체",
-   "video_count": 6,
+   "video_count": 7,
    "channel_count": 3,
-   "total_views": 341977,
-   "latest": "2026-11-22T20:00:33+09:00",
+   "total_views": 416158,
+   "latest": "2026-11-23T06:05:10+09:00",
    "video_ids": [
+    "4hl0kIjQLno",
     "vhAlRhO25CA",
     "OG0IvvfJk5s",
     "qf7jKRwo9Ag",
@@ -166,11 +189,12 @@
   {
    "id": "국내증시",
    "name": "국내증시",
-   "video_count": 5,
+   "video_count": 6,
    "channel_count": 3,
-   "total_views": 500584,
-   "latest": "2026-11-22T22:51:55+09:00",
+   "total_views": 574228,
+   "latest": "2026-11-23T06:05:10+09:00",
    "video_ids": [
+    "4hl0kIjQLno",
     "tvxhRcd8H40",
     "qPT3AVLpy98",
     "4o_7XUjmZVM",
@@ -189,35 +213,29 @@
      "channels": 3
     },
     {
-     "word": "대표",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
-   "id": "미국증시",
-   "name": "미국증시",
-   "video_count": 3,
-   "channel_count": 3,
-   "total_views": 447233,
-   "latest": "2026-11-22T18:00:33+09:00",
-   "video_ids": [
-    "ZKBcv-SrmHA",
-    "3LipybrcW5U",
-    "20qFPmna5rU"
-   ],
-   "channels": [
-    "815머니톡",
-    "미주은 (미국주식으로 은퇴하기)",
-    "이효석아카데미"
-   ],
-   "subtopics": [
-    {
-     "word": "나스닥",
+     "word": "월요일",
      "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "시작인",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "거품",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "붕괴",
+     "videos": 2,
+     "channels": 1
+    },
+    {
+     "word": "끝인",
+     "videos": 2,
+     "channels": 1
     }
    ],
    "active": true
