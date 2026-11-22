@@ -264,7 +264,7 @@ const ATTACH_KINDS=["work","memo","meeting","accident","progress"];
 /* ===== v16 카테고리 시스템 ===== */
 const DEFAULT_CATS_FILE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도"];
 const DEFAULT_CATS_SITE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도","견적전용업체"];
-const DEFAULT_CATS_PW   = ["사이트 로그인","은행","카드","신분증","집 비번","단순 비번"];
+const DEFAULT_CATS_PW   = ["사이트 로그인","은행","카드","신분증","집 비번","API·토큰","단순 비번"];
 const CAT_LS_KEY = "wl_categories_v16";
 let CATEGORIES = { filelink: DEFAULT_CATS_FILE.slice(), site: DEFAULT_CATS_SITE.slice(), password: DEFAULT_CATS_PW.slice() };
 function loadCategories(){
@@ -280,6 +280,15 @@ function loadCategories(){
     if(!localStorage.getItem("wl_pw_cats_v2")){
       CATEGORIES.password=DEFAULT_CATS_PW.slice();
       localStorage.setItem("wl_pw_cats_v2","1");
+      localStorage.setItem(CAT_LS_KEY, JSON.stringify(CATEGORIES));
+    }
+    /* 2026-11-23 「API·토큰」 분류를 한 번만 끼워 넣는다 (이미 v2 로 바뀐 기기용). 달님이 나중에 지워도 다시 넣지 않는다 */
+    if(!localStorage.getItem("wl_pw_cats_v3")){
+      if(!CATEGORIES.password.includes("API·토큰")){
+        const i=CATEGORIES.password.indexOf("단순 비번");
+        if(i>=0) CATEGORIES.password.splice(i,0,"API·토큰"); else CATEGORIES.password.push("API·토큰");
+      }
+      localStorage.setItem("wl_pw_cats_v3","1");
       localStorage.setItem(CAT_LS_KEY, JSON.stringify(CATEGORIES));
     }
   }catch(e){}
@@ -6813,11 +6822,12 @@ async function pwMoveSecretMemos(){
   if(todo.length){
     if(!confirm(`🔒 비밀 메모 ${todo.length}개를 암호화해서 비번 탭(「${PW_MOVE_CAT}」 분류)으로 복사합니다.\n\n· 복사본이 제대로 풀리는지, 클라우드에 올라갔는지 확인한 뒤에만 원본 삭제를 물어봅니다.\n· 그 전까지 원본은 그대로 있습니다.\n\n계속할까요?`)) return;
     try{
-      if(!CATEGORIES.password.includes(PW_MOVE_CAT)){ CATEGORIES.password.push(PW_MOVE_CAT); saveCategories(); }
       for(const m of todo){
+        const _cat=m.pwMoveCat||PW_MOVE_CAT;
+        if(!CATEGORIES.password.includes(_cat)){ CATEGORIES.password.push(_cat); saveCategories(); }
         const name=String(m.title||"").replace(/^🔒\s*/,"").trim()||"(제목 없음)";
         const enc=await encryptStr(JSON.stringify({username:"",password:"",url:"",memo:String(m.body||"")}), masterPassword);
-        const rec=addRecord({kind:"password",name,category:PW_MOVE_CAT,subcategory:PW_MOVE_SUB,createdAt:Date.now(),starred:false,encrypted:enc});
+        const rec=addRecord({kind:"password",name,category:_cat,subcategory:PW_MOVE_SUB,createdAt:Date.now(),starred:false,encrypted:enc});
         updateRecord(m.id,{pwMovedTo:rec.id});
       }
     }catch(e){ toast("복사 중 오류 — 원본은 그대로 있습니다: "+e.message); renderPassword(); return; }
@@ -24189,7 +24199,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v403-1123-0100';
+  var JS_BUILD = 'v403-1123-0130';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
