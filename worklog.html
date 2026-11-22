@@ -1581,7 +1581,6 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     <!-- 1행: 주요탭 + ⚙️폴더탭관리 -->
     <div class="v43-tabs" id="v43Tabs">
       <button class="v43-tab active" data-v43tab="main">📋 기록</button>
-      <button class="v43-tab" data-v43tab="life">🏠 개인</button>
       <button class="v43-tab" data-v43tab="data">🗃 데이터</button>
       <button class="v43-tab" data-v43tab="expense">📅 월별정산</button>
       <button class="v43-tab" data-v43tab="memo">📝 메모</button>
@@ -3589,6 +3588,9 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     const v43tabs=['main','life','data','expense','memo','calendar','filelink','docs','common','indiv','etc','accident','progress','material','password','diag','ai'];
     name = String(name || '');   /* v270 — data-v43tab 없는 단추(⚙️ 폴더탭관리)가 undefined 를 넘겨 터지던 것 */
     if(!v43tabs.includes(name) && name.indexOf('custom_')!==0) name='main';
+    /* 2026-11-22 달님 : 「개인 탭은 노션으로 옮겼다 — 프로그램에서 개인 탭만 뺀다」
+       데이터는 그대로 두고 화면만 막는다. 개인으로 가려 하면 📋 기록으로 보낸다. */
+    if(name==='life') name='main';
     document.querySelectorAll('.v43-tab').forEach(b => b.classList.toggle('active', b.dataset.v43tab===name));
     document.querySelectorAll('.v43-panel').forEach(p => p.classList.remove('active'));
     const panel = document.getElementById('v43-'+name);
@@ -4061,7 +4063,6 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     ];
     var DEFAULTS1 = [
       {id:'main',     label:'📋 기록'},
-      {id:'life',     label:'🏠 개인'},
       {id:'expense',  label:'💰 지출'},
       {id:'memo',     label:'📝 메모'},
       {id:'calendar', label:'📅 달력'},
@@ -4073,11 +4074,12 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
       {id:'ai',       label:'🤖 AI'},
     ];
     var FIXED2 = ['filelink','docs','common','indiv','etc'];
-    var FIXED1 = ['main','life','expense','memo','calendar','accident','progress','material','password','diag','ai'];
+    var FIXED1 = ['main','expense','memo','calendar','accident','progress','material','password','diag','ai'];
 
     /* v48: 개인 탭을 기록 바로 뒤로 한 번 옮긴다 */
     (function fixLifeOrder(){
       try{
+        return;   /* 2026-11-22 개인 탭을 뺐으므로 다시 넣지 않는다 */
         if(localStorage.getItem('wl_life_order_v48')) return;
         ['wl_main_tabs_v1'].forEach(function(k){
           var raw=localStorage.getItem(k); if(!raw) return;
@@ -4096,7 +4098,10 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
     })();
 
     function load(key, defaults){
-      try{ var s=localStorage.getItem(key); if(s) return JSON.parse(s); }catch(e){}
+      try{ var s=localStorage.getItem(key); if(s){ var a=JSON.parse(s);
+        /* 2026-11-22 — 기기에 저장된 탭 목록에 남은 🏠 개인을 걸러낸다 */
+        if(Array.isArray(a)) a=a.filter(function(x){ return ((x&&x.id)||x)!=='life'; });
+        return a; } }catch(e){}
       return JSON.parse(JSON.stringify(defaults));
     }
     function save(key, tabs){ try{ localStorage.setItem(key, JSON.stringify(tabs)); }catch(e){} }
@@ -21806,7 +21811,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=399-20261104t2038"></script>
+<script src="personal.js?v=400-20261122-nolife"></script>
 <script src="habits.js?v=333-20261022t1245"></script>
 <script src="mode-bar.js?v=333-20261022t1245"></script>
 <script>

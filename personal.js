@@ -8892,9 +8892,7 @@ window.PERSONAL_BUILD = 'v399-1104-2038';
     }
     var hidden = 0;
     var h = '<div class="lf-tabs lf-dstabs lf-phcats">';
-    h += '<button type="button" class="lf-tab'+(isPersonal()?' on':'')+'" data-dsk="personal"'
-       + ' title="개인일지 — 업무일지와 따로 저장됩니다">🏠 개인</button>'
-       + '<span style="display:inline-block;width:1px;height:22px;background:#dbe6f4;margin:0 6px;vertical-align:middle"></span>';
+    /* 2026-11-22 달님 : 개인은 노션으로 옮김 — 「🏠 개인」 칩을 뺀다 (업무 칩만 남김) */
     DS_ORDER.forEach(function(k){
       var m = cw[k]; if(!m) return;
       if(!more && !keep[k]){ hidden++; return; }
@@ -8996,6 +8994,7 @@ window.PERSONAL_BUILD = 'v399-1104-2038';
       /* 예전 버전이 따옴표째 저장해 둔 값이 있을 수 있다 — 씻어서 받는다 */
       kind = String(kind==null?'':kind).replace(/^["'\\]+|["'\\]+$/g,'').trim();
       if(kind && kind!=='personal' && !(typeof WORK_KINDS==='object' && WORK_KINDS[kind])) kind='work';
+      if(!kind || kind==='personal') kind='work';   /* 2026-11-22 개인 화면은 닫음 — 늘 업무로 연다 */
       if(!kind || kind==='personal'){
         DS = DS_PERSONAL; HOST_ID='lifeHost'; cur='rec';
         try{ if(typeof window.v43ActivateTab==='function') window.v43ActivateTab('life'); }catch(e){}
