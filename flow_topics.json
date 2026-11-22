@@ -1,14 +1,17 @@
 {
- "updated_at": "2026-11-22T08:38:27.580129+09:00",
+ "updated_at": "2026-11-22T16:36:53.729564+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 14,
+   "video_count": 16,
    "channel_count": 9,
-   "total_views": 3385458,
-   "latest": "2026-11-22T07:00:15+09:00",
+   "total_views": 3697754,
+   "latest": "2026-11-22T14:55:16+09:00",
    "video_ids": [
+    "mHcbcjlkSuY",
+    "SWOUf-JsKb0",
+    "Oe69L5Dv7w0",
     "UB1e9uzumd4",
     "3LipybrcW5U",
     "Zt0LLfeAGEY",
@@ -16,7 +19,6 @@
     "aKPG-NTpgBs",
     "8xsfQnUGgNg",
     "7de2izwgrvk",
-    "VwUvt3aGsLI",
     "pevfIGVAFFs",
     "cQHMzYRaexc",
     "_PhQeyrefkg",
@@ -42,13 +44,13 @@
      "channels": 3
     },
     {
-     "word": "나스닥",
+     "word": "대표",
      "videos": 3,
      "channels": 2
     },
     {
-     "word": "대표",
-     "videos": 3,
+     "word": "나스닥",
+     "videos": 2,
      "channels": 2
     },
     {
@@ -57,12 +59,12 @@
      "channels": 2
     },
     {
-     "word": "증시",
+     "word": "다시",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "폭락",
+     "word": "기업",
      "videos": 2,
      "channels": 2
     }
@@ -73,23 +75,22 @@
    "id": "반도체",
    "name": "반도체",
    "video_count": 8,
-   "channel_count": 6,
-   "total_views": 326685,
-   "latest": "2026-11-22T08:30:07+09:00",
+   "channel_count": 5,
+   "total_views": 453099,
+   "latest": "2026-11-22T16:30:09+09:00",
    "video_ids": [
+    "TzNk7J6b94k",
     "4o_7XUjmZVM",
     "4vM6YwYXhtI",
     "Zt0LLfeAGEY",
     "f_TIWYq6hfI",
     "F7_HRfCVabs",
     "FPJXbdEXDdM",
-    "SvGF31jlpMg",
-    "9s3Q9beqglQ"
+    "SvGF31jlpMg"
    ],
    "channels": [
     "815머니톡",
     "경제 읽어주는 남자 (김광석)",
-    "경제사냥꾼",
     "미주은 (미국주식으로 은퇴하기)",
     "염블리와 함께 (염승환)",
     "이효석아카데미"
@@ -106,17 +107,22 @@
      "channels": 2
     },
     {
+     "word": "공포",
+     "videos": 2,
+     "channels": 2
+    },
+    {
      "word": "AI",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "한국",
+     "word": "SK하이닉스",
      "videos": 2,
-     "channels": 2
+     "channels": 1
     },
     {
-     "word": "대표",
+     "word": "삼성전자",
      "videos": 2,
      "channels": 1
     }
@@ -126,11 +132,12 @@
   {
    "id": "국내증시",
    "name": "국내증시",
-   "video_count": 7,
+   "video_count": 8,
    "channel_count": 5,
-   "total_views": 653594,
-   "latest": "2026-11-22T08:30:07+09:00",
+   "total_views": 886620,
+   "latest": "2026-11-22T12:00:02+09:00",
    "video_ids": [
+    "qPT3AVLpy98",
     "4o_7XUjmZVM",
     "4vM6YwYXhtI",
     "3LipybrcW5U",
@@ -149,7 +156,7 @@
    "subtopics": [
     {
      "word": "코스피",
-     "videos": 4,
+     "videos": 5,
      "channels": 3
     },
     {
@@ -170,7 +177,7 @@
    "name": "일본·엔화",
    "video_count": 5,
    "channel_count": 4,
-   "total_views": 433642,
+   "total_views": 446837,
    "latest": "2026-11-22T07:00:15+09:00",
    "video_ids": [
     "UB1e9uzumd4",
@@ -210,53 +217,11 @@
    "active": true
   },
   {
-   "id": "미국증시",
-   "name": "미국증시",
-   "video_count": 4,
-   "channel_count": 3,
-   "total_views": 966007,
-   "latest": "2026-11-21T20:00:35+09:00",
-   "video_ids": [
-    "3LipybrcW5U",
-    "VwUvt3aGsLI",
-    "20qFPmna5rU",
-    "cQHMzYRaexc"
-   ],
-   "channels": [
-    "815머니톡",
-    "내일은 투자왕 - 김단테",
-    "이효석아카데미"
-   ],
-   "subtopics": [
-    {
-     "word": "나스닥",
-     "videos": 4,
-     "channels": 3
-    },
-    {
-     "word": "무슨",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "AI",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "투매",
-     "videos": 2,
-     "channels": 1
-    }
-   ],
-   "active": true
-  },
-  {
    "id": "관세_무역",
    "name": "관세·무역",
    "video_count": 3,
    "channel_count": 3,
-   "total_views": 165048,
+   "total_views": 244599,
    "latest": "2026-11-22T06:05:32+09:00",
    "video_ids": [
     "4vM6YwYXhtI",
@@ -272,16 +237,42 @@
    "active": true
   },
   {
+   "id": "미국증시",
+   "name": "미국증시",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 779016,
+   "latest": "2026-11-21T20:00:35+09:00",
+   "video_ids": [
+    "3LipybrcW5U",
+    "20qFPmna5rU",
+    "cQHMzYRaexc"
+   ],
+   "channels": [
+    "815머니톡",
+    "내일은 투자왕 - 김단테",
+    "이효석아카데미"
+   ],
+   "subtopics": [
+    {
+     "word": "나스닥",
+     "videos": 3,
+     "channels": 3
+    }
+   ],
+   "active": true
+  },
+  {
    "id": "고용_경기",
    "name": "고용·경기",
    "video_count": 3,
    "channel_count": 2,
-   "total_views": 718857,
-   "latest": "2026-11-20T18:45:13+09:00",
+   "total_views": 727634,
+   "latest": "2026-11-22T12:00:38+09:00",
    "video_ids": [
+    "nfa_u6gyF-A",
     "PHU46Tg0Msw",
-    "k-BTGBvzRtM",
-    "8DZ3KRhgc2Q"
+    "k-BTGBvzRtM"
    ],
    "channels": [
     "경제사냥꾼",
