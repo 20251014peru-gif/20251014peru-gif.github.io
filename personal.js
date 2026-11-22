@@ -8872,6 +8872,13 @@ window.PERSONAL_BUILD = 'v399-1104-2038';
      기록 수로 뽑으면 그날그날 자리가 바뀌어 손이 헷갈렸다 - 붙박이로 고정한다.
      차례는 DS_ORDER 를 따른다. */
   var DS_KEEP = ['plan','work','site','expense','accident','progress','memo'];
+  /* 2026-11-22 달님 : 「오늘계획·업무·사이트·예정·전달·자재·입출고·청소는 노션으로 — 데이터 탭에서 뺀다」
+     🔴 칩만 뺀다. 기록·코드는 그대로 — 달력·월보고·📦 자재 탭·지출이 이 기록들을 함께 읽는다.
+     되살리기: 아래 목록에서 지우면 된다. */
+  var DS_HIDE = {plan:1, work:1, site:1, schedule:1, deliver:1, item:1, stock:1, cleaning:1};
+  window.wlDSHidden = function(k){ return !!DS_HIDE[k]; };
+  DS_ORDER = DS_ORDER.filter(function(k){ return !DS_HIDE[k]; });
+  DS_KEEP  = DS_KEEP.filter(function(k){ return !DS_HIDE[k]; });
   function dsMore(){ try{ return !!lsGet(LS_DSMORE, false); }catch(e){ return false; } }
   function dsMoreSet(v){ lsSet(LS_DSMORE, !!v); safeRender(); }
   function dsCounts(){
@@ -9056,6 +9063,7 @@ window.PERSONAL_BUILD = 'v399-1104-2038';
       var last='work';
       try{ last=String(localStorage.getItem('wl_ds_last')||'work').replace(/^["'\\]+|["'\\]+$/g,'').trim()||'work'; }catch(e){}
       if(!/^[a-z]{2,12}$/.test(last)) last='work';
+      if(DS_HIDE[last]) last='expense';   /* 2026-11-22 뺀 종류면 지출로 연다 */
       try{ window.wlOpenData(last); }catch(e){ console.error('[업무일지로]', e); }
     });
     var sb=document.getElementById('lfSeedBtn');

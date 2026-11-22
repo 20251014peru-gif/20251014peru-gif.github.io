@@ -3645,6 +3645,8 @@ document.getElementById("v43FabDiary").addEventListener("click", function(){
             try{ last=String(localStorage.getItem('wl_ds_last')||'work').replace(/^["'\\]+|["'\\]+$/g,'').trim() || 'work'; }catch(e){}
           }
           if(!/^[a-z]{2,12}$/.test(last)) last='work';
+          /* 2026-11-22 — 데이터 탭에서 뺀 종류(업무 등)면 💰 지출로 연다 */
+          if(typeof window.wlDSHidden==='function' && window.wlDSHidden(last)) last='expense';
           window.wlOpenData(last);
         } else if(typeof window.wlLifeRender==='function') window.wlLifeRender();
       }catch(e){ console.error('[데이터탭]', e); }
@@ -21811,7 +21813,7 @@ input[type=checkbox].lf-ie{ width:18px; height:18px; border:none }
 .lf-bar2{ height:7px; border-radius:4px; background:#e8f0fa; overflow:hidden; margin-top:4px }
 .lf-bar2 i{ display:block; height:100%; border-radius:4px }
 </style>
-<script src="personal.js?v=400-20261122-nolife"></script>
+<script src="personal.js?v=401-20261122-dshide"></script>
 <script src="habits.js?v=333-20261022t1245"></script>
 <script src="mode-bar.js?v=333-20261022t1245"></script>
 <script>
