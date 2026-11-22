@@ -4568,12 +4568,19 @@ $("mSave").addEventListener("click",async ()=>{
       subcategory:pwSub||"",
     };
     try{
-      const payload=JSON.stringify({
+      const _x=Object.assign({}, (pwEditCtx.raw&&pwEditCtx.raw.x)||{}), _pp=Object.assign({}, pwEditCtx.pp||{});
+      document.querySelectorAll("#m-pwextra [data-ppid]").forEach(inp=>{
+        const v = inp.type==="checkbox" ? inp.checked : (inp.value||"");
+        if(inp.dataset.sec==="1") _x[inp.dataset.ppid]=v; else _pp[inp.dataset.ppid]=v;
+      });
+      obj.pp=_pp;
+      const payload=JSON.stringify(Object.assign({}, pwEditCtx.raw||{}, {
         username:$("m-pwuser").value||"",
         password:pw,
         url:($("m-pwurl").value||"").trim(),
-        memo:$("m-pwmemo").value||""
-      });
+        memo:$("m-pwmemo").value||"",
+        x:_x
+      }));
       obj.encrypted=await encryptStr(payload, masterPassword);
     }catch(e){ toast("암호화 실패: "+e.message); return; }
     if(mId){ updateRecord(mId,obj); } else { obj.createdAt=Date.now(); obj.starred=false; addRecord(obj); }
@@ -6685,7 +6692,8 @@ function renderPassword(){
     if($("pwMoveBtn")) $("pwMoveBtn").addEventListener("click",pwMoveSecretMemos);
     $("pwCatMgrBtn").addEventListener("click",()=>openCatMgr("password"));
     $("pwChgMaster").addEventListener("click",pwChangeMaster);
-    $("pwLockBtn").addEventListener("click",()=>{ masterKey=null; masterPassword=null; pwShownIds.clear(); renderPassword(); toast("🔒 비밀번호 탭을 잠갔습니다"); });
+    $("pwLockBtn").addEventListener("click",()=>{ masterKey=null; masterPassword=null; pwShownIds.clear(); pwDecCache.clear(); renderPassword(); toast("🔒 비밀번호 탭을 잠갔습니다"); });
+    pwEnsureToolbar();
     pwBindSearch();
     pwRenderList();
   } else {
@@ -6849,6 +6857,9 @@ function pwMatches(e,q){
   return s.includes(q.trim().toLowerCase());
 }
 async function pwRenderList(){
+  if(!VIEW_PREFS.password.tblInit){ VIEW_PREFS.password.mode="table"; VIEW_PREFS.password.tblInit=1; saveViewPrefs(); }
+  pwEnsureToolbar(); pwPaintToolbar();
+  if(VIEW_PREFS.password.mode==="table"){ await pwRenderTable(); return; }
   bindViewControls("password");
   // 필터 채우기
   $("pwCatFilter").innerHTML=catOptions("password",true);
@@ -7106,15 +7117,286 @@ async function pwRenderList(){
   }
 }
 
+/* =========================================================
+   🔐 비번표 — 노션 표처럼 보기 + 속성(칸) 직접 추가·삭제·숨김·순서
+   · 칸의 구성(스키마)은 기록 한 건(kind:"pwSchema")에 담아 클라우드로 같이 간다.
+   · 🔒 표시한 칸의 값은 마스터 비번으로 암호화된 덩어리(encrypted.x) 안에 들어간다.
+     표시 안 한 칸은 e.pp 에 평문으로 들어간다 (정렬·거르기용: 분류·2단계 인증·변경일 등).
+   · 이미 있는 비번 기록은 그대로 읽힌다 (새 칸은 비어 있을 뿐).
+   ========================================================= */
+const PW_BUILTIN=[
+  {id:"name",name:"이름",type:"title",fixed:true},
+  {id:"category",name:"분류",type:"select",fixed:true},
+  {id:"subcategory",name:"소분류",type:"text",hide:true},
+  {id:"username",name:"아이디",type:"text",secret:true},
+  {id:"password",name:"비밀번호",type:"password",secret:true,fixed:true},
+  {id:"url",name:"사이트 주소",type:"url",secret:true},
+  {id:"email",name:"연결 이메일",type:"text",secret:true},
+  {id:"twofa",name:"2단계 인증",type:"select",opts:["없음","인증앱","문자","패스키"]},
+  {id:"changed",name:"비번 변경일",type:"date"},
+  {id:"memo",name:"메모",type:"text",secret:true}
+];
+const PW_CORE_IDS=["name","category","subcategory","username","password","url","memo"];
+const PW_TYPE_LABEL={text:"텍스트",select:"선택",date:"날짜",check:"체크",url:"주소"};
+const pwDecCache=new Map();     // 암호문 → 복호화한 값 (잠그면 비움)
+let pwEditCtx={raw:{},pp:{}};   // 편집창이 열려 있는 동안, 화면에 없는 칸의 값을 지키기 위한 사본
+let pwSort={k:"name",dir:1};
+
+function pwSchemaRec(){ return (entries||[]).find(e=>e && e.kind==="pwSchema")||null; }
+function pwSchemaGet(){
+  const r=pwSchemaRec(), s=(r&&r.schema)||{};
+  return {order:(s.order||[]).slice(), hidden:Object.assign({},s.hidden), names:Object.assign({},s.names),
+          opts:Object.assign({},s.opts), custom:(s.custom||[]).map(c=>Object.assign({},c))};
+}
+function pwSchemaSave(s){
+  const r=pwSchemaRec();
+  if(r) updateRecord(r.id,{schema:s}); else addRecord({kind:"pwSchema",schema:s,createdAt:Date.now()});
+}
+/* 화면에 쓸 칸 목록 (이름·숨김·순서·선택지 반영) */
+function pwProps(){
+  const s=pwSchemaGet();
+  const all=PW_BUILTIN.map(p=>Object.assign({},p)).concat(s.custom.map(c=>Object.assign({},c,{custom:true})));
+  all.forEach((p,i)=>{
+    p._i=i;
+    if(s.names[p.id]) p.name=s.names[p.id];
+    if(s.opts[p.id]) p.opts=s.opts[p.id];
+    p.hidden = p.fixed ? false : (s.hidden[p.id]!==undefined ? !!s.hidden[p.id] : !!p.hide);
+  });
+  const pos=p=>{ const k=s.order.indexOf(p.id); return k<0 ? 1000+p._i : k; };
+  return all.sort((a,b)=>pos(a)-pos(b));
+}
+/* 한 칸의 값 꺼내기: e=기록, d=복호화한 덩어리 */
+function pwVal(p,e,d){
+  if(p.id==="name") return e.name||"";
+  if(p.id==="category") return e.category||"";
+  if(p.id==="subcategory") return e.subcategory||"";
+  if(p.id==="username"||p.id==="password"||p.id==="url"||p.id==="memo") return (d&&d[p.id])||"";
+  if(p.secret) return (d&&d.x&&d.x[p.id]!==undefined)?d.x[p.id]:"";
+  return (e.pp&&e.pp[p.id]!==undefined)?e.pp[p.id]:"";
+}
+async function pwDecode(e){
+  if(!e.encrypted) return {};
+  let d=pwDecCache.get(e.encrypted);
+  if(d) return d;
+  d=JSON.parse(await decryptStr(e.encrypted, masterPassword));
+  pwDecCache.set(e.encrypted,d);
+  return d;
+}
+
+/* ── 위쪽 도구줄 (검색 · 보기 전환 · 속성 · 분류 칩) ── */
+function pwEnsureToolbar(){
+  if($("pwToolbar")) return;
+  const main=$("pwMainArea"); if(!main) return;
+  if(!document.getElementById("pw-tbl-style")){
+    const st=document.createElement("style"); st.id="pw-tbl-style";
+    st.textContent=`
+      #pwToolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
+      #pwToolbar .pwt-search{flex:1 1 180px;min-width:140px;height:36px;border:1.5px solid #dbe6f4;border-radius:10px;padding:0 12px;font-size:13px;font-family:inherit}
+      .pwt-btn{height:36px;padding:0 12px;border:1.5px solid #dbe6f4;background:#fff;color:#33567d;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+      .pwt-btn.on{background:#2563a8;border-color:#2563a8;color:#fff}
+      #pwChips{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+      #pwChips .pwt-chip{padding:4px 11px;border:1.5px solid #dbe6f4;background:#fff;color:#33567d;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+      #pwChips .pwt-chip.on{background:#eaf1fb;border-color:#2563a8;color:#2563a8}
+      .pwt-wrap{overflow-x:auto;border:1px solid #dbe6f4;border-radius:12px}
+      .pwt{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+      .pwt th{background:#f0f6ff;padding:9px 12px;text-align:left;font-weight:800;color:#33567d;border-bottom:2px solid #dbe6f4;white-space:nowrap;user-select:none}
+      .pwt th.sortable{cursor:pointer}
+      .pwt td{padding:8px 12px;border-bottom:1px solid #f0f6ff;color:#1a2f45;vertical-align:middle;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+      .pwt tr:hover td{background:#f7faff}
+      .pwt .pw-mini-btn{padding:3px 8px;font-size:11px;border:1px solid #dbe6f4;border-radius:6px;background:#fff;cursor:pointer}
+      .pwt .pwt-tag{background:#eaf1fb;color:#3f7cb8;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+    `;
+    document.head.appendChild(st);
+  }
+  const bar=document.createElement("div"); bar.id="pwToolbar";
+  bar.innerHTML=`<input id="pwSearch" class="pwt-search" type="search" placeholder="🔍 검색 (이름·아이디·메모…)" autocomplete="off">
+    <button class="pwt-btn" data-pvm="table" title="표로 보기">▦ 표</button>
+    <button class="pwt-btn" data-pvm="card" title="카드로 보기">▤ 카드</button>
+    <button class="pwt-btn" data-pvm="list" title="목록으로 보기">☰ 목록</button>
+    <button class="pwt-btn" id="pwPropBtn" title="칸(속성) 추가·삭제·숨김·순서">⚙ 속성</button>
+    <div id="pwChips"></div>`;
+  main.insertBefore(bar, main.firstChild);
+  bar.querySelectorAll("[data-pvm]").forEach(b=>b.addEventListener("click",()=>{
+    VIEW_PREFS.password.mode=b.dataset.pvm; saveViewPrefs(); pwRenderList();
+  }));
+  $("pwPropBtn").addEventListener("click",pwOpenPropMgr);
+}
+function pwPaintToolbar(){
+  const bar=$("pwToolbar"); if(!bar) return;
+  bar.querySelectorAll("[data-pvm]").forEach(b=>b.classList.toggle("on", b.dataset.pvm===VIEW_PREFS.password.mode));
+  const s=$("pwSearch"); if(s && s.value!==CAT_FILTER.password.q) s.value=CAT_FILTER.password.q||"";
+  const cnt={}; let total=0;
+  entries.forEach(e=>{ if(e.kind==="password"){ total++; const c=e.category||"(미분류)"; cnt[c]=(cnt[c]||0)+1; } });
+  const cats=(CATEGORIES.password||[]).concat(Object.keys(cnt).filter(c=>!(CATEGORIES.password||[]).includes(c))).filter(c=>cnt[c]);
+  const cur=CAT_FILTER.password.cat;
+  const chip=(c,label,n)=>`<button class="pwt-chip${cur===c?" on":""}" data-pcat="${esc(c)}">${esc(label)} ${n}</button>`;
+  $("pwChips").innerHTML=chip("전체","전체",total)+cats.map(c=>chip(c,c,cnt[c])).join("");
+  $("pwChips").querySelectorAll("[data-pcat]").forEach(b=>b.addEventListener("click",()=>{
+    CAT_FILTER.password.cat=b.dataset.pcat; CAT_FILTER.password.sub="전체"; pwRenderList();
+  }));
+}
+
+/* ── 표 그리기 ── */
+async function pwRenderTable(){
+  const box=$("pwList"); const f=CAT_FILTER.password;
+  box.className="";
+  $("pwCatJump").innerHTML="";
+  const base=entries.filter(e=>e.kind==="password" && (f.cat==="전체"||(e.category||"(미분류)")===f.cat));
+  if(!base.length){
+    box.innerHTML=`<div class="empty">${entries.some(e=>e.kind==="password")?"조건에 맞는 비번이 없습니다.":"➕ 비번 추가를 눌러 사이트별 계정·비밀번호를 등록해 보세요."}</div>`;
+    return;
+  }
+  const props=pwProps().filter(p=>!p.hidden);
+  const rows=[];
+  for(const e of base){
+    let d=null, bad=false;
+    try{ d=await pwDecode(e); }catch(err){ bad=true; d={}; }
+    rows.push({e,d,bad});
+  }
+  const q=(f.q||"").trim().toLowerCase();
+  let rs=rows.filter(r=>{
+    if(!q) return true;
+    const parts=[r.e.name,r.e.category,r.e.subcategory,r.d.username,r.d.url,r.d.memo]
+      .concat(Object.values(r.d.x||{})).concat(Object.values(r.e.pp||{}));
+    return parts.filter(v=>typeof v==="string").join(" ").toLowerCase().includes(q);
+  });
+  const sp=props.find(p=>p.id===pwSort.k && p.id!=="password") || props[0];
+  rs.sort((a,b)=>{
+    const x=String(pwVal(sp,a.e,a.d)).toLowerCase(), y=String(pwVal(sp,b.e,b.d)).toLowerCase();
+    return (x<y?-1:x>y?1:0)*pwSort.dir;
+  });
+  const cell=(p,r)=>{
+    const v=pwVal(p,r.e,r.d);
+    if(p.id==="password"){
+      if(!v) return "-";
+      const sh=pwShownIds.has(r.e.id);
+      return `<span style="font-family:monospace">${sh?esc(v):"••••••"}</span> <button class="pw-mini-btn" data-tog="${r.e.id}">${sh?"🙈":"👁"}</button> <button class="pw-mini-btn" data-cp="${r.e.id}|password" data-lb="비밀번호">📋</button>`;
+    }
+    if(p.id==="name") return `<b>${esc(v||"(이름없음)")}</b>`;
+    if(p.type==="check") return v?"✔":"";
+    if(p.type==="select" && v) return `<span class="pwt-tag">${esc(v)}</span>`;
+    if(p.type==="url" && v) return `<a href="${esc(normUrl(v))}" target="_blank" rel="noopener" style="color:var(--primary-deep)">${esc(v)}</a>`;
+    if(!v) return "";
+    if(p.id==="username"||p.id==="email") return `${esc(v)} <button class="pw-mini-btn" data-cp="${r.e.id}|${p.id}" data-lb="${esc(p.name)}">📋</button>`;
+    return esc(v);
+  };
+  const arrow=p=>pwSort.k===p.id?(pwSort.dir>0?" ▲":" ▼"):"";
+  const th=props.map(p=>`<th class="${p.id==="password"?"":"sortable"}" data-sk="${esc(p.id)}">${esc(p.name)}${p.secret?" 🔒":""}${arrow(p)}</th>`).join("");
+  const body=rs.map(r=>`<tr data-pid="${r.e.id}" style="cursor:pointer">
+      <td style="width:34px;text-align:center"><button class="pw-mini-btn" data-star="${r.e.id}" title="즐겨찾기">${r.e.starred?"⭐":"☆"}</button></td>
+      ${r.bad?`<td colspan="${props.length}" style="color:var(--peach)">⚠ 복호화 실패 (${esc(r.e.name||"")})</td>`:props.map(p=>`<td>${cell(p,r)}</td>`).join("")}
+      <td style="white-space:nowrap"><button class="pw-mini-btn" data-edit="${r.e.id}">수정</button> <button class="pw-mini-btn" data-del="${r.e.id}" style="color:#e74c3c">삭제</button></td>
+    </tr>`).join("");
+  box.innerHTML=`<div class="pwt-wrap"><table class="pwt"><thead><tr><th></th>${th}<th></th></tr></thead><tbody>${body||`<tr><td colspan="${props.length+2}" class="empty">조건에 맞는 비번이 없습니다.</td></tr>`}</tbody></table></div>
+    <div style="font-size:12px;color:#7a92a8;margin-top:6px">${rs.length}개 · 머리글을 누르면 정렬, 줄을 누르면 수정창이 열립니다. 칸은 ⚙ 속성에서 바꿉니다.</div>`;
+  const byId=new Map(rows.map(r=>[r.e.id,r]));
+  box.querySelectorAll("th.sortable").forEach(h=>h.addEventListener("click",()=>{
+    const k=h.dataset.sk; if(pwSort.k===k) pwSort.dir=-pwSort.dir; else { pwSort.k=k; pwSort.dir=1; }
+    pwRenderTable();
+  }));
+  box.querySelectorAll("[data-tog]").forEach(b=>b.addEventListener("click",ev=>{
+    ev.stopPropagation(); const id=b.dataset.tog; if(pwShownIds.has(id)) pwShownIds.delete(id); else pwShownIds.add(id); pwRenderTable();
+  }));
+  box.querySelectorAll("[data-cp]").forEach(b=>b.addEventListener("click",ev=>{
+    ev.stopPropagation(); const [id,pid]=b.dataset.cp.split("|"); const r=byId.get(id); if(!r) return;
+    const p=pwProps().find(x=>x.id===pid); const v=p?pwVal(p,r.e,r.d):""; if(v) copyText(String(v), b.dataset.lb+" 복사됨");
+  }));
+  box.querySelectorAll("[data-star]").forEach(b=>b.addEventListener("click",ev=>{
+    ev.stopPropagation(); const e=entries.find(x=>x.id===b.dataset.star); if(e){ updateRecord(e.id,{starred:!e.starred}); pwRenderTable(); }
+  }));
+  box.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",ev=>{ ev.stopPropagation(); pwOpenEditor(b.dataset.edit); }));
+  box.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",ev=>{
+    ev.stopPropagation(); const e=entries.find(x=>x.id===b.dataset.del); if(!e) return;
+    if(!confirm(`"${e.name}" 비밀번호를 삭제하시겠습니까?`)) return;
+    deleteWithUndo(e.id,"비밀번호");
+  }));
+  box.querySelectorAll("tbody tr[data-pid]").forEach(tr=>tr.addEventListener("click",ev=>{
+    if(ev.target.closest("button,a")) return; pwOpenEditor(tr.dataset.pid);
+  }));
+}
+
+/* ── ⚙ 속성 관리창 ── */
+function pwOpenPropMgr(){
+  const old=$("pwPropOv"); if(old) old.remove();
+  const ov=document.createElement("div"); ov.id="pwPropOv";
+  ov.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:13200;display:flex;align-items:center;justify-content:center;padding:12px;font-family:inherit";
+  document.body.appendChild(ov);
+  const norm=()=>{ const s=pwSchemaGet(); const ids=pwProps().map(p=>p.id); s.order=ids; return s; };
+  const apply=(s)=>{ pwSchemaSave(s); paint(); pwRenderList(); };
+  const paint=()=>{
+    const props=pwProps();
+    const rowsHtml=props.map((p,i)=>`<tr data-id="${esc(p.id)}">
+      <td style="white-space:nowrap">
+        <button class="pwt-btn" data-mv="-1" ${i===0?"disabled":""} style="height:28px;padding:0 8px">▲</button>
+        <button class="pwt-btn" data-mv="1" ${i===props.length-1?"disabled":""} style="height:28px;padding:0 8px">▼</button></td>
+      <td><input type="checkbox" data-show ${p.hidden?"":"checked"} ${p.fixed?"disabled":""} title="보이기"></td>
+      <td><input type="text" data-nm value="${esc(p.name)}" ${p.type==="title"?"disabled":""} style="width:120px;height:30px;border:1.5px solid #dbe6f4;border-radius:8px;padding:0 8px;font-family:inherit"></td>
+      <td style="white-space:nowrap">${p.type==="title"?"이름":p.id==="category"?"선택(분류)":p.id==="password"?"비밀번호":esc(PW_TYPE_LABEL[p.type]||p.type)}${p.secret?" 🔒":""}</td>
+      <td>${p.type==="select"&&p.id!=="category"?`<input type="text" data-op value="${esc((p.opts||[]).join(", "))}" placeholder="선택지(쉼표로)" style="width:150px;height:30px;border:1.5px solid #dbe6f4;border-radius:8px;padding:0 8px;font-family:inherit">`:""}</td>
+      <td>${p.custom?`<button class="pwt-btn" data-rm style="height:28px;padding:0 8px;color:#e74c3c">삭제</button>`:(p.fixed?"":`<span style="font-size:11px;color:#9aa7b4">숨기기만</span>`)}</td>
+    </tr>`).join("");
+    ov.innerHTML=`<div style="background:#fff;border-radius:16px;width:100%;max-width:720px;max-height:90vh;overflow:auto;padding:18px">
+      <div style="display:flex;align-items:center;margin-bottom:6px"><div style="font-size:16px;font-weight:800;color:#1a2f45;flex:1">⚙ 속성(칸) 관리</div><button class="pwt-btn" id="pwPropClose" style="height:32px">닫기</button></div>
+      <div style="font-size:12px;color:#7a92a8;margin-bottom:10px;line-height:1.6">보이기를 끄면 표·입력창에서 안 보입니다(값은 그대로 남음). 🔒 칸은 마스터 비번으로 암호화되어 저장됩니다. 🔒 여부는 만들 때만 정할 수 있습니다.</div>
+      <div style="overflow-x:auto"><table class="pwt" style="min-width:560px"><thead><tr><th>순서</th><th>보이기</th><th>이름</th><th>종류</th><th>선택지</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid #eaf1fb">
+        <div style="font-size:13px;font-weight:800;color:#33567d;margin-bottom:6px">➕ 새 속성 추가</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <input id="pwNewName" type="text" placeholder="이름 (예: 가입일, 인증번호)" style="flex:1 1 150px;height:34px;border:1.5px solid #dbe6f4;border-radius:8px;padding:0 10px;font-family:inherit">
+          <select id="pwNewType" style="height:34px;border:1.5px solid #dbe6f4;border-radius:8px;padding:0 8px;font-family:inherit">${Object.keys(PW_TYPE_LABEL).map(k=>`<option value="${k}">${PW_TYPE_LABEL[k]}</option>`).join("")}</select>
+          <input id="pwNewOpts" type="text" placeholder="선택지(쉼표로 구분)" style="flex:1 1 150px;height:34px;border:1.5px solid #dbe6f4;border-radius:8px;padding:0 10px;font-family:inherit;display:none">
+          <label style="font-size:13px;color:#33567d;white-space:nowrap"><input id="pwNewSec" type="checkbox"> 🔒 암호화</label>
+          <button class="pwt-btn on" id="pwNewAdd">추가</button>
+        </div></div></div>`;
+    $("pwPropClose").addEventListener("click",()=>ov.remove());
+    ov.addEventListener("click",e=>{ if(e.target===ov) ov.remove(); });
+    ov.querySelectorAll("tr[data-id]").forEach(tr=>{
+      const id=tr.dataset.id;
+      tr.querySelectorAll("[data-mv]").forEach(b=>b.addEventListener("click",()=>{
+        const s=norm(); const i=s.order.indexOf(id), j=i+Number(b.dataset.mv);
+        if(j<0||j>=s.order.length) return; [s.order[i],s.order[j]]=[s.order[j],s.order[i]]; apply(s);
+      }));
+      const sh=tr.querySelector("[data-show]"); if(sh) sh.addEventListener("change",()=>{ const s=norm(); s.hidden[id]=!sh.checked; apply(s); });
+      const nm=tr.querySelector("[data-nm]"); if(nm) nm.addEventListener("change",()=>{
+        const v=nm.value.trim(); if(!v){ paint(); return; }
+        const s=norm(); const c=s.custom.find(x=>x.id===id); if(c) c.name=v; else s.names[id]=v; apply(s);
+      });
+      const op=tr.querySelector("[data-op]"); if(op) op.addEventListener("change",()=>{
+        const arr=op.value.split(",").map(x=>x.trim()).filter(Boolean);
+        const s=norm(); const c=s.custom.find(x=>x.id===id); if(c) c.opts=arr; else s.opts[id]=arr; apply(s);
+      });
+      const rm=tr.querySelector("[data-rm]"); if(rm) rm.addEventListener("click",()=>{
+        const p=pwProps().find(x=>x.id===id);
+        if(!confirm(`"${p?p.name:id}" 속성을 삭제할까요?\n\n칸만 없어지고, 이미 입력된 값은 데이터에 남아 있지만 더 이상 보이지 않습니다.\n(값까지 가리고 싶을 땐 삭제 대신 '보이기'를 끄세요)`)) return;
+        const s=norm(); s.custom=s.custom.filter(x=>x.id!==id); s.order=s.order.filter(x=>x!==id); delete s.hidden[id]; apply(s);
+      });
+    });
+    const typeSel=$("pwNewType"); typeSel.addEventListener("change",()=>{ $("pwNewOpts").style.display=typeSel.value==="select"?"":"none"; });
+    $("pwNewAdd").addEventListener("click",()=>{
+      const name=$("pwNewName").value.trim(); if(!name){ toast("속성 이름을 입력하세요"); return; }
+      const type=typeSel.value; const s=norm();
+      if(pwProps().some(p=>p.name===name)){ toast("같은 이름의 속성이 이미 있어요"); return; }
+      const c={id:"c"+Date.now().toString(36), name, type, secret:$("pwNewSec").checked};
+      if(type==="select") c.opts=$("pwNewOpts").value.split(",").map(x=>x.trim()).filter(Boolean);
+      s.custom.push(c); s.order.push(c.id); apply(s); toast("속성을 추가했습니다");
+    });
+  };
+  paint();
+}
+
 /* 비밀번호 추가/수정 — 별도 모달 (암호화 처리 필요) */
 async function pwOpenEditor(id){
   if(!masterPassword){ toast("먼저 잠금을 해제하세요"); return; }
   let data={name:"",category:CATEGORIES.password[0]||"",subcategory:"",username:"",password:"",url:"",memo:""};
+  pwEditCtx={raw:{},pp:{}};
+  let _ent=null;
   if(id){
     const e=entries.find(x=>x.id===id);
     if(e){
+      _ent=e;
       data.name=e.name||""; data.category=e.category||""; data.subcategory=e.subcategory||"";
-      try{ if(e.encrypted){ const o=JSON.parse(await decryptStr(e.encrypted, masterPassword)); Object.assign(data, o); } }
+      pwEditCtx.pp=Object.assign({},e.pp);
+      try{ if(e.encrypted){ const o=JSON.parse(await decryptStr(e.encrypted, masterPassword)); Object.assign(data, o); pwEditCtx.raw=o; } }
       catch(err){ toast("복호화 실패 — 수정할 수 없습니다"); return; }
     }
   }
@@ -7133,10 +7415,11 @@ async function pwOpenEditor(id){
       <select id="m-pwsub-sel" class="subcat-sel"></select>
       <input type="text" id="m-pwsub" class="subcat-new" autocomplete="off" placeholder="새 소분류 입력" style="display:none;margin-top:6px">
     </div>
-    <div class="field full"><label>아이디</label><input type="text" id="m-pwuser" value="${esc(data.username)}" autocomplete="off"></div>
+    <div class="field full"${pwFieldHidden("username")}><label>아이디</label><input type="text" id="m-pwuser" value="${esc(data.username)}" autocomplete="off"></div>
     <div class="field full"><label>비밀번호 <span class="req">*</span></label><div style="display:flex;gap:6px"><input type="password" id="m-pwpass" value="${esc(data.password)}" autocomplete="new-password" style="flex:1"><button type="button" class="mini-btn" id="m-pwShow">👁</button></div></div>
-    <div class="field full"><label>URL (선택)</label><input type="text" id="m-pwurl" value="${esc(data.url)}" placeholder="https://..."></div>
-    <div class="field full"><label>메모 (선택)</label><textarea id="m-pwmemo">${esc(data.memo)}</textarea></div>
+    <div class="field full"${pwFieldHidden("url")}><label>URL (선택)</label><input type="text" id="m-pwurl" value="${esc(data.url)}" placeholder="https://..."></div>
+    <div id="m-pwextra">${pwExtraFieldsHTML(data,_ent)}</div>
+    <div class="field full"${pwFieldHidden("memo")}><label>메모 (선택)</label><textarea id="m-pwmemo">${esc(data.memo)}</textarea></div>
   `;
   // 카테고리/소분류 드롭다운 구성
   const pwCatSel=$("m-pwcat"), pwCatNew=$("m-pwcat-new");
@@ -7180,6 +7463,26 @@ async function pwOpenEditor(id){
   $("mDelete").style.display=id?"":"none";
   $("overlay").classList.add("show");
   const m=$("overlay").querySelector(".modal"); if(m) m.scrollTop=0;
+}
+
+
+/* 편집창: 숨긴 기본 칸 가리기 · 추가 칸(이메일·2단계·변경일·내가 만든 칸) 그리기 */
+function pwFieldHidden(id){
+  const p=pwProps().find(x=>x.id===id);
+  return (p && p.hidden) ? ' style="display:none"' : "";
+}
+function pwExtraFieldsHTML(data,ent){
+  const e=ent||{pp:pwEditCtx.pp};
+  return pwProps().filter(p=>!p.hidden && !PW_CORE_IDS.includes(p.id)).map(p=>{
+    const v=pwVal(p,e,data);
+    const at=`data-ppid="${esc(p.id)}" data-sec="${p.secret?1:0}"`;
+    let inp;
+    if(p.type==="check") inp=`<input type="checkbox" ${at} ${v?"checked":""}>`;
+    else if(p.type==="date") inp=`<input type="date" ${at} value="${esc(v)}">`;
+    else if(p.type==="select") inp=`<select ${at}><option value=""></option>${(p.opts||[]).concat(v&&!(p.opts||[]).includes(v)?[v]:[]).map(o=>`<option value="${esc(o)}"${o===v?" selected":""}>${esc(o)}</option>`).join("")}</select>`;
+    else inp=`<input type="text" ${at} value="${esc(v)}" autocomplete="off"${p.type==="url"?' placeholder="https://..."':""}>`;
+    return `<div class="field full"><label>${esc(p.name)}${p.secret?" 🔒":""}</label>${inp}</div>`;
+  }).join("");
 }
 
 /* ===== 카테고리 모달 진입 정의 (password용 라벨) ===== */
@@ -23867,7 +24170,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v403-1122-2340';
+  var JS_BUILD = 'v403-1123-0016';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
