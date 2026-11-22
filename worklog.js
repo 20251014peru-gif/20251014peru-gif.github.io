@@ -264,7 +264,7 @@ const ATTACH_KINDS=["work","memo","meeting","accident","progress"];
 /* ===== v16 카테고리 시스템 ===== */
 const DEFAULT_CATS_FILE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도"];
 const DEFAULT_CATS_SITE = ["전기","소방","기계","서희타워 운영","사무관련","비용관련","공적업무","용역","개인용도","견적전용업체"];
-const DEFAULT_CATS_PW   = ["업무시스템","거래처","공적업무"];
+const DEFAULT_CATS_PW   = ["사이트 로그인","은행","카드","신분증","집 비번","단순 비번"];
 const CAT_LS_KEY = "wl_categories_v16";
 let CATEGORIES = { filelink: DEFAULT_CATS_FILE.slice(), site: DEFAULT_CATS_SITE.slice(), password: DEFAULT_CATS_PW.slice() };
 function loadCategories(){
@@ -274,6 +274,13 @@ function loadCategories(){
       ["filelink","site","password"].forEach(k=>{
         if(Array.isArray(saved[k]) && saved[k].length) CATEGORIES[k]=saved[k];
       });
+    }
+    /* 2026-11-23 비번 분류를 새 목록으로 한 번만 교체 (예전 분류는 안 쓰기로 함).
+       이후 달님이 ⚙ 카테고리에서 바꾼 목록은 다시 덮어쓰지 않는다. 기록에 붙어 있던 예전 분류 이름은 그대로 남는다. */
+    if(!localStorage.getItem("wl_pw_cats_v2")){
+      CATEGORIES.password=DEFAULT_CATS_PW.slice();
+      localStorage.setItem("wl_pw_cats_v2","1");
+      localStorage.setItem(CAT_LS_KEY, JSON.stringify(CATEGORIES));
     }
   }catch(e){}
 }
@@ -6793,7 +6800,7 @@ async function pwChangeMaster(){
         ④ 달님이 허락하면 원본 삭제.  ④ 전에는 원본을 건드리지 않고(표시만 남김),
         어느 단계든 실패하면 원본은 그대로 둔다. */
 /* 비번 탭 목록은 「업무시스템」 분류만 그린다(pwRenderList) — 다른 분류로 옮기면 저장돼도 화면에 안 보인다 */
-const PW_MOVE_CAT="업무시스템", PW_MOVE_SUB="비밀 메모";
+const PW_MOVE_CAT="단순 비번", PW_MOVE_SUB="비밀 메모";
 function pwSecretMemos(){
   return (entries||[]).filter(e=>e && e.kind==="memo" && (e.secret===true || String(e.title||"").indexOf("🔒")===0));
 }
@@ -6917,8 +6924,8 @@ async function pwRenderList(){
   const rest=list.filter(e=>!e.starred);
   const groups={};
   rest.forEach(e=>{ var c=e.category||"(미분류)"; if(!groups[c]) groups[c]=[]; groups[c].push(e); });
-  // 업무시스템 + 이전된 메모(비밀 메모를 옮겨 온 항목)만 표시, 나머지(개인용도 등)는 제외
-  const orderedCats=["업무시스템","이전된 메모"].filter(c=>groups[c]);
+  // 분류 목록 순서대로, 목록에 없는 예전 분류가 붙은 기록도 뒤에 같이 그린다
+  const orderedCats=(CATEGORIES.password||[]).concat(Object.keys(groups)).filter((c,i,a)=>a.indexOf(c)===i && groups[c]);
   const jumpGroups={};
   if(favs.length) jumpGroups["⭐ 즐겨찾기"]=favs;
   orderedCats.forEach(c=>{ jumpGroups[c]=groups[c]; });
@@ -7127,7 +7134,6 @@ async function pwRenderList(){
 const PW_BUILTIN=[
   {id:"name",name:"이름",type:"title",fixed:true},
   {id:"category",name:"분류",type:"select",fixed:true},
-  {id:"subcategory",name:"소분류",type:"text",hide:true},
   {id:"username",name:"아이디",type:"text",secret:true},
   {id:"password",name:"비밀번호",type:"password",secret:true,fixed:true},
   {id:"url",name:"사이트 주소",type:"url",secret:true},
@@ -7227,9 +7233,9 @@ function pwPaintToolbar(){
   const s=$("pwSearch"); if(s && s.value!==CAT_FILTER.password.q) s.value=CAT_FILTER.password.q||"";
   const cnt={}; let total=0;
   entries.forEach(e=>{ if(e.kind==="password"){ total++; const c=e.category||"(미분류)"; cnt[c]=(cnt[c]||0)+1; } });
-  const cats=(CATEGORIES.password||[]).concat(Object.keys(cnt).filter(c=>!(CATEGORIES.password||[]).includes(c))).filter(c=>cnt[c]);
+  const cats=(CATEGORIES.password||[]).concat(Object.keys(cnt).filter(c=>!(CATEGORIES.password||[]).includes(c)));
   const cur=CAT_FILTER.password.cat;
-  const chip=(c,label,n)=>`<button class="pwt-chip${cur===c?" on":""}" data-pcat="${esc(c)}">${esc(label)} ${n}</button>`;
+  const chip=(c,label,n)=>`<button class="pwt-chip${cur===c?" on":""}" data-pcat="${esc(c)}"${n?"":' style="opacity:.55"'}>${esc(label)} ${n||0}</button>`;
   $("pwChips").innerHTML=chip("전체","전체",total)+cats.map(c=>chip(c,c,cnt[c])).join("");
   $("pwChips").querySelectorAll("[data-pcat]").forEach(b=>b.addEventListener("click",()=>{
     CAT_FILTER.password.cat=b.dataset.pcat; CAT_FILTER.password.sub="전체"; pwRenderList();
@@ -7273,6 +7279,10 @@ async function pwRenderTable(){
       return `<span style="font-family:monospace">${sh?esc(v):"••••••"}</span> <button class="pw-mini-btn" data-tog="${r.e.id}">${sh?"🙈":"👁"}</button> <button class="pw-mini-btn" data-cp="${r.e.id}|password" data-lb="비밀번호">📋</button>`;
     }
     if(p.id==="name") return `<b>${esc(v||"(이름없음)")}</b>`;
+    if(p.id==="category"){
+      const lst=(CATEGORIES.password||[]).slice(); if(v && !lst.includes(v)) lst.push(v);
+      return `<select data-catsel="${r.e.id}" style="border:1px solid #dbe6f4;border-radius:6px;padding:3px 6px;font-size:12px;font-family:inherit;background:#eaf1fb;color:#3f7cb8;font-weight:700"><option value=""${v?"":" selected"}>(미분류)</option>${lst.map(c=>`<option value="${esc(c)}"${c===v?" selected":""}>${esc(c)}${(CATEGORIES.password||[]).includes(c)?"":" ⚠예전"}</option>`).join("")}</select>`;
+    }
     if(p.type==="check") return v?"✔":"";
     if(p.type==="select" && v) return `<span class="pwt-tag">${esc(v)}</span>`;
     if(p.type==="url" && v) return `<a href="${esc(normUrl(v))}" target="_blank" rel="noopener" style="color:var(--primary-deep)">${esc(v)}</a>`;
@@ -7301,6 +7311,13 @@ async function pwRenderTable(){
     ev.stopPropagation(); const [id,pid]=b.dataset.cp.split("|"); const r=byId.get(id); if(!r) return;
     const p=pwProps().find(x=>x.id===pid); const v=p?pwVal(p,r.e,r.d):""; if(v) copyText(String(v), b.dataset.lb+" 복사됨");
   }));
+  box.querySelectorAll("[data-catsel]").forEach(s=>{
+    s.addEventListener("click",ev=>ev.stopPropagation());
+    s.addEventListener("change",()=>{
+      const e=entries.find(x=>x.id===s.dataset.catsel); if(!e) return;
+      updateRecord(e.id,{category:s.value}); pwRenderList(); toast("분류를 바꿨습니다");
+    });
+  });
   box.querySelectorAll("[data-star]").forEach(b=>b.addEventListener("click",ev=>{
     ev.stopPropagation(); const e=entries.find(x=>x.id===b.dataset.star); if(e){ updateRecord(e.id,{starred:!e.starred}); pwRenderTable(); }
   }));
@@ -7311,7 +7328,7 @@ async function pwRenderTable(){
     deleteWithUndo(e.id,"비밀번호");
   }));
   box.querySelectorAll("tbody tr[data-pid]").forEach(tr=>tr.addEventListener("click",ev=>{
-    if(ev.target.closest("button,a")) return; pwOpenEditor(tr.dataset.pid);
+    if(ev.target.closest("button,a,select")) return; pwOpenEditor(tr.dataset.pid);
   }));
 }
 
@@ -7411,7 +7428,7 @@ async function pwOpenEditor(id){
       <select id="m-pwcat" class="cat-sel"></select>
       <input type="text" id="m-pwcat-new" class="cat-new" autocomplete="off" placeholder="새 카테고리 입력" style="display:none;margin-top:6px">
     </div>
-    <div class="field"><label>소분류</label>
+    <div class="field" style="display:none"><label>소분류</label>
       <select id="m-pwsub-sel" class="subcat-sel"></select>
       <input type="text" id="m-pwsub" class="subcat-new" autocomplete="off" placeholder="새 소분류 입력" style="display:none;margin-top:6px">
     </div>
@@ -7427,9 +7444,11 @@ async function pwOpenEditor(id){
   const pwCurCat=()=> pwCatSel.value==="__new__" ? (pwCatNew.value.trim()||"") : pwCatSel.value;
   const pwFillCat=(cv)=>{
     let html=cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    const legacy=!!(cv && !cats.includes(cv));   /* 목록에서 뺀 예전 분류가 붙은 기록: 그대로 두되 목록엔 다시 넣지 않는다 */
+    if(legacy) html+=`<option value="${esc(cv)}">${esc(cv)} (예전 분류)</option>`;
     html+=`<option value="__new__">➕ 새 카테고리 직접 입력…</option>`;
     pwCatSel.innerHTML=html;
-    if(cv && cats.includes(cv)){ pwCatSel.value=cv; pwCatNew.style.display="none"; }
+    if(cv && (cats.includes(cv)||legacy)){ pwCatSel.value=cv; pwCatNew.style.display="none"; }
     else if(cv){ pwCatSel.value="__new__"; pwCatNew.value=cv; pwCatNew.style.display=""; }
     else { pwCatSel.value=cats[0]||""; pwCatNew.style.display="none"; }
   };
@@ -24170,7 +24189,7 @@ async function githubUpload(token){
   var RAW = 'https://raw.githubusercontent.com/20251014peru-gif/20251014peru-gif.github.io/main/worklog.html';
   /* 🔴 worklog.js 를 고칠 때마다 이 줄도 같이 올린다. worklog.html 의 APP_VERSION 과 같아야 한다.
      html 만 올리고 js 를 안 올리면 여기서 걸린다 (?v= 숫자만으로는 못 잡는다). */
-  var JS_BUILD = 'v403-1123-0016';
+  var JS_BUILD = 'v403-1123-0100';
   var LS_OFF  = 'wl_ver_off';      /* 자동 확인 끄기 */
   var LS_LAST = 'wl_ver_last';     /* 마지막으로 물어본 시각(ms) */
   var LS_HIDE = 'wl_ver_hide';     /* 「닫기」 누른 판 — 그 판은 다시 안 띄운다 */
