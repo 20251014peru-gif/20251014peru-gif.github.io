@@ -1,35 +1,27 @@
 {
- "updated_at": "2026-11-23T11:04:24.465142+09:00",
+ "updated_at": "2026-11-23T17:23:34.968209+09:00",
  "topics": [
   {
    "id": "AI_엔비디아",
    "name": "AI·엔비디아",
-   "video_count": 15,
-   "channel_count": 10,
-   "total_views": 3972421,
-   "latest": "2026-11-23T08:31:29+09:00",
+   "video_count": 9,
+   "channel_count": 8,
+   "total_views": 1813431,
+   "latest": "2026-11-23T12:19:26+09:00",
    "video_ids": [
+    "8H7hQU8EncU",
+    "VlZMZ9gZbUg",
     "UoO5-aM9W3Q",
-    "YQ5YCnAwbbY",
     "ecUIGwLMhfc",
     "tvxhRcd8H40",
-    "vhAlRhO25CA",
-    "OG0IvvfJk5s",
     "mHcbcjlkSuY",
     "SWOUf-JsKb0",
     "Oe69L5Dv7w0",
-    "UB1e9uzumd4",
-    "3LipybrcW5U",
-    "Q0bSxAG_pTI",
-    "aKPG-NTpgBs",
-    "7de2izwgrvk",
-    "pevfIGVAFFs"
+    "UB1e9uzumd4"
    ],
    "channels": [
-    "815머니톡",
     "경제 읽어주는 남자 (김광석)",
     "내일은 투자왕 - 김단테",
-    "박종훈의 지식한방",
     "삼프로TV 3PROTV",
     "언더스탠딩",
     "이효석아카데미",
@@ -39,32 +31,69 @@
    ],
    "subtopics": [
     {
-     "word": "붕괴",
-     "videos": 3,
-     "channels": 3
+     "word": "데이터센터",
+     "videos": 2,
+     "channels": 2
     },
     {
      "word": "버블",
-     "videos": 3,
+     "videos": 2,
      "channels": 2
+    },
+    {
+     "word": "붕괴",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "반도체",
+   "name": "반도체",
+   "video_count": 8,
+   "channel_count": 4,
+   "total_views": 246678,
+   "latest": "2026-11-23T17:00:04+09:00",
+   "video_ids": [
+    "tMwJY3ZyB84",
+    "IVlkZX6kxsI",
+    "3NCUIycZnYQ",
+    "G8-7dT70RZs",
+    "sjHkohhR0xw",
+    "4hl0kIjQLno",
+    "qf7jKRwo9Ag",
+    "4vM6YwYXhtI"
+   ],
+   "channels": [
+    "815머니톡",
+    "경제 읽어주는 남자 (김광석)",
+    "달란트투자",
+    "삼프로TV 3PROTV"
+   ],
+   "subtopics": [
+    {
+     "word": "삼성전자",
+     "videos": 4,
+     "channels": 3
     },
     {
      "word": "대표",
+     "videos": 4,
+     "channels": 3
+    },
+    {
+     "word": "SK하이닉스",
      "videos": 3,
      "channels": 2
     },
     {
-     "word": "증안펀드",
-     "videos": 2,
+     "word": "반토막",
+     "videos": 3,
      "channels": 2
     },
     {
-     "word": "월요일",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "코스피",
+     "word": "이형수",
      "videos": 2,
      "channels": 2
     }
@@ -74,18 +103,19 @@
   {
    "id": "국내증시",
    "name": "국내증시",
-   "video_count": 7,
+   "video_count": 8,
    "channel_count": 4,
-   "total_views": 617180,
-   "latest": "2026-11-23T10:54:52+09:00",
+   "total_views": 694996,
+   "latest": "2026-11-23T16:59:41+09:00",
    "video_ids": [
-    "w7Eh9HBW7NM",
+    "IVlkZX6kxsI",
+    "MzYP-A-MNaI",
+    "ZCjikei_9XE",
+    "fcAPj3NT8pY",
     "4hl0kIjQLno",
     "tvxhRcd8H40",
     "qPT3AVLpy98",
-    "4o_7XUjmZVM",
-    "4vM6YwYXhtI",
-    "3LipybrcW5U"
+    "4vM6YwYXhtI"
    ],
    "channels": [
     "815머니톡",
@@ -96,16 +126,21 @@
    "subtopics": [
     {
      "word": "코스피",
-     "videos": 4,
+     "videos": 6,
      "channels": 4
     },
     {
-     "word": "월요일",
+     "word": "이권희",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "공포",
+     "word": "급락",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "바닥",
      "videos": 2,
      "channels": 2
     },
@@ -115,12 +150,7 @@
      "channels": 1
     },
     {
-     "word": "거품",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "붕괴",
+     "word": "공매",
      "videos": 2,
      "channels": 1
     }
@@ -132,13 +162,13 @@
    "name": "미국증시",
    "video_count": 4,
    "channel_count": 4,
-   "total_views": 426573,
-   "latest": "2026-11-23T07:12:45+09:00",
+   "total_views": 1165749,
+   "latest": "2026-11-23T12:19:26+09:00",
    "video_ids": [
-    "qWBPcJiyKP4",
+    "8H7hQU8EncU",
+    "fcAPj3NT8pY",
     "4hl0kIjQLno",
-    "ZKBcv-SrmHA",
-    "3LipybrcW5U"
+    "ZKBcv-SrmHA"
    ],
    "channels": [
     "815머니톡",
@@ -148,17 +178,22 @@
    ],
    "subtopics": [
     {
-     "word": "나스닥",
-     "videos": 2,
-     "channels": 2
-    },
-    {
-     "word": "월요일",
+     "word": "뉴욕증시",
      "videos": 2,
      "channels": 2
     },
     {
      "word": "시작인",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "투매",
+     "videos": 2,
+     "channels": 2
+    },
+    {
+     "word": "급락",
      "videos": 2,
      "channels": 2
     }
@@ -168,76 +203,86 @@
   {
    "id": "일본_엔화",
    "name": "일본·엔화",
-   "video_count": 4,
-   "channel_count": 4,
-   "total_views": 135992,
-   "latest": "2026-11-22T19:00:09+09:00",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 91264,
+   "latest": "2026-11-23T16:55:25+09:00",
    "video_ids": [
+    "PXRlPpgVIU0",
     "Q0iqaX3Kpvo",
-    "UB1e9uzumd4",
-    "7de2izwgrvk",
-    "f_rhRBkWgUE"
+    "UB1e9uzumd4"
    ],
    "channels": [
-    "경제사냥꾼",
     "달란트투자",
     "언더스탠딩",
     "티타임즈TV"
+   ],
+   "subtopics": [
+    {
+     "word": "한국",
+     "videos": 2,
+     "channels": 2
+    }
+   ],
+   "active": true
+  },
+  {
+   "id": "배당_ETF",
+   "name": "배당·ETF",
+   "video_count": 3,
+   "channel_count": 3,
+   "total_views": 76727,
+   "latest": "2026-11-23T15:30:34+09:00",
+   "video_ids": [
+    "bi1rdQK23eU",
+    "_7a67LwWPz0",
+    "pZBhnbpjr-s"
+   ],
+   "channels": [
+    "경제 읽어주는 남자 (김광석)",
+    "경제사냥꾼",
+    "홍춘욱의 경제강의노트"
    ],
    "subtopics": [],
    "active": true
   },
   {
-   "id": "반도체",
-   "name": "반도체",
-   "video_count": 7,
+   "id": "정책_정치",
+   "name": "정책·정치",
+   "video_count": 3,
    "channel_count": 3,
-   "total_views": 458697,
-   "latest": "2026-11-23T06:05:10+09:00",
+   "total_views": 268843,
+   "latest": "2026-11-23T15:30:33+09:00",
    "video_ids": [
-    "4hl0kIjQLno",
-    "vhAlRhO25CA",
-    "OG0IvvfJk5s",
-    "qf7jKRwo9Ag",
-    "TzNk7J6b94k",
-    "4o_7XUjmZVM",
-    "4vM6YwYXhtI"
+    "MzYP-A-MNaI",
+    "9QkNzpaoYOI",
+    "UoO5-aM9W3Q"
    ],
    "channels": [
     "815머니톡",
-    "경제 읽어주는 남자 (김광석)",
-    "달란트투자"
+    "경제사냥꾼",
+    "증시각도기TV"
    ],
    "subtopics": [
     {
-     "word": "대표",
+     "word": "정부",
      "videos": 3,
-     "channels": 2
+     "channels": 3
     },
     {
-     "word": "공포",
+     "word": "증안펀드",
      "videos": 2,
      "channels": 2
     },
     {
-     "word": "SK하이닉스",
+     "word": "역대급",
      "videos": 2,
-     "channels": 1
+     "channels": 2
     },
     {
-     "word": "삼성전자",
+     "word": "월요일",
      "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "AI",
-     "videos": 2,
-     "channels": 1
-    },
-    {
-     "word": "삼전",
-     "videos": 2,
-     "channels": 1
+     "channels": 2
     }
    ],
    "active": true
